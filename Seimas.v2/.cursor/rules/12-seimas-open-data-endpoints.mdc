@@ -1,0 +1,35 @@
+---
+description: Official Seimas open data endpoints for MP ingestion
+globs: "{ingest_*.py,backend/**/*.py,migrations/**/*.sql}"
+alwaysApply: false
+---
+
+# Seimas Open Data Endpoint Policy
+
+Source of truth: `https://www.lrs.lt/sip/portal.show?p_r=35391&p_k=1`
+
+- Do not use non-official endpoints for ingestion.
+- `p2b.ad_sn_kalbos` is not official and must not be used.
+- Before changing ingest logic, verify endpoint existence against the official list.
+
+## Official endpoints to use
+
+- MP members: `p2b.ad_seimo_nariai`
+- MP initiated bills: `p2b.ad_sn_inicijuoti_ta_projektai`
+- MP bill proposals: `p2b.ad_sn_pasiulymai_ta_projektams`
+- MP press releases (speech proxy): `p2b.ad_sn_pranesimai_ziniasklaidai`
+- MP schedules: `p2b.ad_sn_darbotvarkes`
+- MP business trips: `p2b.ad_sn_komandiruotes`
+- Session proceedings: `p2b.ad_sp_eiga`
+- Full session flow: `p2b.ad_seimo_posedzio_eiga_full`
+
+## Speech-data strategy
+
+- Preferred communication proxy: `p2b.ad_sn_pranesimai_ziniasklaidai`.
+- Alternative for embedded speech extraction: `p2b.ad_seimo_posedzio_eiga_full`.
+- If using proxy metrics, label them clearly as proxy in code/API responses.
+
+## Query constraints
+
+- Prefer per-MP calls when supported (use `?asmens_id=...`) to avoid global aggregates.
+- Keep ingestion parsers schema-aware and resilient to missing XML fields.

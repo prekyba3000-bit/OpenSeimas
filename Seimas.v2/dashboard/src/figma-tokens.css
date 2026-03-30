@@ -1,0 +1,15 @@
+:root {
+  --borderradius-card: 0.5rem;
+  --colors-accent: #3B82F6;
+  --colors-background: #F8FAFC;
+  --colors-border: #E2E8F0;
+  --colors-danger: #EF4444;
+  --colors-primary: #0F172A;
+  --colors-secondary: #64748B;
+  --colors-success: #22C55E;
+  --colors-surface: #FFFFFF;
+  --colors-warning: #F59E0B;
+  --spacing-lg: 1.5rem;
+  --spacing-md: 1rem;
+  --spacing-sm: 0.5rem;
+}

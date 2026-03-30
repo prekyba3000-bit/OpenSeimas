@@ -1,0 +1,21 @@
+{
+  "colors": {
+    "background": { "value": "#F8FAFC" },
+    "surface": { "value": "#FFFFFF" },
+    "primary": { "value": "#0F172A" },
+    "secondary": { "value": "#64748B" },
+    "accent": { "value": "#3B82F6" },
+    "danger": { "value": "#EF4444" },
+    "success": { "value": "#22C55E" },
+    "warning": { "value": "#F59E0B" },
+    "border": { "value": "#E2E8F0" }
+  },
+  "spacing": {
+    "sm": { "value": "0.5rem" },
+    "md": { "value": "1rem" },
+    "lg": { "value": "1.5rem" }
+  },
+  "borderRadius": {
+    "card": { "value": "0.5rem" }
+  }
+}

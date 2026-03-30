@@ -1,0 +1,9 @@
+{
+  "name": "seimas_benford",
+  "description": "Runs Benford's Law analysis on MP wealth declarations and writes results to the database.",
+  "parameters": {
+    "type": "object",
+    "properties": {},
+    "required": []
+  }
+}

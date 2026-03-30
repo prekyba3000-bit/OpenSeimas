@@ -1,0 +1,14 @@
+fastapi
+requests
+psycopg2-binary
+unidecode
+defusedxml
+beautifulsoup4
+pandas
+openpyxl
+lxml
+pytest
+pytest-asyncio
+httpx
+uvicorn
+gunicorn

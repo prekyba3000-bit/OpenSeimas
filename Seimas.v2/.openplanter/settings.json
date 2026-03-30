@@ -1,0 +1,6 @@
+{
+  "workspace_name": "Seimas.v2",
+  "description": "Lithuanian Parliament transparency platform with forensic analysis engines.",
+  "tools_dir": ".openplanter/tools",
+  "prompts_dir": ".openplanter/prompts"
+}

@@ -1,0 +1,15 @@
+# Seimas v.2 Project Rules
+
+## Core Workflow
+- **Memory Bank First**: Always read `memory-bank/activeContext.md` and `memory-bank/systemPatterns.md` before starting work.
+- **Pipeline Integrity**: Ensure any changes to ingestion scripts do not break the orchestrator's sequence.
+- **Normalization Consistency**: Always use the defined name normalization patterns to ensure successful identity linking.
+
+## Technical Standards
+- **Python**: Use PEP 8 standards. Use type hints where appropriate.
+- **SQL**: Maintain `schema.sql`. Use migrations if structural changes are made.
+- **Environment**: Use environment variables for sensitive data (DB credentials).
+
+## Documentation
+- Update `memory-bank/progress.md` after significant changes.
+- Log important architectural decisions in `memory-bank/decisionLog.md` (if created).

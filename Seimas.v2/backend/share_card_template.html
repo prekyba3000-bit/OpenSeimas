@@ -1,0 +1,264 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color: #A9B1D6;
+      background: #1A1B26;
+    }
+
+    .frame {
+      width: ${WIDTH}px;
+      height: ${HEIGHT}px;
+      box-sizing: border-box;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      background:
+        radial-gradient(circle at 50% 42%, #2D2E3A 0%, #1F2230 50%, #1A1B26 100%);
+      border: 1px solid #4E597B;
+    }
+
+    .content {
+      flex: 1;
+      display: flex;
+      gap: 24px;
+      min-height: 0;
+    }
+
+    .left-col {
+      width: 40%;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 14px;
+      padding-right: 6px;
+    }
+
+    .right-col {
+      width: 60%;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      justify-content: flex-start;
+    }
+
+    .photo {
+      width: 200px;
+      height: 200px;
+      border-radius: 24px;
+      object-fit: cover;
+      border: 2px solid #4E597B;
+      box-shadow: 0 0 24px rgba(122, 162, 247, 0.30);
+      background: #2D2E3A;
+    }
+
+    .name {
+      margin-top: 4px;
+      font-size: 42px;
+      line-height: 1.06;
+      font-weight: 800;
+      color: #FFFFFF;
+      letter-spacing: 0.2px;
+    }
+
+    .party {
+      font-size: 20px;
+      line-height: 1.3;
+      color: #A9B1D6;
+      max-width: 92%;
+    }
+
+    .left-meta-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 6px;
+    }
+
+    .level-badge {
+      width: 70px;
+      height: 70px;
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 30px;
+      font-weight: 800;
+      color: #FFFFFF;
+      background: #2D2E3A;
+      border: 2px solid #7AA2F7;
+      box-shadow: 0 0 12px rgba(122, 162, 247, 0.35);
+    }
+
+    .alignment-badge {
+      border-radius: 12px;
+      padding: 10px 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 700;
+      font-size: 16px;
+      white-space: nowrap;
+    }
+
+    .chart-wrap {
+      border-radius: 16px;
+      border: 1px solid #4E597B;
+      background: rgba(45, 46, 58, 0.75);
+      padding: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 280px;
+    }
+
+    .xp-wrap {
+      border-radius: 12px;
+      border: 1px solid #4E597B;
+      background: rgba(45, 46, 58, 0.75);
+      padding: 12px;
+    }
+
+    .xp-label {
+      font-size: 14px;
+      letter-spacing: 0.2px;
+      margin-bottom: 8px;
+    }
+
+    .xp-bar {
+      height: 30px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: #1A1B26;
+      border: 1px solid #4E597B;
+      position: relative;
+    }
+
+    .xp-fill {
+      height: 100%;
+      width: ${XP_PERCENT}%;
+      background: linear-gradient(90deg, #3E4C76 0%, #7AA2F7 100%);
+    }
+
+    .xp-text {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+      color: #FFFFFF;
+      text-shadow: 0 1px 1px rgba(0, 0, 0, 0.35);
+    }
+
+    .artifacts-wrap {
+      border-radius: 12px;
+      border: 1px solid #4E597B;
+      background: rgba(45, 46, 58, 0.75);
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .artifacts-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #A9B1D6;
+      margin-bottom: 2px;
+    }
+
+    .artifact-item {
+      border-radius: 10px;
+      border: 1px solid #4E597B;
+      padding: 7px 10px;
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 13px;
+      background: rgba(26, 27, 38, 0.55);
+    }
+
+    .artifact-name {
+      color: #FFFFFF;
+      font-weight: 600;
+    }
+
+    .artifact-rarity {
+      color: #A9B1D6;
+      text-transform: uppercase;
+      font-size: 11px;
+      letter-spacing: 0.5px;
+      align-self: center;
+      white-space: nowrap;
+    }
+
+    .footer {
+      height: 40px;
+      margin-top: 12px;
+      border-top: 1px solid #4E597B;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      align-items: center;
+      font-size: 14px;
+      color: #A9B1D6;
+    }
+
+    .footer-left { text-align: left; }
+    .footer-center { text-align: center; }
+    .footer-right { text-align: right; }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <div class="content">
+      <div class="left-col">
+        <img class="photo" src="${PHOTO_DATA_URI}" alt="${MP_NAME}" />
+        <div class="name">${MP_NAME}</div>
+        <div class="party">${MP_PARTY}</div>
+        <div class="left-meta-row">
+          <div class="level-badge">${LEVEL}</div>
+          <div class="alignment-badge" style="${ALIGNMENT_STYLE}">
+            <span>${ALIGNMENT_ICON}</span>
+            <span>${ALIGNMENT_TEXT}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="right-col">
+        <div class="chart-wrap">
+          ${RADAR_SVG}
+        </div>
+        <div class="xp-wrap">
+          <div class="xp-label">XP Progress</div>
+          <div class="xp-bar">
+            <div class="xp-fill"></div>
+            <div class="xp-text">XP: ${XP_CURRENT} / ${XP_NEXT}</div>
+          </div>
+        </div>
+        <div class="artifacts-wrap">
+          <div class="artifacts-title">Top Artifacts</div>
+          ${ARTIFACTS_HTML}
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <div class="footer-left">seimas-v2.vercel.app</div>
+      <div class="footer-center">Generated ${GENERATED_DATE}</div>
+      <div class="footer-right">#HeroParliament</div>
+    </div>
+  </div>
+</body>
+</html>

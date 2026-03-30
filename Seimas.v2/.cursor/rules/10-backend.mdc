@@ -1,0 +1,28 @@
+---
+description: Backend and ingestion rules for Python work
+globs: ["backend/**/*.py", "ingest_*.py"]
+alwaysApply: false
+---
+
+# Backend Rules
+
+- Use the DB connection pool/context patterns already established in `backend/main.py`.
+- Follow existing FastAPI endpoint structure in `backend/main.py` for new routes:
+  - input validation
+  - DB connection acquisition
+  - cursor usage
+  - explicit HTTP error mapping
+- Keep `hero_engine.py` as the canonical scoring source for hero attributes and forensic logic.
+
+## Ingestion Expectations
+
+- Ingest scripts must fail safely when `DB_DSN` is missing.
+- Handle missing optional tables/columns gracefully with explicit fallbacks.
+- Parse external XML defensively and guard against partial/dirty records.
+- Prefer idempotent writes (upsert/update/delete-rebuild pattern where appropriate).
+
+## Querying and Reliability
+
+- Keep SQL readable and explicit.
+- Avoid destructive schema assumptions in runtime logic.
+- Return deterministic payload shapes from API functions.
