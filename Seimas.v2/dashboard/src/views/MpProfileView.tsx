@@ -14,6 +14,7 @@ interface HeroResponse {
     photo?: string;
     active?: boolean;
     seimas_id?: string | number;
+    last_synced_at?: string | null;
   };
   level: number;
   xp: number;
