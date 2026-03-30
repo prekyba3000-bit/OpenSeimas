@@ -77,6 +77,33 @@ export function LandingPage() {
             </button>
           </div>
 
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-6">
+            <button
+              onClick={() => navigate('/dashboard/mps')}
+              className="flex flex-col items-start p-4 rounded-xl border border-border bg-card hover:border-primary/50 transition-all group"
+            >
+              <Users className="w-5 h-5 text-primary mb-2 group-hover:scale-110 transition-transform" />
+              <span className="text-sm font-semibold">Mano Seimo narys</span>
+              <span className="text-xs text-muted-foreground mt-1">Profiliai ir veikla</span>
+            </button>
+            <button
+              onClick={() => navigate('/dashboard/votes')}
+              className="flex flex-col items-start p-4 rounded-xl border border-border bg-card hover:border-primary/50 transition-all group"
+            >
+              <BarChart3 className="w-5 h-5 text-primary mb-2 group-hover:scale-110 transition-transform" />
+              <span className="text-sm font-semibold">Naujausi balsavimai</span>
+              <span className="text-xs text-muted-foreground mt-1">Sprendimų istorija</span>
+            </button>
+            <button
+              onClick={() => navigate('/dashboard/leaderboard')}
+              className="flex flex-col items-start p-4 rounded-xl border border-border bg-card hover:border-primary/50 transition-all group"
+            >
+              <ShieldCheck className="w-5 h-5 text-primary mb-2 group-hover:scale-110 transition-transform" />
+              <span className="text-sm font-semibold">Skaidrumo reitingas</span>
+              <span className="text-xs text-muted-foreground mt-1">Rizikos signalai</span>
+            </button>
+          </div>
+
           <div className="pt-8 flex flex-wrap items-center gap-6 text-muted-foreground">
             <div className="flex items-center gap-2">
               <ShieldCheck size={20} />

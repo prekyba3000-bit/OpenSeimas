@@ -27,6 +27,7 @@ interface HeroProfile {
     photo?: string;
     active?: boolean;
     seimas_id?: string | number;
+    last_synced_at?: string | null;
   };
   level: number;
   xp: number;
@@ -184,6 +185,11 @@ export default function HeroCard({ hero }: { hero: HeroProfile }) {
           <div className="mt-4 max-w-xl">
             <ForensicExplainer intScore={hero.attributes.INT} breakdown={hero.forensic_breakdown} variant="banner" />
           </div>
+          {hero.mp.last_synced_at && (
+            <div className="mt-4 text-[10px] uppercase tracking-widest text-[#A9B1D6]/40 font-mono">
+              Last synced: {new Date(hero.mp.last_synced_at).toLocaleString('lt-LT')}
+            </div>
+          )}
         </div>
 
         <div className="md:text-right flex md:flex-col items-center md:items-end gap-3">
