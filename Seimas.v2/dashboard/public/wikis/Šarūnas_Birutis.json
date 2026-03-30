@@ -1,0 +1,51 @@
+{
+  "name": "Šarūnas Birutis",
+  "birth_date": "1961-09-20",
+  "birth_place": "Šiauliai, Lithuania",
+  "education": [
+    {
+      "degree": "Bachelor's in Economics",
+      "institution": "Vilnius University",
+      "year": 1984
+    },
+    {
+      "degree": "Master's in Law",
+      "institution": "Law University of Lithuania",
+      "year": 2003
+    }
+  ],
+  "career": [
+    {
+      "role": "Minister of Culture",
+      "term": "2024-12-12 to 2025-09-25",
+      "government": "Gintautas Paluckas-led"
+    },
+    {
+      "role": "Member of the European Parliament",
+      "term": "2004-2009",
+      "party": "Alliance of Liberals and Democrats for Europe"
+    },
+    {
+      "role": "Head of the Small and Medium Business Division",
+      "term": "1999",
+      "organization": "Ministry of Economy"
+    },
+    {
+      "role": "Representative",
+      "term": "2002-2003",
+      "organization": "Lithuanian Union of Industrial Employers"
+    },
+    {
+      "role": "Member",
+      "term": "2003",
+      "organization": "State Commission on Gambling Supervision"
+    }
+  ],
+  "political_affiliation": "Labour Party",
+  "current_position": "Member of the Lithuanian Parliament",
+  "sources": [
+    "https://en.wikipedia.org/wiki/Šarūnas_Birutis",
+    "https://www.lrs.lt/sip/portal.show?p_a=498&p_asm_id=73569&p_k=1&p_r=35299",
+    "https://www.europarl.europa.eu/meps/en/28216/SARUNAS_BIRUTIS/history/6"
+  ]
+}

@@ -1,0 +1,11 @@
+.env
+.env.*
+node_modules/
+__pycache__/
+*.pyc
+*.egg-info/
+dist/
+build/
+*.cast
+*.mp4
+.openplanter/

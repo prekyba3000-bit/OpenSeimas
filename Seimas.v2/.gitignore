@@ -1,0 +1,49 @@
+# Debug files
+debug_*.html
+response.xml
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+bin/
+lib/
+develop-eggs/
+dist/
+eggs/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Project
+.env
+archive/
+*.html
+!backend/share_card_template.html
+# *.xml
+!mps.xml
+response.xml
+
+# Tooling & Builds
+storybook-static/
+.agent/
+.claude/
+_bmad/
+_bmad-output/
+.vercel
+.env*.local
+.cursor/memory.json
+
+# OpenPlanter-generated MP wikis (runtime artefacts)
+dashboard/public/wikis/*.md

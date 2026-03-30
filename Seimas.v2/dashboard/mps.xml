@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Seimas xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <SeimoNariai>
+    <SeimoNarys>
+      <seimo_narys_id>101</seimo_narys_id>
+      <asmens_id>101</asmens_id>
+      <vardas>Ingrida</vardas>
+      <pavarde>Šimonytė</pavarde>
+      <partija>Tėvynės sąjunga-Lietuvos krikščionys demokratai</partija>
+      <nuotrauka>https://www.lrs.lt/p/s/n/101_small.jpg</nuotrauka>
+    </SeimoNarys>
+    <SeimoNarys>
+      <seimo_narys_id>102</seimo_narys_id>
+      <asmens_id>102</asmens_id>
+      <vardas>Viktorija</vardas>
+      <pavarde>Čmilytė-Nielsen</pavarde>
+      <partija>Liberalų sąjūdis</partija>
+      <nuotrauka>https://www.lrs.lt/p/s/n/102_small.jpg</nuotrauka>
+    </SeimoNarys>
+  </SeimoNariai>
+</Seimas>

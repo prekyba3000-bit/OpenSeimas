@@ -1,0 +1,17 @@
+aiohttp
+psycopg2-binary
+python-dotenv
+fastapi
+requests
+unidecode
+defusedxml
+beautifulsoup4
+# pandas - removed to save build size on Render
+# openpyxl - removed
+# lxml - removed
+pytest
+pytest-asyncio
+httpx
+uvicorn
+gunicorn
+Pillow

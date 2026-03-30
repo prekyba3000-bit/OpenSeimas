@@ -1,0 +1,34 @@
+---
+description: Core project mission, stack, and layout
+alwaysApply: true
+---
+
+# Seimas.v2 Project Context
+
+- Mission: Build a Lithuanian Parliament transparency platform with Hero Parliament gamification, forensic integrity scoring, and explainable public accountability.
+- Core product areas:
+  - Data ingestion from official Seimas XML APIs
+  - Forensic analysis and risk scoring
+  - Hero profiles, leaderboard, and transparency UI
+  - OpenPlanter integration for agentic pipeline orchestration, knowledge graph export, and autonomous forensic wiki generation
+
+## Tech Stack
+
+- Backend: Python 3.11, FastAPI, psycopg2, PostgreSQL
+- Frontend: React 18, TypeScript, Vite, TailwindCSS
+- Data layer: SQL schema + migrations + ingest scripts
+
+## Key Repository Structure
+
+- `backend/` -> API server, hero engine, endpoint orchestration
+- `dashboard/` -> React frontend app and UI components
+- `.openplanter/` -> OpenPlanter workspace config, tool wrappers, and agent prompts
+- `ingest_*.py` -> ETL ingestion scripts from Seimas and related sources
+- `migrations/` -> SQL migration files for DB evolution
+- `memory-bank/` -> persistent project memory and progress logs
+
+## Operating Principles
+
+- Prefer direct-source data over proxies.
+- Keep hero scoring explainable and auditable.
+- Maintain graceful fallbacks when optional forensic tables are missing.

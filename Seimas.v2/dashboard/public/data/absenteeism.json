@@ -1,0 +1,199 @@
+{
+  "title": "Gėdos siena",
+  "subtitle": "Seimo narių dalyvavimas posėdžiuose pagal dienas",
+  "description": "Dalyvavimas skaičiuojamas pagal posėdžių dienas, ne individualius balsavimus. Narys laikomas dalyvavusiu, jei per dieną balsavo bent vieną kartą. Dienos atlyginimas ≈ €191 (€4200/mėn. ÷ 22 d.d.). Praleistų dienų atlyginimas — mokesčių mokėtojų lėšos, kurios buvo sumokėtos už neatliktą darbą.",
+  "methodology": {
+    "unit": "posėdžio diena",
+    "present_if": "bent 1 balsavimas ne 'Nedalyvavo' per dieną",
+    "salary_monthly_eur": 4200,
+    "daily_rate_eur": 190.91,
+    "total_sitting_days": 57
+  },
+  "summary": {
+    "top15_total_absent_days": 304,
+    "top15_total_wage_unearned_eur": 58036.64
+  },
+  "generated_at": "2026-03-13T05:13:10.230418",
+  "absentees": [
+    {
+      "rank": 1,
+      "name": "Rūta Miliūtė",
+      "photo_url": "https://www.lrs.lt/SIPIS/sn_foto/2024/ruta_miliute.jpg",
+      "party": "Demokratų frakcija „Vardan Lietuvos“",
+      "days_present": 23,
+      "total_days": 56,
+      "days_absent": 33,
+      "participation_pct": 41.1,
+      "daily_rate_eur": 190.91,
+      "wage_unearned_eur": 6300.03
+    },
+    {
+      "rank": 2,
+      "name": "Inga Ruginienė",
+      "photo_url": "https://www.lrs.lt/SIPIS/sn_foto/2024/inga_ruginiene.jpg",
+      "party": "Lietuvos socialdemokratų partijos frakcija",
+      "days_present": 25,
+      "total_days": 57,
+      "days_absent": 32,
+      "participation_pct": 43.9,
+      "daily_rate_eur": 190.91,
+      "wage_unearned_eur": 6109.12
+    },
+    {
+      "rank": 3,
+      "name": "Dovilė Šakalienė",
+      "photo_url": "https://www.lrs.lt/SIPIS/sn_foto/2024/dovile_sakaliene.jpg",
+      "party": "Lietuvos socialdemokratų partijos frakcija",
+      "days_present": 29,
+      "total_days": 57,
+      "days_absent": 28,
+      "participation_pct": 50.9,
+      "daily_rate_eur": 190.91,
+      "wage_unearned_eur": 5345.48
+    },
+    {
+      "rank": 4,
+      "name": "Emanuelis Zingeris",
+      "photo_url": "https://www.lrs.lt/SIPIS/sn_foto/2024/emanuelis_zingeris.jpg",
+      "party": "Tėvynės sąjungos-Lietuvos krikščionių demokratų frakcija",
+      "days_present": 31,
+      "total_days": 57,
+      "days_absent": 26,
+      "participation_pct": 54.4,
+      "daily_rate_eur": 190.91,
+      "wage_unearned_eur": 4963.66
+    },
+    {
+      "rank": 5,
+      "name": "Arminas Lydeka",
+      "photo_url": "https://www.lrs.lt/SIPIS/sn_foto/2024/arminas_lydeka.jpg",
+      "party": "Liberalų  sąjūdžio frakcija",
+      "days_present": 35,
+      "total_days": 57,
+      "days_absent": 22,
+      "participation_pct": 61.4,
+      "daily_rate_eur": 190.91,
+      "wage_unearned_eur": 4200.02
+    },
+    {
+      "rank": 6,
+      "name": "Raminta Popovienė",
+      "photo_url": "https://www.lrs.lt/SIPIS/sn_foto/2024/raminta_popoviene.jpg",
+      "party": "Lietuvos socialdemokratų partijos frakcija",
+      "days_present": 37,
+      "total_days": 57,
+      "days_absent": 20,
+      "participation_pct": 64.9,
+      "daily_rate_eur": 190.91,
+      "wage_unearned_eur": 3818.2
+    },
+    {
+      "rank": 7,
+      "name": "Giedrimas Jeglinskas",
+      "photo_url": "https://www.lrs.lt/SIPIS/sn_foto/2024/giedrimas_jeglinskas.jpg",
+      "party": "Demokratų frakcija „Vardan Lietuvos“",
+      "days_present": 37,
+      "total_days": 57,
+      "days_absent": 20,
+      "participation_pct": 64.9,
+      "daily_rate_eur": 190.91,
+      "wage_unearned_eur": 3818.2
+    },
+    {
+      "rank": 8,
+      "name": "Lukas Savickas",
+      "photo_url": "https://www.lrs.lt/SIPIS/sn_foto/2024/lukas_savickas.jpg",
+      "party": "Demokratų frakcija „Vardan Lietuvos“",
+      "days_present": 40,
+      "total_days": 57,
+      "days_absent": 17,
+      "participation_pct": 70.2,
+      "daily_rate_eur": 190.91,
+      "wage_unearned_eur": 3245.47
+    },
+    {
+      "rank": 9,
+      "name": "Eugenijus Sabutis",
+      "photo_url": "https://www.lrs.lt/SIPIS/sn_foto/2024/eugenijus_sabutis.jpg",
+      "party": "Lietuvos socialdemokratų partijos frakcija",
+      "days_present": 40,
+      "total_days": 57,
+      "days_absent": 17,
+      "participation_pct": 70.2,
+      "daily_rate_eur": 190.91,
+      "wage_unearned_eur": 3245.47
+    },
+    {
+      "rank": 10,
+      "name": "Česlav Olševski",
+      "photo_url": "https://www.lrs.lt/SIPIS/sn_foto/2024/ceslav_olsevski.jpg",
+      "party": "Lietuvos valstiečių, žaliųjų ir Krikščioniškų šeimų sąjungos frakcija",
+      "days_present": 41,
+      "total_days": 57,
+      "days_absent": 16,
+      "participation_pct": 71.9,
+      "daily_rate_eur": 190.91,
+      "wage_unearned_eur": 3054.56
+    },
+    {
+      "rank": 11,
+      "name": "Gintautas Paluckas",
+      "photo_url": "https://www.lrs.lt/SIPIS/sn_foto/2024/gintautas_paluckas.jpg",
+      "party": "Lietuvos socialdemokratų partijos frakcija",
+      "days_present": 41,
+      "total_days": 57,
+      "days_absent": 16,
+      "participation_pct": 71.9,
+      "daily_rate_eur": 190.91,
+      "wage_unearned_eur": 3054.56
+    },
+    {
+      "rank": 12,
+      "name": "Šarūnas Birutis",
+      "photo_url": "https://www.lrs.lt/SIPIS/sn_foto/2024/sarunas_birutis.jpg",
+      "party": "Lietuvos socialdemokratų partijos frakcija",
+      "days_present": 42,
+      "total_days": 57,
+      "days_absent": 15,
+      "participation_pct": 73.7,
+      "daily_rate_eur": 190.91,
+      "wage_unearned_eur": 2863.65
+    },
+    {
+      "rank": 13,
+      "name": "Žygimantas Pavilionis",
+      "photo_url": "https://www.lrs.lt/SIPIS/sn_foto/2024/zygimantas_pavilionis.jpg",
+      "party": "Tėvynės sąjungos-Lietuvos krikščionių demokratų frakcija",
+      "days_present": 43,
+      "total_days": 57,
+      "days_absent": 14,
+      "participation_pct": 75.4,
+      "daily_rate_eur": 190.91,
+      "wage_unearned_eur": 2672.74
+    },
+    {
+      "rank": 14,
+      "name": "Kęstutis Mažeika",
+      "photo_url": "https://www.lrs.lt/SIPIS/sn_foto/2024/kestutis_mazeika.jpg",
+      "party": "Demokratų frakcija „Vardan Lietuvos“",
+      "days_present": 43,
+      "total_days": 57,
+      "days_absent": 14,
+      "participation_pct": 75.4,
+      "daily_rate_eur": 190.91,
+      "wage_unearned_eur": 2672.74
+    },
+    {
+      "rank": 15,
+      "name": "Agnė Bilotaitė",
+      "photo_url": "https://www.lrs.lt/SIPIS/sn_foto/2024/agne_bilotaite.jpg",
+      "party": "Tėvynės sąjungos-Lietuvos krikščionių demokratų frakcija",
+      "days_present": 43,
+      "total_days": 57,
+      "days_absent": 14,
+      "participation_pct": 75.4,
+      "daily_rate_eur": 190.91,
+      "wage_unearned_eur": 2672.74
+    }
+  ]
+}

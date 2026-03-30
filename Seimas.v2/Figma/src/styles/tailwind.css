@@ -1,0 +1,6 @@
+@import 'tailwindcss';
+
+/* Override default font family with Inter (Linear-style) */
+body {
+  font-family: 'Inter', 'Geist Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}

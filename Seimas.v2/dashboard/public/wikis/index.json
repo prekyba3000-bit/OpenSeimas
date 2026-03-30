@@ -1,0 +1,32 @@
+[
+  {
+    "mp_id": "18d2ac9d-69d3-431d-8e8c-0bff1586a387",
+    "display_name": "Ignas Vėgėlė",
+    "risk_level": "Low",
+    "wiki_path": "/wikis/18d2ac9d-69d3-431d-8e8c-0bff1586a387.md"
+  },
+  {
+    "mp_id": "67835f9f-16a1-4151-a938-4bf84fb34a38",
+    "display_name": "Roma Janušonienė",
+    "risk_level": "High",
+    "wiki_path": "/wikis/67835f9f-16a1-4151-a938-4bf84fb34a38.md"
+  },
+  {
+    "mp_id": "dcf737bc-65dd-46fd-b851-e7a44a15e1f7",
+    "display_name": "Laurynas Kasčiūnas",
+    "risk_level": "High",
+    "wiki_path": "/wikis/dcf737bc-65dd-46fd-b851-e7a44a15e1f7.md"
+  },
+  {
+    "mp_id": "92f34bd9-d596-465f-bfdf-fbe8bca6c617",
+    "display_name": "Simonas Gentvilas",
+    "risk_level": "High",
+    "wiki_path": "/wikis/92f34bd9-d596-465f-bfdf-fbe8bca6c617.md"
+  },
+  {
+    "mp_id": "45f0a213-f8bc-4eee-9e4e-4627502339fe",
+    "display_name": "Juozas Olekas",
+    "risk_level": "High",
+    "wiki_path": "/wikis/45f0a213-f8bc-4eee-9e4e-4627502339fe.md"
+  }
+]

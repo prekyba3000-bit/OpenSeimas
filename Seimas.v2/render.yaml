@@ -1,0 +1,26 @@
+# Render.com Infrastructure as Code
+# https://render.com/docs/blueprint-spec
+
+databases:
+  - name: seimas-db
+    plan: free
+    databaseName: seimas
+    user: seimas
+
+services:
+  - type: web
+    name: seimas-api
+    runtime: docker
+    plan: free
+    envVars:
+      - key: DB_DSN
+        fromDatabase:
+          name: seimas-db
+          property: connectionString
+      - key: SYNC_SECRET
+        generateValue: true
+      - key: PYTHON_VERSION
+        value: "3.11"
+    autoDeploy: true
+    repo: https://github.com/prekyba3000-bit/Seimas.v2
+    healthCheckPath: /health

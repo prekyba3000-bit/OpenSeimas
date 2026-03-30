@@ -1,0 +1,94 @@
+name: Daily Data Sync & Export
+
+on:
+  schedule:
+    # Daily at 6:00 AM Vilnius time (4:00 AM UTC)
+    - cron: '0 4 * * *'
+  # Allow manual trigger for testing
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync_and_export:
+    runs-on: ubuntu-latest
+    name: Sync MP Data & Export Stats
+
+    steps:
+      - name: Checkout Code (Full History)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install System Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libpq-dev
+
+      - name: Install Python Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Sync MP Data
+        env:
+          DB_DSN: ${{ secrets.DB_DSN }}
+        run: python3 sync_real_mps.py
+
+      - name: Sync Votes from Seimas API
+        env:
+          DB_DSN: ${{ secrets.DB_DSN }}
+        run: python3 ingest_votes_v2.py
+
+      - name: Recreate Materialized View (day-based attendance)
+        env:
+          DB_DSN: ${{ secrets.DB_DSN }}
+        run: |
+          python3 -c "
+          import psycopg2, os
+          c = psycopg2.connect(os.environ['DB_DSN'])
+          c.autocommit = True
+          cur = c.cursor()
+          with open('migrations/002_create_stats_view.sql') as f:
+              cur.execute(f.read())
+          c.close()
+          print('Materialized view recreated with day-based attendance')
+          "
+
+      - name: Export Stats JSON
+        env:
+          DB_DSN: ${{ secrets.DB_DSN }}
+        run: python3 export_stats.py
+
+      - name: Check for Changes
+        id: changes
+        run: |
+          if git diff --quiet dashboard/public/data/absenteeism.json; then
+            echo "no_changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "no_changes=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Configure Git
+        if: steps.changes.outputs.no_changes == 'false'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+
+      - name: Commit & Push Updated Data
+        if: steps.changes.outputs.no_changes == 'false'
+        run: |
+          git add dashboard/public/data/absenteeism.json
+          git commit -m "data: daily sync [skip ci]"
+          git pull --rebase origin master
+          git push
+
+      - name: Sync Complete
+        run: echo "✅ Daily data sync completed. Wall of Shame updated."
+

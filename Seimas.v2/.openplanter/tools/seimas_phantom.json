@@ -1,0 +1,9 @@
+{
+  "name": "seimas_phantom",
+  "description": "Runs phantom network analysis to find indirect corporate links from MPs to procurement or tax debtors.",
+  "parameters": {
+    "type": "object",
+    "properties": {},
+    "required": []
+  }
+}

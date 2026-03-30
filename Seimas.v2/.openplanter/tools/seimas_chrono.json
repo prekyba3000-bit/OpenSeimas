@@ -1,0 +1,9 @@
+{
+  "name": "seimas_chrono",
+  "description": "Runs chrono-forensics on amendments (drafting windows, clustering) and writes amendment profiles.",
+  "parameters": {
+    "type": "object",
+    "properties": {},
+    "required": []
+  }
+}

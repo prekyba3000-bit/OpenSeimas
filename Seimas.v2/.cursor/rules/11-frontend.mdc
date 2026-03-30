@@ -1,0 +1,23 @@
+---
+description: Frontend rules for React dashboard development
+globs: ["dashboard/src/**/*.tsx"]
+alwaysApply: false
+---
+
+# Frontend Rules
+
+- Use React Query for server-state fetching/caching patterns in new work.
+- Reuse existing UI building blocks from `dashboard/src/components/` before creating new primitives.
+- Use TailwindCSS utility classes; do not add standalone custom CSS files.
+- Follow component structure and style conventions from `HeroCard.tsx` for new feature cards/views.
+
+## Data and UX
+
+- Keep API fetch flows resilient with loading, empty, and error states.
+- Preserve explainability UI for hero and forensic data; avoid opaque score presentation.
+- Maintain stable prop contracts and explicit TypeScript interfaces.
+
+## Navigation and Integration
+
+- Add new pages through existing routing and main navigation patterns.
+- Keep leaderboard/profile interactions consistent with current dashboard behavior.

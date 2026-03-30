@@ -1,0 +1,48 @@
+# Secrets — never commit
+.env
+.env.*
+!.env.template
+
+# OpenPlanter agent sessions (traces often contain API keys — never push)
+Seimas.v2/.openplanter/sessions/
+OpenPlanter/.openplanter/sessions/
+
+# Optional large workspace (MCP / experiments) — keep local only
+openclaw/
+.graphiti-mcp/
+graphiti-mcp-server/
+.antigravity/
+
+# Python
+**/__pycache__/
+**/*.py[cod]
+**/.venv/
+**/venv/
+**/*.egg-info/
+**/.pytest_cache/
+**/.mypy_cache/
+
+# Node
+**/node_modules/
+
+# Builds & caches
+**/dist/
+**/build/
+**/.turbo/
+**/.next/
+**/*.tsbuildinfo
+
+# Logs & runtime
+logs/*.log
+*.log
+npm-debug.log*
+
+# IDE / local
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# OS / tooling
+*.orig

@@ -1,0 +1,32 @@
+---
+description: Global coding standards for backend and frontend
+alwaysApply: true
+---
+
+# Seimas.v2 Global Code Standards
+
+## Naming and Style
+
+- Python code uses `snake_case` for variables, functions, and modules.
+- TypeScript/React code uses `camelCase` for variables and functions.
+- Keep functions focused and avoid hidden side effects.
+
+## Error Handling
+
+- All DB and API interactions must use explicit error handling.
+- Python: wrap DB/API operations in `try...except` and return safe fallbacks or clear errors.
+- Frontend: guard fetch failures and provide user-facing fallback states.
+
+## Library Constraints
+
+- Do not use `axios`; use native `fetch`.
+- Do not use `moment.js`; use `date-fns` when date utilities are needed.
+
+## API Contract
+
+- All FastAPI endpoints should return Pydantic models for response validation and schema clarity.
+- Keep response shapes stable and backwards compatible.
+
+## Test and Validation
+
+- Run targeted syntax/lint/test checks for touched files before finalizing changes.
