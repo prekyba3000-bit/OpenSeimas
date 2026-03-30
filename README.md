@@ -26,6 +26,11 @@ This repo replaces nested checkouts with one tree. Old `.git` directories were m
 3. Start the React dashboard: `cd Seimas.v2/dashboard && npm run dev`
 4. Run the OpenPlanter agent: `cd OpenPlanter && source .venv/bin/activate && openplanter-agent --workspace ../Seimas.v2`
 
+## Git / monorepo
+
+- **Remote:** `https://github.com/prekyba3000-bit/OpenSeimas` (branch `main`).
+- **Do not commit** `Seimas.v2/.openplanter/sessions/` — traces can include API keys; they are **gitignored**.
+
 ## Merger Plan
 
 See `Seimas.v2/memory-bank/` for the full project context and the `.openplanter/` directory (created in Phase 1) for the integration configuration.
