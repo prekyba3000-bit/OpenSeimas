@@ -61,5 +61,7 @@ export const LT = {
     viewVoteDetails: "Peržiūrėti balsavimo detales",
     readyTitle: "Pasiruošę palyginti",
     readyBody: "Pasirinkite du atstovus viršuje, kad analizuotumėte jų balsavimo suderinamumą.",
+    updating: "Atnaujinama…",
+    updatedAnnouncement: "Palyginimas atnaujintas",
   },
 } as const;

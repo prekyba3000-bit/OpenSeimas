@@ -1,5 +1,8 @@
+use std::time::Duration;
+
 use tauri::{AppHandle, Emitter, State};
 use tokio_util::sync::CancellationToken;
+use uuid::Uuid;
 
 use crate::bridge::{LoggingEmitter, TauriEmitter};
 use crate::commands::session::sessions_dir;
@@ -94,4 +97,74 @@ pub async fn cancel(
 pub async fn debug_log(msg: String) -> Result<(), String> {
     eprintln!("[frontend] {msg}");
     Ok(())
+}
+
+// ── Thin IPC slice: investigation lifecycle (ADR 0005) ─────────────────────
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StartInvestigationResponse {
+    pub status: &'static str,
+    pub run_id: String,
+}
+
+#[derive(Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct AgentStreamChunkEvent {
+    run_id: String,
+    token: String,
+}
+
+#[derive(Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct AgentPhaseChangeEvent {
+    run_id: String,
+    new_phase: String,
+}
+
+/// Dummy investigation run: streams tokens then completes. Real LLM hooks in later.
+#[tauri::command]
+pub async fn start_investigation(case_id: String, query: String, app: AppHandle) -> Result<StartInvestigationResponse, String> {
+    let _ = (case_id, query);
+    let run_id = Uuid::new_v4().to_string();
+    let run_id_bg = run_id.clone();
+    let app_bg = app.clone();
+
+    tokio::spawn(async move {
+        // Brief delay so the frontend can apply `startRun(runId)` before events arrive.
+        tokio::time::sleep(Duration::from_millis(100)).await;
+
+        let _ = app_bg.emit(
+            "agent:phase-change",
+            AgentPhaseChangeEvent {
+                run_id: run_id_bg.clone(),
+                new_phase: "planning".into(),
+            },
+        );
+        tokio::time::sleep(Duration::from_millis(500)).await;
+
+        for i in 1..=5 {
+            let _ = app_bg.emit(
+                "agent:stream-chunk",
+                AgentStreamChunkEvent {
+                    run_id: run_id_bg.clone(),
+                    token: format!("{i}… "),
+                },
+            );
+            tokio::time::sleep(Duration::from_millis(500)).await;
+        }
+
+        let _ = app_bg.emit(
+            "agent:phase-change",
+            AgentPhaseChangeEvent {
+                run_id: run_id_bg,
+                new_phase: "completed".into(),
+            },
+        );
+    });
+
+    Ok(StartInvestigationResponse {
+        status: "started",
+        run_id,
+    })
 }

@@ -7,6 +7,10 @@ vi.mock("@tauri-apps/api/core", async () => {
   return { invoke: mock.invoke };
 });
 
+vi.mock("@tauri-apps/api/event", () => ({
+  listen: vi.fn(async () => () => {}),
+}));
+
 // Mock sub-components that have heavy dependencies (markdown-it, three.js)
 vi.mock("./StatusBar", () => ({
   createStatusBar: () => document.createElement("div"),

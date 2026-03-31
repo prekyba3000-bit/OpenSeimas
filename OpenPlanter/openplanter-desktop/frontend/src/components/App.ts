@@ -3,7 +3,16 @@ import { createStatusBar } from "./StatusBar";
 import { createChatPane } from "./ChatPane";
 import { createGraphPane } from "./GraphPane";
 import { appState } from "../state/store";
-import { listSessions, openSession, deleteSession, getCredentialsStatus, getSessionHistory } from "../api/invoke";
+import {
+  listSessions,
+  openSession,
+  deleteSession,
+  getCredentialsStatus,
+  getSessionHistory,
+  startInvestigation,
+} from "../api/invoke";
+import { agentStore } from "../state/agentStore";
+import { wireAgentIpcListeners } from "../state/agentIpcWire";
 import type { ChatMessage } from "../state/store";
 import type { ReplayEntry } from "../api/types";
 
@@ -51,6 +60,8 @@ export function createApp(root: HTMLElement): void {
   credsDisplay.className = "cred-status";
   sidebar.appendChild(credsDisplay);
 
+  mountInvestigationIpcDevStrip(sidebar);
+
   root.appendChild(sidebar);
 
   // Chat pane
@@ -84,6 +95,62 @@ export function createApp(root: HTMLElement): void {
 
   // Load credentials status
   loadCredentials(credsDisplay);
+
+  void wireAgentIpcListeners().catch((err) =>
+    console.error("[openplanter] agent IPC listeners failed:", err)
+  );
+}
+
+/** Dev-only strip: exercise `start_investigation` + Zustand stream buffer (ADR 0005). */
+function mountInvestigationIpcDevStrip(sidebar: HTMLElement): void {
+  const wrap = document.createElement("div");
+  wrap.className = "ipc-investigation-dev";
+  wrap.style.marginTop = "16px";
+
+  const h = document.createElement("h3");
+  h.textContent = "Investigation IPC (dev)";
+
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.textContent = "start_investigation";
+  btn.style.marginTop = "6px";
+  btn.addEventListener("click", async () => {
+    try {
+      const res = await startInvestigation("demo-case", "demo query");
+      agentStore.getState().startRun(res.runId);
+    } catch (e) {
+      console.error(e);
+    }
+  });
+
+  const phaseEl = document.createElement("div");
+  phaseEl.className = "ipc-phase";
+  phaseEl.style.fontSize = "11px";
+  phaseEl.style.marginTop = "6px";
+  phaseEl.style.opacity = "0.85";
+
+  const pre = document.createElement("pre");
+  pre.className = "ipc-stream-buffer";
+  pre.style.whiteSpace = "pre-wrap";
+  pre.style.wordBreak = "break-word";
+  pre.style.maxHeight = "120px";
+  pre.style.overflow = "auto";
+  pre.style.fontSize = "11px";
+  pre.style.marginTop = "6px";
+
+  const syncIpcUi = (): void => {
+    const s = agentStore.getState();
+    phaseEl.textContent = `phase: ${s.phase} | run: ${s.activeRunId?.slice(0, 8) ?? "—"}`;
+    pre.textContent = s.streamBuffer || "(empty buffer)";
+  };
+  agentStore.subscribe(syncIpcUi);
+  syncIpcUi();
+
+  wrap.appendChild(h);
+  wrap.appendChild(btn);
+  wrap.appendChild(phaseEl);
+  wrap.appendChild(pre);
+  sidebar.appendChild(wrap);
 }
 
 /** Switch to a new session, clearing chat state. */

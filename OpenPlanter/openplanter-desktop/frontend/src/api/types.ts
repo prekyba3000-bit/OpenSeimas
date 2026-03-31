@@ -33,6 +33,12 @@ export interface ErrorEvent {
   message: string;
 }
 
+/** Response from `start_investigation` (ADR 0005). */
+export interface StartInvestigationResponse {
+  status: string;
+  runId: string;
+}
+
 export interface CuratorUpdateEvent {
   summary: string;
   files_changed: number;

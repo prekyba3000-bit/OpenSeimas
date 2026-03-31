@@ -3,6 +3,7 @@
  * WS4: faction column; risk-tier summary toggles are not implemented here — orthogonal when added.
  */
 import React, { useEffect, useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Trophy, ArrowUpDown, HelpCircle } from 'lucide-react';
 import { useNavigate, NavLink } from 'react-router';
 import { api, MONITORING_API_URL, type MpLeaderboardRow } from '../services/api';
@@ -13,7 +14,7 @@ import {
   readMpDimension,
   type MpCivicDimension,
 } from '../utils/mpLegacyDimensions';
-import { toast } from 'sonner';
+import { toastErrorDeduped } from '../utils/toastDeduped';
 import { Card } from '../components/Card';
 import { Popover, PopoverContent, PopoverTrigger } from '../components/ui/popover';
 import { ProblemDetailsNotice } from '../components/ProblemDetailsNotice';
@@ -32,10 +33,17 @@ const SKAIDRUMO_HELP_LT =
 
 export default function StebsenaView() {
   const navigate = useNavigate();
-  const [rows, setRows] = useState<MpRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState(false);
-  const [requestError, setRequestError] = useState<unknown>(null);
+  const {
+    data: rowsRaw,
+    isPending: loading,
+    isFetching,
+    isError: loadError,
+    error: requestError,
+  } = useQuery({
+    queryKey: ['monitoring', 'leaderboard'],
+    queryFn: () => api.getMpLeaderboard(),
+  });
+  const rows = useMemo(() => (Array.isArray(rowsRaw) ? rowsRaw : []) as MpRow[], [rowsRaw]);
   const [slowNetwork, setSlowNetwork] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>('rank');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
@@ -65,27 +73,19 @@ export default function StebsenaView() {
   };
 
   useEffect(() => {
-    setLoadError(false);
-    setRequestError(null);
-    setSlowNetwork(false);
+    if (!isFetching) {
+      setSlowNetwork(false);
+      return;
+    }
     const slowTimer = window.setTimeout(() => setSlowNetwork(true), 1200);
-    api
-      .getMpLeaderboard()
-      .then((data: MpRow[]) => {
-        setRows(Array.isArray(data) ? data : []);
-        setLoading(false);
-      })
-      .catch((error) => {
-        setRows([]);
-        setLoadError(true);
-        setRequestError(error);
-        toast.error(LT.errors.leaderboardLoad);
-        setLoading(false);
-      })
-      .finally(() => {
-        window.clearTimeout(slowTimer);
-      });
-  }, []);
+    return () => window.clearTimeout(slowTimer);
+  }, [isFetching]);
+
+  useEffect(() => {
+    if (loadError && requestError) {
+      toastErrorDeduped('monitoring:leaderboard', LT.errors.leaderboardLoad);
+    }
+  }, [loadError, requestError]);
 
   const sorted = useMemo(() => {
     const ranked = rows.map((row, i) => ({ ...row, rank: i + 1 }));

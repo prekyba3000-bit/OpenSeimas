@@ -1,4 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
+import { useInfiniteQuery } from '@tanstack/react-query';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { FileText, Search, Calendar, CheckCircle, XCircle, AlertCircle, ChevronRight } from 'lucide-react';
 import { motion } from 'motion/react';
 import { api, VoteSummary } from '../services/api';
@@ -49,38 +51,46 @@ export const VoteCard = ({ vote, onClick }: { vote: VoteSummary; onClick: () => 
     );
 };
 
+const VOTE_ROW_ESTIMATE_PX = 116;
+
 const VotesListView = () => {
-    const [votes, setVotes] = useState<VoteSummary[]>([]);
     const [search, setSearch] = useState('');
-    const [loading, setLoading] = useState(true);
-    const [loadingMore, setLoadingMore] = useState(false);
-    const [error, setError] = useState<unknown>(null);
-    const [hasMore, setHasMore] = useState(true);
+    const listParentRef = useRef<HTMLDivElement>(null);
 
-    const loadVotes = useCallback((offset: number, append: boolean) => {
-        const setter = append ? setLoadingMore : setLoading;
-        setter(true);
-        setError(null);
+    const {
+        data,
+        isLoading: loading,
+        isFetchingNextPage: loadingMore,
+        error,
+        hasNextPage,
+        fetchNextPage,
+    } = useInfiniteQuery({
+        queryKey: ['votes', 'list', PAGE_SIZE],
+        initialPageParam: 0,
+        queryFn: ({ pageParam }) => api.getVotes(PAGE_SIZE, pageParam as number),
+        getNextPageParam: (lastPage, allPages) =>
+            lastPage.length === PAGE_SIZE ? allPages.length * PAGE_SIZE : undefined,
+    });
 
-        api.getVotes(PAGE_SIZE, offset)
-            .then(data => {
-                setVotes(prev => append ? [...prev, ...data] : data);
-                setHasMore(data.length === PAGE_SIZE);
-            })
-            .catch(err => {
-                console.error('Failed to load votes', err);
-                setError(err);
-            })
-            .finally(() => setter(false));
-    }, []);
+    const votes = useMemo(
+        () => (data?.pages ?? []).flat() as VoteSummary[],
+        [data?.pages],
+    );
 
-    useEffect(() => { loadVotes(0, false); }, [loadVotes]);
-
-    const loadMore = () => { loadVotes(votes.length, true); };
+    const loadMore = () => {
+        void fetchNextPage();
+    };
 
     const filtered = votes.filter(v =>
         v.title.toLowerCase().includes(search.toLowerCase())
     );
+
+    const virtualizer = useVirtualizer({
+        count: filtered.length,
+        getScrollElement: () => listParentRef.current,
+        estimateSize: () => VOTE_ROW_ESTIMATE_PX,
+        overscan: 8,
+    });
 
     const handleVoteClick = (id: string) => {
         window.location.href = `#/dashboard/votes/${id}`;
@@ -133,19 +143,49 @@ const VotesListView = () => {
                 </Card>
             ) : (
                 <div className="flex flex-col gap-3">
-                    {filtered.map(vote => (
-                        <VoteCard key={vote.id} vote={vote} onClick={() => handleVoteClick(vote.id)} />
-                    ))}
-                    {filtered.length === 0 && !error && (
+                    {filtered.length === 0 && !error ? (
                         <div className="text-center py-20 text-gray-500 flex flex-col items-center gap-4">
                             <Search className="w-12 h-12 opacity-20" />
                             <p>{LT.votesView.noVotes} "{search}"</p>
                             <Button variant="ghost" onClick={() => setSearch('')}>{LT.votesView.clearSearch}</Button>
                         </div>
+                    ) : (
+                        <div
+                            ref={listParentRef}
+                            role="grid"
+                            aria-rowcount={filtered.length}
+                            aria-colcount={1}
+                            className="max-h-[min(70vh,840px)] overflow-auto rounded-xl pr-1"
+                            aria-label={LT.votesView.title}
+                        >
+                            <div
+                                className="relative w-full"
+                                style={{ height: `${virtualizer.getTotalSize()}px` }}
+                                role="presentation"
+                            >
+                                {virtualizer.getVirtualItems().map((vi) => {
+                                    const vote = filtered[vi.index];
+                                    return (
+                                        <div
+                                            key={vote.id}
+                                            role="row"
+                                            aria-rowindex={vi.index + 1}
+                                            className="absolute top-0 left-0 w-full pb-3"
+                                            style={{ transform: `translateY(${vi.start}px)` }}
+                                            data-index={vi.index}
+                                            ref={virtualizer.measureElement}
+                                        >
+                                            <div role="gridcell" className="w-full">
+                                                <VoteCard vote={vote} onClick={() => handleVoteClick(vote.id)} />
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
                     )}
 
-                    {/* Load More */}
-                    {hasMore && !search && filtered.length > 0 && (
+                    {hasNextPage && !search && filtered.length > 0 && (
                         <div className="text-center pt-4">
                             <Button
                                 variant="secondary"

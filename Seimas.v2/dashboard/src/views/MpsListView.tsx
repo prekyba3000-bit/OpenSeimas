@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Users, Search, ChevronRight, ArrowUpDown } from 'lucide-react';
 import { motion } from 'motion/react';
 import { api, MpProfile, MpSummary } from '../services/api';
@@ -11,15 +12,24 @@ import { ProblemDetailsNotice } from '../components/ProblemDetailsNotice';
 import { LT } from '../i18n/lt';
 
 const MpsListView = () => {
-    const [mps, setMps] = useState<MpSummary[]>([]);
+    const {
+        data: mps = [],
+        isLoading: loading,
+        error: rosterError,
+    } = useQuery({
+        queryKey: ['mps', 'roster'],
+        queryFn: () => api.getMps(),
+    });
+
     const [searchResults, setSearchResults] = useState<MpSummary[] | null>(null);
     const [search, setSearch] = useState('');
     const [partyFilter, setPartyFilter] = useState<string | null>(null);
     const [sortBy, setSortBy] = useState<SortOption>('name_asc');
-    const [loading, setLoading] = useState(true);
     const [searching, setSearching] = useState(false);
     const [slowSearch, setSlowSearch] = useState(false);
-    const [error, setError] = useState<unknown>(null);
+    const [searchError, setSearchError] = useState<unknown>(null);
+
+    const displayError = rosterError ?? searchError;
 
     const mapMpProfileToSummary = (mpProfile: MpProfile): MpSummary => ({
         id: mpProfile.mp.id,
@@ -32,16 +42,6 @@ const MpsListView = () => {
         attendance: 0,
         vote_mode: null,
     });
-
-    useEffect(() => {
-        api.getMps()
-            .then(data => setMps(data))
-            .catch(err => {
-                console.error('Failed to load MPs', err);
-                setError(err);
-            })
-            .finally(() => setLoading(false));
-    }, []);
 
     useEffect(() => {
         const q = search.trim();
@@ -68,7 +68,7 @@ const MpsListView = () => {
                     if (cancelled) return;
                     console.error('Server-side search failed', err);
                     setSearchResults([]);
-                    setError(err);
+                    setSearchError(err);
                     toast.error(LT.errors.searchUnavailable);
                 })
                 .finally(() => {
@@ -200,9 +200,9 @@ const MpsListView = () => {
             </Card>
 
             {/* Error State */}
-            {error && (
+            {displayError && (
                 <ProblemDetailsNotice
-                    error={error}
+                    error={displayError}
                     className="p-4 border rounded-xl flex items-center gap-3"
                 />
             )}
@@ -222,7 +222,7 @@ const MpsListView = () => {
                     />
                     Loading MP roster...
                 </div>
-            ) : !error && (
+            ) : !displayError && (
                 <>
                     {/* MPs Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -236,7 +236,7 @@ const MpsListView = () => {
                     </div>
 
                     {/* Empty State */}
-                    {processedMps.length === 0 && (
+                    {processedMps.length === 0 && !displayError && (
                         <div
                             className="text-center py-20 flex flex-col items-center gap-4"
                             style={{ color: 'var(--text-secondary)' }}
