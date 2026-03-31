@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { FileText, Search, Calendar, CheckCircle, XCircle, AlertCircle, ChevronRight, AlertTriangle } from 'lucide-react';
+import { FileText, Search, Calendar, CheckCircle, XCircle, AlertCircle, ChevronRight } from 'lucide-react';
 import { motion } from 'motion/react';
 import { api, VoteSummary } from '../services/api';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
+import { ProblemDetailsNotice } from '../components/ProblemDetailsNotice';
+import { LT } from '../i18n/lt';
 
 const PAGE_SIZE = 50;
 
@@ -52,7 +54,7 @@ const VotesListView = () => {
     const [search, setSearch] = useState('');
     const [loading, setLoading] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const [error, setError] = useState<unknown>(null);
     const [hasMore, setHasMore] = useState(true);
 
     const loadVotes = useCallback((offset: number, append: boolean) => {
@@ -67,7 +69,7 @@ const VotesListView = () => {
             })
             .catch(err => {
                 console.error('Failed to load votes', err);
-                setError('Failed to load voting records. Please try again.');
+                setError(err);
             })
             .finally(() => setter(false));
     }, []);
@@ -95,14 +97,14 @@ const VotesListView = () => {
                 <div>
                     <h2 className="text-3xl font-bold flex items-center gap-3 mb-2">
                         <FileText className="w-8 h-8 text-purple-500" />
-                        Parliamentary Votes
+                        {LT.votesView.title}
                     </h2>
-                    <p className="text-gray-400">Browse historical voting records</p>
+                    <p className="text-gray-400">{LT.votesView.subtitle}</p>
                 </div>
 
                 <div className="px-4 py-2 bg-white/5 rounded-lg text-sm font-medium border border-white/5">
                     <span className="text-white">{filtered.length}</span>
-                    <span className="text-gray-500 ml-1">results</span>
+                    <span className="text-gray-500 ml-1">{LT.votesView.results}</span>
                 </div>
             </div>
 
@@ -111,7 +113,7 @@ const VotesListView = () => {
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 group-focus-within:text-purple-500 transition-colors" />
                 <input
                     type="text"
-                    placeholder="Search votes by title..."
+                    placeholder={LT.votesView.searchPlaceholder}
                     value={search}
                     onChange={e => setSearch(e.target.value)}
                     className="w-full pl-12 pr-4 py-4 glass rounded-2xl text-base focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all placeholder:text-gray-600"
@@ -120,17 +122,14 @@ const VotesListView = () => {
 
             {/* Error State */}
             {error && (
-                <div className="p-4 border border-red-500/30 bg-red-500/10 rounded-xl flex items-center gap-3 text-red-400">
-                    <AlertTriangle className="w-5 h-5 shrink-0" />
-                    {error}
-                </div>
+                <ProblemDetailsNotice error={error} className="p-4 border border-red-500/30 bg-red-500/10 rounded-xl flex items-center gap-3 text-red-400" />
             )}
 
             {/* List */}
             {loading ? (
                 <Card className="p-20 text-center text-gray-400 flex flex-col items-center">
                     <div className="animate-spin w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full mb-4" />
-                    Syncing voting records...
+                    {LT.votesView.syncing}
                 </Card>
             ) : (
                 <div className="flex flex-col gap-3">
@@ -140,8 +139,8 @@ const VotesListView = () => {
                     {filtered.length === 0 && !error && (
                         <div className="text-center py-20 text-gray-500 flex flex-col items-center gap-4">
                             <Search className="w-12 h-12 opacity-20" />
-                            <p>No votes found matching "{search}"</p>
-                            <Button variant="ghost" onClick={() => setSearch('')}>Clear Search</Button>
+                            <p>{LT.votesView.noVotes} "{search}"</p>
+                            <Button variant="ghost" onClick={() => setSearch('')}>{LT.votesView.clearSearch}</Button>
                         </div>
                     )}
 
@@ -153,7 +152,7 @@ const VotesListView = () => {
                                 onClick={loadMore}
                                 disabled={loadingMore}
                             >
-                                {loadingMore ? 'Loading...' : 'Load More Votes'}
+                                {loadingMore ? LT.votesView.loadingMore : LT.votesView.loadMore}
                             </Button>
                         </div>
                     )}

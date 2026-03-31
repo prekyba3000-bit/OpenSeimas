@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { cn } from './ui/utils';
 import { Toaster } from 'sonner';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 const dataNavItems = [
   { path: '/dashboard', label: 'Apžvalga', icon: LayoutDashboard },
@@ -26,7 +27,7 @@ const dataNavItems = [
   { path: '/dashboard/factions', label: 'Frakcijos', icon: Shield },
   { path: '/dashboard/sessions', label: 'Sesijos', icon: Calendar },
   { path: '/dashboard/compare', label: 'Palyginimas', icon: Scale },
-  { path: '/dashboard/leaderboard', label: 'Stebėsena / rizika', icon: Trophy },
+  { path: '/dashboard/stebejimas', label: 'Stebėsena', icon: Trophy },
 ];
 
 const transparencyNavItems = [
@@ -79,6 +80,7 @@ function NavButton({
 }
 
 export function MainLayout() {
+  useDocumentTitle();
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
   const [cmdOpen, setCmdOpen] = React.useState(false);
   const location = useLocation();

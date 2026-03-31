@@ -1,9 +1,13 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { ArrowRight, ShieldCheck, BarChart3, Users } from 'lucide-react';
 
 export function LandingPage() {
   const navigate = useNavigate();
+
+  useEffect(() => {
+    document.title = 'Atviras Seimas';
+  }, []);
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground font-sans">

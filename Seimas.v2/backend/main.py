@@ -1,6 +1,8 @@
-from fastapi import FastAPI, HTTPException, Request, BackgroundTasks, Header
-from fastapi.responses import Response
+from fastapi import FastAPI, HTTPException, Request, BackgroundTasks, Header, Query
+from fastapi.responses import Response, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.exceptions import RequestValidationError
+from pydantic import BaseModel, ConfigDict, Field
 from contextlib import asynccontextmanager, contextmanager
 import psycopg2
 from psycopg2.extras import RealDictCursor
@@ -52,6 +54,52 @@ OPENPLANTER_GRAPH_CACHE_SEC = 300
 OPENPLANTER_GRAPH_MAX_VOTE_NODES = 55
 OPENPLANTER_GRAPH_MAX_WEALTH_ROWS = 280
 OPENPLANTER_GRAPH_MAX_INTEREST_ROWS = 120
+
+
+class HeroMpResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    id: str
+    name: str
+    party: Optional[str] = None
+    photo: Optional[str] = None
+    active: Optional[bool] = None
+    seimas_id: Optional[int] = None
+
+
+class HeroAttributesResponse(BaseModel):
+    STR: float
+    WIS: float
+    CHA: float
+    INT: float
+    STA: float
+
+
+class HeroArtifactResponse(BaseModel):
+    name: str
+    rarity: str
+
+
+class HeroProfileResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    mp: HeroMpResponse
+    level: int
+    xp: int
+    xp_current_level: int
+    xp_next_level: int
+    alignment: str
+    attributes: HeroAttributesResponse
+    artifacts: List[HeroArtifactResponse]
+    metrics: Dict[str, Any] = Field(default_factory=dict)
+    metrics_provenance: Dict[str, str] = Field(default_factory=dict)
+    forensic_breakdown: Dict[str, Any] = Field(default_factory=dict)
+
+
+class HeroSearchResponse(BaseModel):
+    query: str
+    total: int
+    results: List[HeroProfileResponse]
 
 
 def _openplanter_graph_slug(prefix: str, key: str) -> str:
@@ -125,6 +173,71 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Skaidrus Seimas API", lifespan=lifespan)
+
+
+def _problem_details(
+    *,
+    status: int,
+    title: str,
+    detail: str,
+    instance: str,
+    type_uri: str = "about:blank",
+    extra: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    payload: Dict[str, Any] = {
+        "type": type_uri,
+        "title": title,
+        "status": status,
+        "detail": detail,
+        "instance": instance,
+    }
+    if extra:
+        payload.update(extra)
+    return payload
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    title = "HTTP Error"
+    if exc.status_code == 404:
+        title = "Not Found"
+    elif exc.status_code == 429:
+        title = "Too Many Requests"
+    elif exc.status_code >= 500:
+        title = "Internal Server Error"
+    detail = str(exc.detail) if exc.detail else "Request failed"
+    payload = _problem_details(
+        status=exc.status_code,
+        title=title,
+        detail=detail,
+        instance=request.url.path,
+    )
+    return JSONResponse(status_code=exc.status_code, content=payload)
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    payload = _problem_details(
+        status=422,
+        title="Validation Error",
+        detail="Request validation failed",
+        instance=request.url.path,
+        type_uri="https://openseimas.local/problems/validation-error",
+        extra={"errors": exc.errors()},
+    )
+    return JSONResponse(status_code=422, content=payload)
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    print(f"Unhandled exception at {request.url.path}: {exc}")
+    payload = _problem_details(
+        status=500,
+        title="Internal Server Error",
+        detail="Unexpected server error",
+        instance=request.url.path,
+    )
+    return JSONResponse(status_code=500, content=payload)
 
 # Suppress browser 404s for common static files
 @app.get("/favicon.ico", include_in_schema=False)
@@ -512,7 +625,7 @@ def get_mp_votes(mp_id: str, limit: int = 20):
             ]
 
 
-@app.get("/api/v2/heroes/leaderboard")
+@app.get("/api/v2/heroes/leaderboard", response_model=List[HeroProfileResponse])
 def get_hero_leaderboard(limit: int = 20):
     """Get all active MP hero profiles sorted by level/xp."""
     safe_limit = max(1, min(limit, 200))
@@ -544,7 +657,64 @@ def get_hero_leaderboard(limit: int = 20):
                 raise HTTPException(status_code=500, detail=f"Failed to build leaderboard: {exc}")
 
 
-@app.get("/api/v2/heroes/{mp_id}")
+@app.get("/api/v2/heroes/search", response_model=HeroSearchResponse)
+def search_heroes(
+    request: Request,
+    q: str = Query(..., min_length=1, max_length=120),
+    limit: int = Query(20, ge=1),
+):
+    """Search active MPs by name/party and return hero profiles."""
+    client_ip = request.client.host if request.client else "unknown"
+    if not check_rate_limit(client_ip):
+        raise HTTPException(status_code=429, detail="Rate limit exceeded")
+
+    normalized_q = q.strip()
+    if len(normalized_q) < 2:
+        raise HTTPException(status_code=422, detail="Query must be at least 2 non-space characters")
+
+    safe_limit = max(1, min(limit, 50))
+    like_q = f"%{normalized_q}%"
+
+    with get_db_conn() as conn:
+        if not conn:
+            raise HTTPException(status_code=500, detail="Database connection failed")
+
+        with conn.cursor() as cur:
+            try:
+                cur.execute(
+                    """
+                    SELECT id::text AS id
+                    FROM politicians
+                    WHERE is_active = TRUE
+                      AND (
+                        display_name ILIKE %s
+                        OR COALESCE(current_party, '') ILIKE %s
+                      )
+                    ORDER BY display_name ASC
+                    LIMIT %s
+                    """,
+                    (like_q, like_q, safe_limit),
+                )
+                rows = cur.fetchall()
+                results: List[Dict[str, Any]] = []
+                for row in rows:
+                    mp_id = str(row["id"])
+                    try:
+                        results.append(calculate_hero_profile(mp_id=mp_id, db_cursor=cur))
+                    except ValueError:
+                        continue
+                return {
+                    "query": normalized_q,
+                    "total": len(results),
+                    "results": results,
+                }
+            except HTTPException:
+                raise
+            except Exception as exc:
+                raise HTTPException(status_code=500, detail=f"Failed to search heroes: {exc}")
+
+
+@app.get("/api/v2/heroes/{mp_id}", response_model=HeroProfileResponse)
 def get_hero_profile(mp_id: str):
     """Get the gamified hero profile for a single MP."""
     with get_db_conn() as conn:

@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Users, GitCompare, TrendingUp, AlertTriangle, Check } from 'lucide-react';
+import { Users, GitCompare, TrendingUp, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { api, MpSummary } from '../services/api';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
+import { ProblemDetailsNotice } from '../components/ProblemDetailsNotice';
+import { LT } from '../i18n/lt';
 
 const MpSelector = ({ mps, selected, onSelect, placeholder }: {
     mps: MpSummary[];
@@ -62,7 +64,7 @@ const MpSelector = ({ mps, selected, onSelect, placeholder }: {
                             <div className="sticky top-0 bg-[#1a1a1e] p-2 border-b border-white/5">
                                 <input
                                     type="text"
-                                    placeholder="Search MP..."
+                                    placeholder={LT.comparisonView.searchMp}
                                     value={search}
                                     onChange={e => setSearch(e.target.value)}
                                     className="w-full p-2 bg-black/20 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -84,7 +86,7 @@ const MpSelector = ({ mps, selected, onSelect, placeholder }: {
                                 </div>
                             ))}
                             {filtered.length === 0 && (
-                                <div className="p-4 text-center text-xs text-gray-500">No results found</div>
+                                <div className="p-4 text-center text-xs text-gray-500">{LT.comparisonView.noResults}</div>
                             )}
                         </motion.div>
                     </>
@@ -119,7 +121,7 @@ const ComparisonView = ({ initialSelected = [null, null] }: ComparisonViewProps)
     const [selected, setSelected] = useState<(string | null)[]>(initialSelected);
     const [comparison, setComparison] = useState<any>(null);
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const [error, setError] = useState<unknown>(null);
 
     useEffect(() => {
         api.getMps()
@@ -133,7 +135,7 @@ const ComparisonView = ({ initialSelected = [null, null] }: ComparisonViewProps)
             setError(null);
             api.compareMps([selected[0], selected[1]])
                 .then(data => setComparison(data))
-                .catch(err => setError(err.message || 'Comparison failed'))
+                .catch(err => setError(err))
                 .finally(() => setLoading(false));
         } else {
             setComparison(null);
@@ -158,9 +160,9 @@ const ComparisonView = ({ initialSelected = [null, null] }: ComparisonViewProps)
                     <div className="p-3 bg-blue-500/10 rounded-xl">
                         <GitCompare className="w-8 h-8 text-blue-500" />
                     </div>
-                    MP Comparison Engine
+                    {LT.comparisonView.title}
                 </h1>
-                <p className="text-gray-400 ml-[4.5rem]">Analyze voting alignment and divergence between representatives</p>
+                <p className="text-gray-400 ml-[4.5rem]">{LT.comparisonView.subtitle}</p>
             </header>
 
             {/* Selector Row */}
@@ -169,7 +171,7 @@ const ComparisonView = ({ initialSelected = [null, null] }: ComparisonViewProps)
                     mps={mps.filter(m => m.id !== selected[1])}
                     selected={selected[0]}
                     onSelect={(v) => updateSelected(0, v)}
-                    placeholder="Select first MP..."
+                    placeholder={LT.comparisonView.selectFirst}
                 />
 
                 <div className="hidden md:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 bg-blue-500 rounded-full items-center justify-center z-10 shadow-lg shadow-blue-500/50 text-white font-bold text-xs ring-4 ring-[#0a0a0c]">
@@ -180,7 +182,7 @@ const ComparisonView = ({ initialSelected = [null, null] }: ComparisonViewProps)
                     mps={mps.filter(m => m.id !== selected[0])}
                     selected={selected[1]}
                     onSelect={(v) => updateSelected(1, v)}
-                    placeholder="Select second MP..."
+                    placeholder={LT.comparisonView.selectSecond}
                 />
             </div>
 
@@ -188,16 +190,16 @@ const ComparisonView = ({ initialSelected = [null, null] }: ComparisonViewProps)
             {loading && (
                 <Card className="p-20 flex flex-col items-center justify-center">
                     <div className="animate-spin w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full mb-6" />
-                    <span className="text-gray-400 animate-pulse">Running comparative analysis...</span>
+                    <span className="text-gray-400 animate-pulse">{LT.comparisonView.running}</span>
                 </Card>
             )}
 
             {/* Error State */}
             {error && (
-                <div className="p-4 border border-red-500/30 bg-red-500/10 rounded-xl flex items-center gap-3 text-red-400">
-                    <AlertTriangle className="w-5 h-5" />
-                    {error}
-                </div>
+                <ProblemDetailsNotice
+                    error={error}
+                    className="p-4 border border-red-500/30 bg-red-500/10 rounded-xl flex items-center gap-3 text-red-400"
+                />
             )}
 
             {/* Results */}
@@ -211,10 +213,10 @@ const ComparisonView = ({ initialSelected = [null, null] }: ComparisonViewProps)
                         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500 via-secondary to-green-500" />
                         <AlignmentScore
                             score={comparison.alignment_matrix[0][1]}
-                            label="Agreement Score"
+                                label={LT.comparisonView.scoreLabel}
                         />
                         <p className="text-sm text-gray-500 pb-8 max-w-md mx-auto">
-                            Based on shared voting sessions. A higher score indicates stronger political alignment.
+                            {LT.comparisonView.scoreBody}
                         </p>
                     </Card>
 
@@ -222,7 +224,7 @@ const ComparisonView = ({ initialSelected = [null, null] }: ComparisonViewProps)
                         <Card className="p-0 overflow-hidden">
                             <div className="p-6 border-b border-white/5 flex items-center gap-2">
                                 <TrendingUp className="w-5 h-5 text-purple-400" />
-                                <h3 className="font-semibold text-white">Recent Divergences</h3>
+                                <h3 className="font-semibold text-white">{LT.comparisonView.divergences}</h3>
                             </div>
 
                             <div className="divide-y divide-white/5">
@@ -245,7 +247,7 @@ const ComparisonView = ({ initialSelected = [null, null] }: ComparisonViewProps)
                                         </div>
                                         <div className="mt-4 pt-4 border-t border-white/5 flex justify-between items-center text-xs text-gray-500">
                                             <span>{vote.date}</span>
-                                            <Button variant="ghost" size="sm" onClick={() => window.location.hash = `#/votes/${vote.vote_id}`}>View Vote Details</Button>
+                                            <Button variant="ghost" size="sm" onClick={() => window.location.hash = `#/votes/${vote.vote_id}`}>{LT.comparisonView.viewVoteDetails}</Button>
                                         </div>
                                     </div>
                                 ))}
@@ -261,8 +263,8 @@ const ComparisonView = ({ initialSelected = [null, null] }: ComparisonViewProps)
                     <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mb-6">
                         <Users className="w-10 h-10 opacity-30" />
                     </div>
-                    <p className="text-lg font-medium text-gray-400">Ready to Compare</p>
-                    <p className="max-w-xs mx-auto mt-2">Select two representatives above to analyze their voting compatibility.</p>
+                    <p className="text-lg font-medium text-gray-400">{LT.comparisonView.readyTitle}</p>
+                    <p className="max-w-xs mx-auto mt-2">{LT.comparisonView.readyBody}</p>
                 </div>
             )}
         </motion.div>

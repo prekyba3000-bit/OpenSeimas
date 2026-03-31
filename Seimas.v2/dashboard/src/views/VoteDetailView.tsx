@@ -7,6 +7,7 @@ import { Button } from '../components/Button';
 import { VoteBreakdown } from '../components/VoteBreakdown';
 import { getPartyColor, getPartyShort } from '../utils/partyColors';
 import { cn } from '../components/ui/utils';
+import { ProblemDetailsNotice } from '../components/ProblemDetailsNotice';
 
 const getChoiceIcon = (choice: string) => {
     switch (choice.toLowerCase()) {
@@ -29,7 +30,7 @@ const getChoiceBg = (choice: string) => {
 const VoteDetailView = ({ voteId }: { voteId: string }) => {
     const [vote, setVote] = useState<VoteDetail | null>(null);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const [error, setError] = useState<unknown>(null);
     const [search, setSearch] = useState('');
     const [filterChoice, setFilterChoice] = useState<string | null>(null);
 
@@ -40,7 +41,7 @@ const VoteDetailView = ({ voteId }: { voteId: string }) => {
             .then(setVote)
             .catch(err => {
                 console.error('Failed to load vote details', err);
-                setError('Nepavyko užkrauti balsavimo duomenų.');
+                setError(err);
             })
             .finally(() => setLoading(false));
     }, [voteId]);
@@ -83,7 +84,8 @@ const VoteDetailView = ({ voteId }: { voteId: string }) => {
                     <ArrowLeft className="w-4 h-4" /> Grįžti
                 </Button>
                 <div className="p-4 border border-destructive/30 bg-destructive/10 rounded-xl flex items-center gap-3 text-destructive">
-                    <AlertTriangle className="w-5 h-5 shrink-0" /> {error}
+                    <AlertTriangle className="w-5 h-5 shrink-0" />
+                    <ProblemDetailsNotice error={error} className="text-sm" />
                 </div>
             </div>
         );

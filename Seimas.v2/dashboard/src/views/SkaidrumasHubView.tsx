@@ -22,8 +22,17 @@ import {
   BarChart, Bar, Cell, LineChart, Line, Legend,
 } from 'recharts';
 import {
-  api, DashboardStats, HeroesVillainsResponse, MpSummary, VoteSummary,
-  ChronoResponse, BenfordResponse, LoyaltyResponse, PhantomResponse, VoteGeoResponse,
+  api,
+  type AccountabilitySnapshot,
+  type BenfordResponse,
+  type ChronoResponse,
+  type DashboardStats,
+  type ForensicFlag,
+  type LoyaltyResponse,
+  type MpSummary,
+  type PhantomResponse,
+  type VoteGeoResponse,
+  type VoteSummary,
 } from '../services/api';
 
 type SourceStatus = {
@@ -48,10 +57,14 @@ const BENFORD_EXPECTED: Record<string, number> = {
 
 export default function SkaidrumasHubView() {
   const navigate = useNavigate();
+
+  const goToMpForensicFlag = (mpId: string, engine: ForensicFlag['engine']) => {
+    navigate(`/dashboard/mps/${mpId}?flag=${engine}`);
+  };
   const [stats, setStats] = React.useState<DashboardStats | null>(null);
   const [mps, setMps] = React.useState<MpSummary[]>([]);
   const [votes, setVotes] = React.useState<VoteSummary[]>([]);
-  const [accountability, setAccountability] = React.useState<HeroesVillainsResponse | null>(null);
+  const [accountability, setAccountability] = React.useState<AccountabilitySnapshot | null>(null);
   const [chrono, setChrono] = React.useState<ChronoResponse | null>(null);
   const [benford, setBenford] = React.useState<BenfordResponse | null>(null);
   const [loyalty, setLoyalty] = React.useState<LoyaltyResponse | null>(null);
@@ -65,7 +78,7 @@ export default function SkaidrumasHubView() {
       api.getStats(),
       api.getMps(),
       api.getVotes(8, 0),
-      api.getHeroesVillains(10),
+      api.getAccountabilitySnapshot(10),
       api.getChronoForensics(30).catch(() => ({ items: [], clusters: [] }) as ChronoResponse),
       api.getBenfordResults(20).catch(() => ({ items: [] }) as BenfordResponse),
       api.getLoyaltyGraph().catch(() => ({ alignment: [], total_mps: 0 }) as LoyaltyResponse),
@@ -168,7 +181,7 @@ export default function SkaidrumasHubView() {
             Palyginimas
           </NavLink>
           <NavLink
-            to="/dashboard/leaderboard"
+            to="/dashboard/stebejimas"
             className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-2 text-sm hover:bg-muted/50"
           >
             <Trophy className="w-4 h-4" />
@@ -269,16 +282,20 @@ export default function SkaidrumasHubView() {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <ShieldAlert className="w-4 h-4 text-emerald-400" />
-              <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Top 10 herojai</h2>
+              <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Stebėsenos suvestinė (10)</h2>
             </div>
             <span className="text-xs text-muted-foreground">7 d.</span>
           </div>
           <div className="space-y-2">
             {(accountability?.heroes ?? []).map((item) => (
               <button
-                key={`hero-${item.id}`}
-                onClick={() => navigate(`/dashboard/mps/${item.id}`)}
-                className="w-full text-left rounded-md border border-border p-3 hover:bg-muted/30"
+                key={`highlight-${item.id}`}
+                type="button"
+                onClick={() => {
+                  // TODO(v4): refine to a more specific engine once snapshot rows carry engine data
+                  goToMpForensicFlag(item.id, 'base_risk');
+                }}
+                className="w-full text-left rounded-md border border-border p-3 hover:bg-muted/30 transition-colors cursor-pointer"
               >
                 <div className="flex items-center justify-between">
                   <div className="text-sm font-semibold">#{item.rank} {item.name}</div>
@@ -286,7 +303,7 @@ export default function SkaidrumasHubView() {
                 </div>
                 <div className="text-xs text-muted-foreground mt-1">{item.party || 'Nežinoma'} · {item.attendance}% lankomumas</div>
                 <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
-                  {item.hero_evidence.slice(0, 3).map((evidence) => (
+                  {item.evidence.slice(0, 3).map((evidence) => (
                     <li key={`${item.id}-${evidence}`}>• {evidence}</li>
                   ))}
                 </ul>
@@ -307,8 +324,12 @@ export default function SkaidrumasHubView() {
             {(accountability?.watchlist ?? []).map((item) => (
               <button
                 key={`watch-${item.id}`}
-                onClick={() => navigate(`/dashboard/mps/${item.id}`)}
-                className="w-full text-left rounded-md border border-border p-3 hover:bg-muted/30"
+                type="button"
+                onClick={() => {
+                  // TODO(v4): refine to a more specific engine once snapshot rows carry engine data
+                  goToMpForensicFlag(item.id, 'base_risk');
+                }}
+                className="w-full text-left rounded-md border border-border p-3 hover:bg-muted/30 transition-colors cursor-pointer"
               >
                 <div className="flex items-center justify-between">
                   <div className="text-sm font-semibold">#{item.rank} {item.name}</div>
@@ -398,6 +419,7 @@ export default function SkaidrumasHubView() {
               </ResponsiveContainer>
             </div>
 
+            {/* TODO(v4): chrono items have no mp_id — add profile deep link + ?flag=chrono when API exposes MP on each item */}
             <div className="space-y-2 max-h-64 overflow-y-auto">
               {chrono!.items
                 .filter((i) => i.zscore !== null && i.zscore < -2)
@@ -482,9 +504,11 @@ export default function SkaidrumasHubView() {
 
             <div className="space-y-2 max-h-64 overflow-y-auto">
               {benford!.items.slice(0, 10).map((item) => (
-                <div
+                <button
                   key={item.mp_id}
-                  className={`rounded-md border p-3 ${
+                  type="button"
+                  onClick={() => goToMpForensicFlag(item.mp_id, 'benford')}
+                  className={`w-full text-left rounded-md border p-3 cursor-pointer hover:bg-muted/50 transition-colors ${
                     item.conformity === 'non-conforming'
                       ? 'border-rose-500/30 bg-rose-500/5'
                       : item.conformity === 'marginal'
@@ -510,7 +534,7 @@ export default function SkaidrumasHubView() {
                       Pažymėti: {item.flagged_fields.map((f) => f.field).join(', ')}
                     </div>
                   )}
-                </div>
+                </button>
               ))}
             </div>
           </div>
@@ -567,7 +591,12 @@ export default function SkaidrumasHubView() {
 
             <div className="space-y-2 max-h-72 overflow-y-auto">
               {loyalty!.alignment.slice(0, 15).map((mp) => (
-                <div key={mp.mp_id} className="rounded-md border border-border p-3">
+                <button
+                  key={mp.mp_id}
+                  type="button"
+                  onClick={() => goToMpForensicFlag(mp.mp_id, 'loyalty')}
+                  className="w-full text-left rounded-md border border-border p-3 cursor-pointer hover:bg-muted/50 transition-colors"
+                >
                   <div className="flex items-center justify-between">
                     <div>
                       <span className="text-sm font-semibold">{mp.name}</span>
@@ -581,7 +610,7 @@ export default function SkaidrumasHubView() {
                       {mp.avg_alignment_30d}%
                     </span>
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           </div>
@@ -603,9 +632,11 @@ export default function SkaidrumasHubView() {
         {(phantom?.items?.length ?? 0) > 0 ? (
           <div className="space-y-3">
             {phantom!.items.slice(0, 10).map((link, idx) => (
-              <div
+              <button
                 key={idx}
-                className={`rounded-md border p-4 ${
+                type="button"
+                onClick={() => goToMpForensicFlag(link.mp_id, 'phantom')}
+                className={`w-full text-left rounded-md border p-4 cursor-pointer hover:bg-muted/50 transition-colors ${
                   link.procurement_hit
                     ? 'border-rose-500/40 bg-rose-500/5'
                     : link.debtor_hit
@@ -637,7 +668,7 @@ export default function SkaidrumasHubView() {
                   {link.procurement_hit && <span className="text-rose-400 font-semibold">Viešasis pirkimas</span>}
                   {link.debtor_hit && <span className="text-amber-400 font-semibold">Mokesčių skolininkas</span>}
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         ) : (
@@ -691,6 +722,7 @@ export default function SkaidrumasHubView() {
               </ResponsiveContainer>
             </div>
 
+            {/* TODO(v4): vote geometry rows are per vote, not MP — add ?flag=vote_geometry deep link when items include mp_id or a vote→MP mapping */}
             <div className="space-y-2 max-h-64 overflow-y-auto">
               {voteGeo!.items.slice(0, 10).map((item) => (
                 <div key={item.vote_id} className="rounded-md border border-rose-500/30 bg-rose-500/5 p-3">

@@ -2,5 +2,12 @@
   "workspace_name": "Seimas.v2",
   "description": "Lithuanian Parliament transparency platform with forensic analysis engines.",
   "tools_dir": ".openplanter/tools",
-  "prompts_dir": ".openplanter/prompts"
+  "prompts_dir": ".openplanter/prompts",
+  "write_policies": [
+    {
+      "path_glob": "dashboard/public/wikis/*.md",
+      "validator": "uuid_frontmatter",
+      "description": "Wiki files must have YAML frontmatter with mp_id matching the filename UUID. Prevents the March 27 identity-confusion bug where Roma Janušonienė's UUID file contained Simonas Gentvilas's wiki."
+    }
+  ]
 }

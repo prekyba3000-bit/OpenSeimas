@@ -1,3 +1,4 @@
+// ORPHANED(v4): not imported by any production route. Safe to delete in hygiene pass.
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';

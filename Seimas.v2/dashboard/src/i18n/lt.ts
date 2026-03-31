@@ -1,0 +1,65 @@
+// TODO(v4): move remaining Skaidrumas Hub inline strings here when the hub is fully internationalised.
+export const LT = {
+  voteChoices: {
+    for: "Už",
+    against: "Prieš",
+    abstain: "Susilaikė",
+    absent: "Nedalyvavo",
+  },
+  errors: {
+    generic: "Įvyko klaida. Bandykite dar kartą.",
+    tooManyRequests: "Per daug užklausų. Pabandykite po minutės.",
+    validation: "Užklausa neteisinga. Patikrinkite įvestus duomenis.",
+    timeout: "Serveris neatsakė laiku. Bandykite dar kartą.",
+    network: "Nepavyko prisijungti prie serverio. Patikrinkite interneto ryšį.",
+    profileLoad: "Nepavyko užkrauti Seimo nario profilio.",
+    leaderboardLoad: "Nepavyko užkrauti stebėsenos lentelės.",
+    searchUnavailable: "Serverio paieška laikinai nepasiekiama.",
+    boundaryTitle: "Įvyko netikėta klaida",
+    boundaryBody: "Sąsaja laikinai sustabdyta dėl klaidos. Galite bandyti iš naujo.",
+    boundaryRetry: "Bandyti iš naujo",
+    wikiUnavailable: "Wiki šiuo metu nepasiekiama. Rodoma paskutinė talpyklos versija, jei ji yra.",
+  },
+  wiki: {
+    loading: "Wiki kraunama",
+    missingTitle: "Paskelbto wiki rinkinio nėra",
+    missingBody:
+      "Rodomi rodikliai ir forensinė suvestinė vis tiek remiasi duomenų bazės ir API signalais. Jei byla bus sugeneruota ir įdėta į /wikis/, ji automatiškai atsiras čia.",
+    methodologyLink: "Kaip skaičiuojami rodikliai",
+    reportTitle: "Wiki suvestinė (biografija)",
+    identityMismatchTitle: "Tapatybės nesutapimas",
+    identityMismatchBody:
+      "Šio wiki turinio tapatybė neatitinka MP profilio. Turinys nerodomas saugumo sumetimais.",
+    staleBanner: (hoursAgo: number) =>
+      `Įspėjimas: ši forensinė ataskaita sugeneruota prieš ${hoursAgo} val. ir gali būti pasenusi.`,
+  },
+  votesView: {
+    title: "Parlamento balsavimai",
+    subtitle: "Naršykite istorinius balsavimo įrašus",
+    results: "rezultatai",
+    searchPlaceholder: "Ieškoti balsavimo pagal pavadinimą...",
+    loadFailed: "Nepavyko užkrauti balsavimo įrašų.",
+    syncing: "Sinchronizuojami balsavimo įrašai...",
+    noVotes: "Nerasta balsavimų pagal",
+    clearSearch: "Išvalyti paiešką",
+    loadMore: "Įkelti daugiau balsavimų",
+    loadingMore: "Kraunama...",
+  },
+  comparisonView: {
+    title: "Narių palyginimas",
+    subtitle: "Analizuokite balsavimo suderinamumą ir skirtumus tarp atstovų",
+    searchMp: "Ieškoti Seimo nario...",
+    noResults: "Rezultatų nėra",
+    selectFirst: "Pasirinkite pirmą narį...",
+    selectSecond: "Pasirinkite antrą narį...",
+    running: "Vykdoma lyginamoji analizė...",
+    failed: "Nepavyko palyginti pasirinktų narių.",
+    scoreLabel: "Suderinamumo balas",
+    scoreBody:
+      "Skaičiuojama pagal bendrus balsavimo posėdžius. Didesnis balas reiškia stipresnį politinį suderinamumą.",
+    divergences: "Naujausi skirtumai",
+    viewVoteDetails: "Peržiūrėti balsavimo detales",
+    readyTitle: "Pasiruošę palyginti",
+    readyBody: "Pasirinkite du atstovus viršuje, kad analizuotumėte jų balsavimo suderinamumą.",
+  },
+} as const;
