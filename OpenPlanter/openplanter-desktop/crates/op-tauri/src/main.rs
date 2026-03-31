@@ -15,6 +15,7 @@ fn main() {
             commands::agent::solve,
             commands::agent::cancel,
             commands::agent::debug_log,
+            commands::agent::start_investigation,
             commands::config::get_config,
             commands::config::update_config,
             commands::config::list_models,

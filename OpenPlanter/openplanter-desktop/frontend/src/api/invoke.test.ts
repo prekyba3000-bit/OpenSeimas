@@ -19,6 +19,7 @@ import {
   deleteSession,
   getGraphData,
   debugLog,
+  startInvestigation,
 } from "./invoke";
 
 describe("invoke wrappers", () => {
@@ -193,5 +194,15 @@ describe("invoke wrappers", () => {
     });
     const history = await getSessionHistory("session-1");
     expect(history).toEqual([]);
+  });
+
+  it("startInvestigation calls invoke with caseId and query", async () => {
+    __setHandler("start_investigation", ({ caseId, query }: any) => {
+      expect(caseId).toBe("case-1");
+      expect(query).toBe("why");
+      return { status: "started", runId: "run-uuid" };
+    });
+    const res = await startInvestigation("case-1", "why");
+    expect(res).toEqual({ status: "started", runId: "run-uuid" });
   });
 });

@@ -1,10 +1,12 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Calendar, ChevronRight, AlertTriangle, Vote, Clock, BarChart3 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router';
 import { api, VoteSummary } from '../services/api';
 import { Card } from '../components/Card';
 import { cn } from '../components/ui/utils';
+import { ProblemDetailsNotice } from '../components/ProblemDetailsNotice';
 
 interface SessionInfo {
   id: number;
@@ -24,17 +26,15 @@ const SESSIONS: SessionInfo[] = [
 
 const SessionsView = () => {
   const navigate = useNavigate();
-  const [votes, setVotes] = useState<VoteSummary[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    data: votes = [],
+    isLoading: loading,
+    error,
+  } = useQuery({
+    queryKey: ['votes', 'sessions', 2600],
+    queryFn: () => api.getVotes(2600, 0),
+  });
   const [expandedSession, setExpandedSession] = useState<number | null>(141);
-
-  useEffect(() => {
-    api.getVotes(2600, 0)
-      .then(setVotes)
-      .catch(() => setError('Nepavyko užkrauti balsavimų duomenų.'))
-      .finally(() => setLoading(false));
-  }, []);
 
   const sessionVotes = useMemo(() => {
     const grouped: Record<number, { votes: VoteSummary[]; byDate: Record<string, VoteSummary[]> }> = {};
@@ -68,7 +68,7 @@ const SessionsView = () => {
     return (
       <div className="p-6 border rounded-xl flex items-center gap-3 border-destructive bg-destructive/10 text-destructive">
         <AlertTriangle className="w-5 h-5 shrink-0" />
-        {error}
+        <ProblemDetailsNotice error={error} className="text-sm border-0 bg-transparent p-0 text-destructive" />
       </div>
     );
   }

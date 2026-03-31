@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router';
 import { ArrowLeft } from 'lucide-react';
 import { Card } from '../components/Card';
@@ -8,7 +9,7 @@ import { WikiPanel } from '../components/WikiPanel';
 import { IntegrityBar } from '../components/IntegrityBar';
 import { ScoreTooltip } from '../components/ScoreTooltip';
 import { ApiError, api, type ForensicFlag, MpProfile, MpVoteRecord } from '../services/api';
-import { toast } from 'sonner';
+import { toastErrorDeduped } from '../utils/toastDeduped';
 import { ProblemDetailsNotice } from '../components/ProblemDetailsNotice';
 import { LT } from '../i18n/lt';
 import { SITE_NAME } from '../utils/routeTitles';
@@ -229,55 +230,46 @@ const MpProfileView = ({ mpId }: { mpId: string }) => {
   const [searchParams] = useSearchParams();
   const highlightEngine = parseHighlightFlag(searchParams.get('flag'));
 
-  const [profile, setProfile] = useState<MpProfile | null>(null);
-  const [votes, setVotes] = useState<MpVoteRecord[]>([]);
-  const [votesLoading, setVotesLoading] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [errorDetails, setErrorDetails] = useState<unknown>(null);
   const [slowNetwork, setSlowNetwork] = useState(false);
 
-  useEffect(() => {
-    if (!mpId) return;
+  const profileQuery = useQuery({
+    queryKey: ['mps', mpId, 'profile'],
+    queryFn: () => api.getMpProfile(mpId),
+    enabled: Boolean(mpId),
+  });
 
-    setLoading(true);
-    setError(null);
-    setErrorDetails(null);
-    setSlowNetwork(false);
-    setVotes([]);
+  const votesQuery = useQuery({
+    queryKey: ['mps', mpId, 'votes'],
+    queryFn: () => api.getMpVotes(mpId, 40),
+    enabled: Boolean(mpId) && profileQuery.isSuccess,
+  });
+
+  const profile = profileQuery.data ?? null;
+  const votes = votesQuery.data ?? [];
+  const votesLoading = votesQuery.isFetching;
+  const loading = profileQuery.isPending;
+  const error =
+    profileQuery.isError && profileQuery.error instanceof ApiError && profileQuery.error.status === 404
+      ? 'MP not found'
+      : profileQuery.isError
+        ? 'Failed to load mp profile'
+        : null;
+  const errorDetails = profileQuery.isError && error !== 'MP not found' ? profileQuery.error : null;
+
+  useEffect(() => {
+    if (!profileQuery.isFetching) {
+      setSlowNetwork(false);
+      return;
+    }
     const slowTimer = window.setTimeout(() => setSlowNetwork(true), 1200);
-
-    api
-      .getMpProfile(mpId)
-      .then((payload: MpProfile) => {
-        setProfile(payload);
-        setLoading(false);
-      })
-      .catch((err: Error) => {
-        setProfile(null);
-        if (err instanceof ApiError && err.status === 404) {
-          setError('MP not found');
-        } else {
-          setError('Failed to load mp profile');
-          setErrorDetails(err);
-          toast.error(LT.errors.profileLoad);
-        }
-        setLoading(false);
-      })
-      .finally(() => {
-        window.clearTimeout(slowTimer);
-      });
-  }, [mpId]);
+    return () => window.clearTimeout(slowTimer);
+  }, [profileQuery.isFetching]);
 
   useEffect(() => {
-    if (!mpId || !profile) return;
-    setVotesLoading(true);
-    api
-      .getMpVotes(mpId, 40)
-      .then(setVotes)
-      .catch(() => setVotes([]))
-      .finally(() => setVotesLoading(false));
-  }, [mpId, profile]);
+    if (!profileQuery.isError || !profileQuery.error) return;
+    if (profileQuery.error instanceof ApiError && profileQuery.error.status === 404) return;
+    toastErrorDeduped(`mp:profile:${mpId}`, LT.errors.profileLoad);
+  }, [mpId, profileQuery.isError, profileQuery.error]);
 
   useEffect(() => {
     if (profile?.mp?.name) {

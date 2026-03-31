@@ -1,0 +1,17 @@
+{
+  "name": "open-seimas-monorepo",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "Seimas.v2/dashboard"
+  ],
+  "scripts": {
+    "dashboard:dev": "npm run dev -w dashboard",
+    "dashboard:build": "npm run build -w dashboard",
+    "dashboard:test": "npm run test -w dashboard",
+    "dashboard:lint": "npm run lint -w dashboard"
+  },
+  "devDependencies": {
+    "jsdom": "^25.0.1"
+  }
+}

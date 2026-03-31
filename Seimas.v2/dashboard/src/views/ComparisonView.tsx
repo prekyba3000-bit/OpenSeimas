@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { Users, GitCompare, TrendingUp, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { api, MpSummary } from '../services/api';
@@ -117,30 +118,35 @@ interface ComparisonViewProps {
 }
 
 const ComparisonView = ({ initialSelected = [null, null] }: ComparisonViewProps) => {
-    const [mps, setMps] = useState<MpSummary[]>([]);
     const [selected, setSelected] = useState<(string | null)[]>(initialSelected);
-    const [comparison, setComparison] = useState<any>(null);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<unknown>(null);
 
-    useEffect(() => {
-        api.getMps()
-            .then(data => setMps(data))
-            .catch(err => console.error('Failed to load MPs', err));
-    }, []);
+    const { data: mps = [] } = useQuery({
+        queryKey: ['mps', 'roster'],
+        queryFn: () => api.getMps(),
+    });
 
-    useEffect(() => {
-        if (selected[0] && selected[1] && selected[0] !== selected[1]) {
-            setLoading(true);
-            setError(null);
-            api.compareMps([selected[0], selected[1]])
-                .then(data => setComparison(data))
-                .catch(err => setError(err))
-                .finally(() => setLoading(false));
-        } else {
-            setComparison(null);
-        }
-    }, [selected]);
+    const compareEnabled =
+        Boolean(selected[0] && selected[1] && selected[0] !== selected[1]);
+    const compareIds = useMemo(
+        () => (compareEnabled ? ([selected[0], selected[1]] as [string, string]) : null),
+        [compareEnabled, selected],
+    );
+
+    const {
+        data: comparison = null,
+        isFetching,
+        isPlaceholderData,
+        error,
+    } = useQuery({
+        queryKey: compareIds
+            ? (['mps', 'compare', compareIds[0], compareIds[1]] as const)
+            : (['mps', 'compare', 'idle'] as const),
+        queryFn: () => api.compareMps([compareIds![0], compareIds![1]]),
+        enabled: compareEnabled,
+        placeholderData: keepPreviousData,
+    });
+
+    const loading = isFetching && !isPlaceholderData;
 
     const updateSelected = (index: number, value: string) => {
         const newSelected = [...selected];
@@ -186,8 +192,8 @@ const ComparisonView = ({ initialSelected = [null, null] }: ComparisonViewProps)
                 />
             </div>
 
-            {/* Loading State */}
-            {loading && (
+            {/* Loading State — only when no cached row yet (keepPreviousData keeps prior pair visible while refetching) */}
+            {loading && !comparison && (
                 <Card className="p-20 flex flex-col items-center justify-center">
                     <div className="animate-spin w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full mb-6" />
                     <span className="text-gray-400 animate-pulse">{LT.comparisonView.running}</span>
@@ -203,12 +209,23 @@ const ComparisonView = ({ initialSelected = [null, null] }: ComparisonViewProps)
             )}
 
             {/* Results */}
-            {comparison && !loading && (
+            {comparison && (
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="flex flex-col gap-8"
+                    aria-busy={comparisonStale}
+                    className={`flex flex-col gap-8 ${comparisonStale ? 'ui-state-updating' : ''}`}
                 >
+                    {comparisonStale && (
+                        <div aria-live="polite" aria-atomic="true" className="text-center text-xs text-gray-500 -mb-2">
+                            {LT.comparisonView.updating}
+                        </div>
+                    )}
+                    {completeAnnouncement && (
+                        <div role="status" aria-live="assertive" className="sr-only">
+                            {completeAnnouncement}
+                        </div>
+                    )}
                     <Card className="text-center overflow-hidden relative">
                         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500 via-secondary to-green-500" />
                         <AlignmentScore
@@ -258,7 +275,7 @@ const ComparisonView = ({ initialSelected = [null, null] }: ComparisonViewProps)
             )}
 
             {/* Empty State */}
-            {!comparison && !loading && !error && (
+            {!comparison && !isFetching && !error && (
                 <div className="p-20 text-center text-gray-500 flex flex-col items-center">
                     <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mb-6">
                         <Users className="w-10 h-10 opacity-30" />

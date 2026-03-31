@@ -1,4 +1,5 @@
 import React from 'react';
+import { useQueries } from '@tanstack/react-query';
 import { useNavigate, NavLink } from 'react-router';
 import {
   AlertTriangle,
@@ -34,6 +35,14 @@ import {
   type VoteGeoResponse,
   type VoteSummary,
 } from '../services/api';
+import { ProblemDetailsNotice } from '../components/ProblemDetailsNotice';
+import { Button } from '../components/Button';
+
+const EMPTY_CHRONO: ChronoResponse = { items: [], clusters: [] };
+const EMPTY_BENFORD: BenfordResponse = { items: [] };
+const EMPTY_LOYALTY: LoyaltyResponse = { alignment: [], total_mps: 0 };
+const EMPTY_PHANTOM: PhantomResponse = { items: [] };
+const EMPTY_VOTE_GEO: VoteGeoResponse = { items: [], total_analyzed: 0 };
 
 type SourceStatus = {
   name: string;
@@ -61,43 +70,89 @@ export default function SkaidrumasHubView() {
   const goToMpForensicFlag = (mpId: string, engine: ForensicFlag['engine']) => {
     navigate(`/dashboard/mps/${mpId}?flag=${engine}`);
   };
-  const [stats, setStats] = React.useState<DashboardStats | null>(null);
-  const [mps, setMps] = React.useState<MpSummary[]>([]);
-  const [votes, setVotes] = React.useState<VoteSummary[]>([]);
-  const [accountability, setAccountability] = React.useState<AccountabilitySnapshot | null>(null);
-  const [chrono, setChrono] = React.useState<ChronoResponse | null>(null);
-  const [benford, setBenford] = React.useState<BenfordResponse | null>(null);
-  const [loyalty, setLoyalty] = React.useState<LoyaltyResponse | null>(null);
-  const [phantom, setPhantom] = React.useState<PhantomResponse | null>(null);
-  const [voteGeo, setVoteGeo] = React.useState<VoteGeoResponse | null>(null);
   const [query, setQuery] = React.useState('');
-  const [loading, setLoading] = React.useState(true);
 
-  React.useEffect(() => {
-    Promise.all([
-      api.getStats(),
-      api.getMps(),
-      api.getVotes(8, 0),
-      api.getAccountabilitySnapshot(10),
-      api.getChronoForensics(30).catch(() => ({ items: [], clusters: [] }) as ChronoResponse),
-      api.getBenfordResults(20).catch(() => ({ items: [] }) as BenfordResponse),
-      api.getLoyaltyGraph().catch(() => ({ alignment: [], total_mps: 0 }) as LoyaltyResponse),
-      api.getPhantomNetwork(20).catch(() => ({ items: [] }) as PhantomResponse),
-      api.getVoteGeometry(15).catch(() => ({ items: [], total_analyzed: 0 }) as VoteGeoResponse),
-    ])
-      .then(([s, m, v, hv, ch, bf, ly, ph, vg]) => {
-        setStats(s);
-        setMps(m);
-        setVotes(v);
-        setAccountability(hv);
-        setChrono(ch);
-        setBenford(bf);
-        setLoyalty(ly);
-        setPhantom(ph);
-        setVoteGeo(vg);
-      })
-      .finally(() => setLoading(false));
-  }, []);
+  const hubQueries = useQueries({
+    queries: [
+      { queryKey: ['skaidrumas', 'stats'] as const, queryFn: () => api.getStats() },
+      { queryKey: ['skaidrumas', 'mps'] as const, queryFn: () => api.getMps() },
+      { queryKey: ['skaidrumas', 'votesPreview'] as const, queryFn: () => api.getVotes(8, 0) },
+      { queryKey: ['skaidrumas', 'accountability'] as const, queryFn: () => api.getAccountabilitySnapshot(10) },
+      {
+        queryKey: ['skaidrumas', 'chrono'] as const,
+        queryFn: async () => {
+          try {
+            return await api.getChronoForensics(30);
+          } catch {
+            return EMPTY_CHRONO;
+          }
+        },
+        retry: false,
+      },
+      {
+        queryKey: ['skaidrumas', 'benford'] as const,
+        queryFn: async () => {
+          try {
+            return await api.getBenfordResults(20);
+          } catch {
+            return EMPTY_BENFORD;
+          }
+        },
+        retry: false,
+      },
+      {
+        queryKey: ['skaidrumas', 'loyalty'] as const,
+        queryFn: async () => {
+          try {
+            return await api.getLoyaltyGraph();
+          } catch {
+            return EMPTY_LOYALTY;
+          }
+        },
+        retry: false,
+      },
+      {
+        queryKey: ['skaidrumas', 'phantom'] as const,
+        queryFn: async () => {
+          try {
+            return await api.getPhantomNetwork(20);
+          } catch {
+            return EMPTY_PHANTOM;
+          }
+        },
+        retry: false,
+      },
+      {
+        queryKey: ['skaidrumas', 'voteGeo'] as const,
+        queryFn: async () => {
+          try {
+            return await api.getVoteGeometry(15);
+          } catch {
+            return EMPTY_VOTE_GEO;
+          }
+        },
+        retry: false,
+      },
+    ],
+  });
+
+  const [statsQ, mpsQ, votesQ, accountabilityQ, chronoQ, benfordQ, loyaltyQ, phantomQ, voteGeoQ] = hubQueries;
+
+  const loading = hubQueries.some((q) => q.isPending);
+  const coreError = [statsQ, mpsQ, votesQ, accountabilityQ].find((q) => q.isError)?.error;
+  const refetchHub = () => {
+    hubQueries.forEach((q) => void q.refetch());
+  };
+
+  const stats = statsQ.data ?? null;
+  const mps = React.useMemo(() => mpsQ.data ?? [], [mpsQ.data]);
+  const votes = React.useMemo(() => votesQ.data ?? [], [votesQ.data]);
+  const accountability = accountabilityQ.data ?? null;
+  const chrono = chronoQ.data ?? null;
+  const benford = benfordQ.data ?? null;
+  const loyalty = loyaltyQ.data ?? null;
+  const phantom = phantomQ.data ?? null;
+  const voteGeo = voteGeoQ.data ?? null;
 
   const filteredMps = React.useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -125,6 +180,17 @@ export default function SkaidrumasHubView() {
 
   if (loading) {
     return <div className="py-16 text-center text-muted-foreground">Kraunama „Skaidrumas Hub“...</div>;
+  }
+
+  if (coreError) {
+    return (
+      <div className="space-y-4 py-8 max-w-lg mx-auto">
+        <ProblemDetailsNotice error={coreError} />
+        <Button variant="secondary" type="button" onClick={() => refetchHub()}>
+          Bandyti dar kartą
+        </Button>
+      </div>
+    );
   }
 
   return (

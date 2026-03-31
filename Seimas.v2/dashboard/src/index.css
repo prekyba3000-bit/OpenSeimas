@@ -8,6 +8,10 @@
   --font-size: 16px;
   --radius: 0.625rem;
 
+  /* Fetch / stale UI (shared rhythm for web + future desktop) */
+  --state-updating-opacity: 0.9;
+  --transition-state-snappy: opacity 200ms ease-in-out;
+
   /* Figma shadcn theme variables (HSL) */
   --background: 222.2 84% 4.9%;
   --foreground: 210 40% 98%;
@@ -177,6 +181,12 @@
 /* Snapping Transitions */
 .ease-snap {
   transition-timing-function: var(--ease-snap);
+}
+
+/* Stale / in-flight data (comparison, future shared surfaces) */
+.ui-state-updating {
+  opacity: var(--state-updating-opacity);
+  transition: var(--transition-state-snappy);
 }
 
 /* ============================================

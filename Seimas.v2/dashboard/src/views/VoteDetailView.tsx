@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, ExternalLink, ThumbsUp, ThumbsDown, Minus, UserX, Search, PieChart, Calendar, AlertTriangle, BarChart3 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { api, VoteDetail } from '../services/api';
@@ -28,23 +29,17 @@ const getChoiceBg = (choice: string) => {
 };
 
 const VoteDetailView = ({ voteId }: { voteId: string }) => {
-    const [vote, setVote] = useState<VoteDetail | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<unknown>(null);
+    const {
+        data: vote = null,
+        isLoading: loading,
+        error,
+    } = useQuery({
+        queryKey: ['votes', 'detail', voteId],
+        queryFn: () => api.getVote(voteId),
+        enabled: Boolean(voteId),
+    });
     const [search, setSearch] = useState('');
     const [filterChoice, setFilterChoice] = useState<string | null>(null);
-
-    useEffect(() => {
-        setLoading(true);
-        setError(null);
-        api.getVote(voteId)
-            .then(setVote)
-            .catch(err => {
-                console.error('Failed to load vote details', err);
-                setError(err);
-            })
-            .finally(() => setLoading(false));
-    }, [voteId]);
 
     const filteredVotes = useMemo(() => {
         if (!vote) return [];

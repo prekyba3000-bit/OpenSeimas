@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Users, Shield, AlertTriangle, TrendingUp, ChevronRight } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router';
@@ -6,6 +7,7 @@ import { api, MpSummary } from '../services/api';
 import { Card } from '../components/Card';
 import { getPartyMeta, PartyMeta } from '../utils/partyColors';
 import { cn } from '../components/ui/utils';
+import { ProblemDetailsNotice } from '../components/ProblemDetailsNotice';
 
 interface FactionData {
   name: string;
@@ -17,17 +19,15 @@ interface FactionData {
 
 const FactionsView = () => {
   const navigate = useNavigate();
-  const [mps, setMps] = useState<MpSummary[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    data: mps = [],
+    isLoading: loading,
+    error,
+  } = useQuery({
+    queryKey: ['mps', 'roster'],
+    queryFn: () => api.getMps(),
+  });
   const [expandedFaction, setExpandedFaction] = useState<string | null>(null);
-
-  useEffect(() => {
-    api.getMps()
-      .then(setMps)
-      .catch(() => setError('Nepavyko užkrauti duomenų.'))
-      .finally(() => setLoading(false));
-  }, []);
 
   const factions = useMemo<FactionData[]>(() => {
     const groups: Record<string, MpSummary[]> = {};
@@ -62,7 +62,7 @@ const FactionsView = () => {
     return (
       <div className="p-6 border rounded-xl flex items-center gap-3 border-destructive bg-destructive/10 text-destructive">
         <AlertTriangle className="w-5 h-5 shrink-0" />
-        {error}
+        <ProblemDetailsNotice error={error} className="text-sm border-0 bg-transparent p-0 text-destructive" />
       </div>
     );
   }

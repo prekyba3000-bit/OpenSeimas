@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Users, Activity, Shield, AlertTriangle, FileText, Vote, TrendingUp, Calendar } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router';
 import { api, DashboardStats, ActivityItem as ActivityItemType, MpSummary, VoteSummary } from '../services/api';
+import { ProblemDetailsNotice } from '../components/ProblemDetailsNotice';
 import { StatCard } from '../components/StatCard';
 import { Card } from '../components/Card';
 import { AbsenteeismCard } from '../components/AbsenteeismCard';
@@ -13,32 +15,31 @@ import { CornerAccents } from '../components/CornerAccents';
 
 export const DashboardView = () => {
     const navigate = useNavigate();
-    const [stats, setStats] = useState<DashboardStats | null>(null);
-    const [activity, setActivity] = useState<ActivityItemType[]>([]);
-    const [mps, setMps] = useState<MpSummary[]>([]);
-    const [votes, setVotes] = useState<VoteSummary[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        Promise.all([
-            api.getStats(),
-            api.getActivity(),
-            api.getMps(),
-            api.getVotes(12, 0),
-        ])
-            .then(([s, a, m, v]) => {
-                setStats(s);
-                setActivity(a);
-                setMps(m);
-                setVotes(v);
-            })
-            .catch(err => {
-                console.error('Dashboard fetch failed', err);
-                setError('Nepavyko užkrauti duomenų. Serveris gali būti paleidžiamas — bandykite dar kartą.');
-            })
-            .finally(() => setLoading(false));
-    }, []);
+    const statsQ = useQuery({
+        queryKey: ['dashboard', 'stats'],
+        queryFn: () => api.getStats(),
+    });
+    const activityQ = useQuery({
+        queryKey: ['dashboard', 'activity'],
+        queryFn: () => api.getActivity(),
+    });
+    const mpsQ = useQuery({
+        queryKey: ['mps', 'roster'],
+        queryFn: () => api.getMps(),
+    });
+    const votesQ = useQuery({
+        queryKey: ['dashboard', 'votesPreview'],
+        queryFn: () => api.getVotes(12, 0),
+    });
+
+    const loading = statsQ.isLoading || activityQ.isLoading || mpsQ.isLoading || votesQ.isLoading;
+    const error = statsQ.error ?? activityQ.error ?? mpsQ.error ?? votesQ.error;
+
+    const stats: DashboardStats | null = statsQ.data ?? null;
+    const activity: ActivityItemType[] = activityQ.data ?? [];
+    const mps: MpSummary[] = mpsQ.data ?? [];
+    const votes: VoteSummary[] = votesQ.data ?? [];
 
     if (loading) {
         return (
@@ -53,7 +54,7 @@ export const DashboardView = () => {
         return (
             <div className="p-6 border rounded-xl flex items-center gap-3 border-destructive bg-destructive/10 text-destructive">
                 <AlertTriangle className="w-5 h-5 shrink-0" />
-                {error}
+                <ProblemDetailsNotice error={error} className="text-sm border-0 bg-transparent p-0 text-destructive" />
             </div>
         );
     }

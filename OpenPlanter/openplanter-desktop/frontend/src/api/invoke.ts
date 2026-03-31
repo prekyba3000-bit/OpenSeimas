@@ -8,6 +8,7 @@ import type {
   PersistentSettings,
   ReplayEntry,
   SessionInfo,
+  StartInvestigationResponse,
 } from "./types";
 
 export async function solve(objective: string, sessionId: string): Promise<void> {
@@ -67,4 +68,12 @@ export async function readWikiFile(path: string): Promise<string> {
 
 export async function debugLog(msg: string): Promise<void> {
   return invoke("debug_log", { msg });
+}
+
+/** Thin vertical slice: dummy stream + phase events (see ADR 0005). */
+export async function startInvestigation(
+  caseId: string,
+  query: string
+): Promise<StartInvestigationResponse> {
+  return invoke("start_investigation", { caseId, query });
 }
