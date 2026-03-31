@@ -160,9 +160,12 @@ export function GlobalCommandPalette({ open: controlledOpen, onOpenChange }: Glo
               <GitCompare className="mr-2 h-4 w-4" />
               <span>Palyginimas</span>
             </CommandItem>
-            <CommandItem value="leaderboard stebėsena rizika" onSelect={() => runCommand(() => navigate('/dashboard/leaderboard'))}>
+            <CommandItem
+              value="stebėsena stebejimas monitoring rizika risk mp sąrašas leaderboard"
+              onSelect={() => runCommand(() => navigate('/dashboard/stebejimas'))}
+            >
               <Trophy className="mr-2 h-4 w-4" />
-              <span>Stebėsena / rizika</span>
+              <span>Stebėsena</span>
             </CommandItem>
             <CommandItem value="frakcijos" onSelect={() => runCommand(() => navigate('/dashboard/factions'))}>
               <FileText className="mr-2 h-4 w-4" />

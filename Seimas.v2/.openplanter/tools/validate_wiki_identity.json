@@ -1,0 +1,35 @@
+{
+  "name": "validate_wiki_identity",
+  "description": "Validates wiki identity contracts. Supports single-file checks and batch session audits (FAIL/WARN/PASS) including stale-content and missing-expected detection.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "batch": {
+        "type": "boolean",
+        "description": "When true, run directory-wide batch audit."
+      },
+      "path": {
+        "type": "string",
+        "description": "Path to one wiki .md file in single-file mode."
+      },
+      "dir": {
+        "type": "string",
+        "description": "Directory to audit in batch mode (default: dashboard/public/wikis)."
+      },
+      "expected_mp_id": {
+        "type": "array",
+        "items": { "type": "string" },
+        "description": "Optional expected UUIDs. In single-file mode first item is used. In batch mode all are checked for missing/orphan detection."
+      },
+      "session_start": {
+        "type": "string",
+        "description": "ISO-8601 session start timestamp for stale-content warnings in batch mode."
+      },
+      "stale_threshold_hours": {
+        "type": "integer",
+        "description": "Stale warning threshold in hours (default: 6)."
+      }
+    },
+    "required": []
+  }
+}

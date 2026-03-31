@@ -34,6 +34,10 @@ _WS_RE = _re.compile(r"\s+")
 _HASHLINE_PREFIX_RE = _re.compile(r"^\d+:[0-9a-f]{2}\|")
 _HEREDOC_RE = _re.compile(r"<<-?\s*['\"]?\w+['\"]?")
 _INTERACTIVE_RE = _re.compile(r"(^|[;&|]\s*)(vim|nano|less|more|top|htop|man)\b")
+_UUID_RE = _re.compile(
+    r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+    _re.IGNORECASE,
+)
 
 
 def _line_hash(line: str) -> str:
@@ -70,12 +74,82 @@ class WorkspaceTools:
         self._parallel_write_claims: dict[str, dict[Path, str]] = {}
         self._parallel_lock = threading.Lock()
         self._scope_local = threading.local()
+        self._write_policies: list[dict[str, Any]] = self._load_write_policies()
 
     def _clip(self, text: str, max_chars: int) -> str:
         if len(text) <= max_chars:
             return text
         omitted = len(text) - max_chars
         return f"{text[:max_chars]}\n\n...[truncated {omitted} chars]..."
+
+    def _load_write_policies(self) -> list[dict[str, Any]]:
+        """Load write_policies from .openplanter/settings.json if present."""
+        settings_path = self.root / ".openplanter" / "settings.json"
+        if not settings_path.is_file():
+            return []
+        try:
+            data = json.loads(settings_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return []
+        policies = data.get("write_policies")
+        if not isinstance(policies, list):
+            return []
+        valid: list[dict[str, Any]] = []
+        for entry in policies:
+            if (
+                isinstance(entry, dict)
+                and isinstance(entry.get("path_glob"), str)
+                and isinstance(entry.get("validator"), str)
+            ):
+                valid.append(entry)
+        return valid
+
+    def _validate_write_content(self, resolved: Path, content: str) -> str | None:
+        """Check workspace write policies against content. Returns error or None."""
+        if not self._write_policies:
+            return None
+        try:
+            rel = resolved.relative_to(self.root).as_posix()
+        except ValueError:
+            return None
+        for policy in self._write_policies:
+            if fnmatch.fnmatch(rel, policy["path_glob"]):
+                validator = policy["validator"]
+                if validator == "uuid_frontmatter":
+                    return self._check_uuid_frontmatter(resolved, content)
+        return None
+
+    def _check_uuid_frontmatter(self, resolved: Path, content: str) -> str | None:
+        """Enforce: filename UUID must match frontmatter mp_id."""
+        stem = resolved.stem
+        if not _UUID_RE.match(stem):
+            return None
+        if not content.startswith("---"):
+            return (
+                f"BLOCKED (write_policy uuid_frontmatter): {resolved.name} "
+                f"requires YAML frontmatter with mp_id matching the filename UUID."
+            )
+        fm_end = content.find("---", 3)
+        if fm_end == -1:
+            return (
+                f"BLOCKED (write_policy uuid_frontmatter): Malformed frontmatter "
+                f"in {resolved.name} — missing closing '---'."
+            )
+        frontmatter = content[3:fm_end]
+        mp_id_match = _re.search(r"^mp_id:\s*(.+)$", frontmatter, _re.MULTILINE)
+        if not mp_id_match:
+            return (
+                f"BLOCKED (write_policy uuid_frontmatter): {resolved.name} "
+                f"frontmatter is missing the required 'mp_id' field."
+            )
+        fm_uuid = mp_id_match.group(1).strip().strip("\"'")
+        if fm_uuid.lower() != stem.lower():
+            return (
+                f"BLOCKED (write_policy uuid_frontmatter): UUID mismatch in "
+                f"{resolved.name} — filename stem is '{stem}' but frontmatter "
+                f"mp_id is '{fm_uuid}'. This would write the wrong MP's data."
+            )
+        return None
 
     def _resolve_path(self, raw_path: str) -> Path:
         candidate = Path(raw_path)
@@ -555,6 +629,9 @@ class WorkspaceTools:
                 f"BLOCKED: {path} already exists but has not been read. "
                 f"Use read_file('{path}') first, then edit via apply_patch or write_file."
             )
+        policy_err = self._validate_write_content(resolved, content)
+        if policy_err:
+            return policy_err
         try:
             self._register_write_target(resolved)
         except ToolError as exc:
@@ -600,6 +677,9 @@ class WorkspaceTools:
             if count > 1:
                 return f"edit_file failed: old_text appears {count} times in {path}. Provide more context to make it unique."
             content = content.replace(old_text, new_text, 1)
+        policy_err = self._validate_write_content(resolved, content)
+        if policy_err:
+            return policy_err
         try:
             self._register_write_target(resolved)
         except ToolError as exc:
@@ -726,6 +806,9 @@ class WorkspaceTools:
         new_content = "\n".join(lines)
         if content.endswith("\n"):
             new_content += "\n"
+        policy_err = self._validate_write_content(resolved, new_content)
+        if policy_err:
+            return policy_err
         try:
             self._register_write_target(resolved)
         except ToolError as exc:
@@ -764,12 +847,23 @@ class WorkspaceTools:
             )
         except (PatchApplyError, OSError) as exc:
             return f"Patch failed: {exc}"
+        policy_violations: list[str] = []
         for rel_path in report.added + report.updated:
             try:
-                self._files_read.add(self._resolve_path(rel_path))
-            except ToolError:
+                patched = self._resolve_path(rel_path)
+                self._files_read.add(patched)
+                if patched.is_file():
+                    err = self._validate_write_content(
+                        patched, patched.read_text(encoding="utf-8", errors="replace"),
+                    )
+                    if err:
+                        policy_violations.append(err)
+            except (ToolError, OSError):
                 pass
-        return report.render()
+        rendered = report.render()
+        if policy_violations:
+            return rendered + "\n\nWARNING — write policy violations:\n" + "\n".join(policy_violations)
+        return rendered
 
     def _exa_request(self, endpoint: str, payload: dict[str, Any]) -> dict[str, Any]:
         if not (self.exa_api_key and self.exa_api_key.strip()):

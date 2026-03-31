@@ -144,16 +144,50 @@ For each flagged MP: include `mp_id`, `display_name`, and API `forensic_breakdow
 
 `"<display_name>" skandalas OR "viešieji pirkimai" OR korupcija site:lrt.lt OR site:delfi.lt OR site:15min.lt`
 
-### c. Markdown sections
+### c. Markdown format — mandatory YAML frontmatter
+
+Every wiki file **must** begin with YAML frontmatter anchoring the MP's identity. The `mp_id` field **must** equal the UUID used in the filename. If they do not match, `write_file` will **reject** the write.
+
+```markdown
+---
+mp_id: <MP_UUID>
+display_name: <DISPLAY_NAME>
+risk_level: Low|Medium|High|Critical
+generated_at: <ISO-8601 timestamp>
+source: api|sql
+---
+```
+
+### d. Markdown sections (after frontmatter)
 
 - `## Summary` — cited facts only.
 - `## Forensic Engine Findings` — table; use API engine names when present, else SQL-based rows as in the plan above.
 - `## Web Evidence` — links or **No corroborating web evidence found**.
 - `## Conclusion` — `Low|Medium|High|Critical` from cited data only.
 
-### d. Write file
+### e. Identity cross-verification (before write)
+
+Before calling `write_file`, **verify all three match**:
+
+1. The `mp_id` in your YAML frontmatter
+2. The `<mp_id>` segment of the target path `dashboard/public/wikis/<mp_id>.md`
+3. The UUID from Step 1a/1b that you used to look up this specific MP
+
+If a prior `read_file` on the target path returned content with a **different** `display_name` than expected, **do not** carry that content forward. Discard it and regenerate from the canonical data source (API or SQL) keyed by the UUID.
+
+### f. Write file
 
 `dashboard/public/wikis/<mp_id>.md` (UUID).
+
+### g. Post-write validation
+
+After each `write_file`, run:
+
+```bash
+python .openplanter/tools/validate_wiki_identity.py --path "dashboard/public/wikis/<mp_id>.md" --expected-mp-id "<MP_UUID>"
+```
+
+If the output JSON contains `"status": "FAIL"`, **stop** and fix the content before proceeding to the next MP.
 
 ---
 
@@ -165,6 +199,8 @@ JSON array of `{ "mp_id", "display_name", "risk_level", "wiki_path": "/wikis/<mp
 
 ## Constraints
 
+- **Identity is UUID-only.** Every MP is identified by `politicians.id` (UUID). **Never** use `display_name`, `seimas_mp_id`, or file ordering as an identity key. If you cannot determine the UUID for an MP, skip that MP entirely.
+- **Never carry forward stale content.** If `read_file` returns wiki content where the `display_name` in the text does not match the MP you are generating for, the file was corrupted by a prior run. Ignore its content completely and regenerate from scratch using the UUID-keyed API or SQL query.
 - **Do not** modify `.py` / `.tsx` source — only `dashboard/public/wikis/*`.
 - **Do not** paste `DB_DSN` into wiki files.
 - **Do not** run exploratory `SELECT` from tables not in the canonical list above. If unsure, run **`psql "$DB_DSN" -c "\dt"`** once and stop; do not loop on invented names.
@@ -174,4 +210,20 @@ JSON array of `{ "mp_id", "display_name", "risk_level", "wiki_path": "/wikis/<mp
 
 ## Verification
 
-`run_shell`: `ls -la dashboard/public/wikis/` and validate `index.json` is JSON.
+1. `run_shell`: `ls -la dashboard/public/wikis/` and validate `index.json` is JSON.
+2. Final batch audit (quality gate):
+
+```bash
+python .openplanter/tools/validate_wiki_identity.py \
+  --batch \
+  --dir "dashboard/public/wikis" \
+  --session-start "<ISO-8601 session start>" \
+  --stale-threshold-hours 6
+```
+
+3. If the batch output is:
+   - `"status": "FAIL"`: stop the run and mark session failed.
+   - `"status": "WARN"`: continue but include warning summary in run report (`stale_warnings`, `missing_expected`, `orphan_files`).
+   - `"status": "PASS"`: session is integrity-clean.
+
+4. Edge-case policy: if `missing_expected_count == expected_total` (100% expected files missing), treat as **FAIL** even when no identity mismatches exist.

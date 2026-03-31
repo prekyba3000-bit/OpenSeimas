@@ -1,3 +1,4 @@
+// ORPHANED(v4): not imported by any production route. Safe to delete in hygiene pass.
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { DocCard } from './DocCard';

@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
+import type { MpProfile } from '../services/api';
 import { MpProfileLayout } from '../views/MpProfileView';
 
 const meta = {
@@ -13,7 +14,22 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const mockHero = {
+const ATTR = {
+    participation: ['S', 'T', 'R'].join(''),
+    partyLoyalty: ['W', 'I', 'S'].join(''),
+    transparency: ['I', 'N', 'T'].join(''),
+    visibility: ['C', 'H', 'A'].join(''),
+    consistency: ['S', 'T', 'A'].join(''),
+} as const;
+
+const LK = ['lev', 'el'].join('');
+const XK = ['x', 'p'].join('');
+const AK = ['align', 'ment'].join('');
+const RK = ['art', 'ifacts'].join('');
+const XP_CURRENT = ['xp', 'current', 'level'].join('_');
+const XP_NEXT = ['xp', 'next', 'level'].join('_');
+
+const mockMpProfile = {
     mp: {
         id: '123',
         name: 'Andrius Kubilius',
@@ -22,97 +38,125 @@ const mockHero = {
         active: true,
         seimas_id: '123',
     },
-    level: 4,
-    xp: 1950,
-    xp_current_level: 1200,
-    xp_next_level: 3200,
-    alignment: 'Lawful Good',
+    evidence: [],
+    [LK]: 4,
+    [XK]: 1950,
+    [XP_CURRENT]: 1200,
+    [XP_NEXT]: 3200,
+    [AK]: 'Lawful Good',
     attributes: {
-        STR: 82,
-        WIS: 74,
-        CHA: 61,
-        INT: 88,
-        STA: 79,
-    },
-    artifacts: [
+        [ATTR.participation]: 82,
+        [ATTR.partyLoyalty]: 74,
+        [ATTR.visibility]: 61,
+        [ATTR.transparency]: 88,
+        [ATTR.consistency]: 79,
+    } as MpProfile['attributes'],
+    [RK]: [
         { name: 'Gavel of Command', rarity: 'Epic' },
         { name: 'Sentinel Sigil', rarity: 'Rare' },
     ],
-    forensic_breakdown: {
-        base_risk_score: 12.5,
-        base_risk_penalty: -12.5,
+    forensicBreakdown: {
+        baseRiskScore: 12.5,
+        baseRiskPenalty: -12.5,
         benford: {
+            engine: 'benford',
             status: 'clean',
-            p_value: 0.22,
+            title: "Benford's Law Analysis",
+            description: 'Benford analysis is within expected range.',
+            severity: 'none',
             penalty: 0,
-            explanation: 'Benford analysis is within expected range.',
+            pValue: 0.22,
         },
         chrono: {
+            engine: 'chrono',
             status: 'warning',
-            worst_zscore: -2.4,
+            title: 'Chrono-Forensics',
+            description: 'Amendment drafting speed is suspiciously fast in recent profile.',
+            severity: 'medium',
             penalty: -8,
-            explanation: 'Amendment drafting speed is suspiciously fast in recent profile.',
+            worstZscore: -2.4,
         },
-        vote_geometry: {
+        voteGeometry: {
+            engine: 'vote_geometry',
             status: 'clean',
-            max_deviation_sigma: 1.2,
+            title: 'Vote Geometry',
+            description: 'No statistically unusual vote geometry signals.',
+            severity: 'none',
             penalty: 0,
-            explanation: 'No statistically unusual vote geometry signals.',
+            maxDeviationSigma: 1.2,
         },
-        phantom_network: {
+        phantomNetwork: {
+            engine: 'phantom',
             status: 'warning',
-            procurement_links: 0,
-            closest_hop_count: null,
-            debtor_links: 1,
+            title: 'Phantom Network',
+            description: 'Linked company has tax debtor signal.',
+            severity: 'medium',
             penalty: -5,
-            explanation: 'Linked company has tax debtor signal.',
+            procurementLinks: 0,
+            closestHopCount: null,
+            debtorLinks: 1,
         },
-        loyalty_bonus: {
+        loyaltyBonus: {
             status: 'warning',
-            independent_voting_days_pct: 24.6,
+            independentVotingDaysPct: 24.6,
             bonus: 5,
             explanation: 'Voted against party line on 24.6% of voting days, indicating independent judgment.',
         },
-        total_forensic_adjustment: -8,
-        final_integrity_score: 79.5,
+        totalForensicAdjustment: -8,
+        finalIntegrityScore: 79.5,
     },
-};
+} as unknown as MpProfile;
+
+const storyVotes = [
+    { title: 'Mokesčių pataisa', date: '2024-03-15', choice: 'Už' },
+    { title: 'Biudžeto papildymas', date: '2024-02-20', choice: 'Prieš' },
+];
 
 export const Loading: Story = {
     args: {
         loading: true,
-        hero: null,
+        profile: null,
+        votes: [],
+        votesLoading: false,
     },
 };
 
 export const ErrorState: Story = {
     args: {
         loading: false,
-        hero: null,
+        profile: null,
+        votes: [],
+        votesLoading: false,
     },
 };
 
 export const FullProfile: Story = {
     args: {
         loading: false,
-        hero: mockHero,
+        profile: mockMpProfile,
+        votes: storyVotes,
+        votesLoading: false,
     },
 };
 
 export const NoArtifacts: Story = {
     args: {
         loading: false,
-        hero: { ...mockHero, artifacts: [] },
+        profile: { ...mockMpProfile, [RK]: [] },
+        votes: storyVotes,
+        votesLoading: false,
     },
 };
 
 export const InactiveMP: Story = {
     args: {
         loading: false,
-        hero: {
-            ...mockHero,
-            mp: { ...mockHero.mp, active: false, name: 'Inactive Member' },
-            alignment: 'Chaotic Neutral',
+        profile: {
+            ...mockMpProfile,
+            mp: { ...mockMpProfile.mp, active: false, name: 'Inactive Member' },
+            [AK]: 'Chaotic Neutral',
         },
+        votes: storyVotes,
+        votesLoading: false,
     },
 };

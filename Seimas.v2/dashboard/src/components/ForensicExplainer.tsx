@@ -1,47 +1,50 @@
+// TODO(v4): confirm whether ForensicExplainer is still needed elsewhere before deleting
 import React from 'react';
 import { NavLink } from 'react-router';
 import { HelpCircle } from 'lucide-react';
+import type { ForensicBreakdown } from '../services/api';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from './ui/popover';
 
-/** Subset of API `forensic_breakdown` used for public explainers */
+/** Subset of civic `ForensicBreakdown` used for public explainers */
 export type ForensicBreakdownLite = {
-  final_integrity_score?: number;
-  total_forensic_adjustment?: number;
-  benford?: { status?: string; penalty?: number; explanation?: string };
-  chrono?: { status?: string; penalty?: number; explanation?: string };
-  vote_geometry?: { status?: string; penalty?: number; explanation?: string };
-  phantom_network?: { status?: string; penalty?: number; explanation?: string };
+  finalIntegrityScore?: number;
+  totalForensicAdjustment?: number;
+  benford?: { status?: string; penalty?: number; explanation?: string; description?: string };
+  chrono?: { status?: string; penalty?: number; explanation?: string; description?: string };
+  voteGeometry?: { status?: string; penalty?: number; explanation?: string; description?: string };
+  phantomNetwork?: { status?: string; penalty?: number; explanation?: string; description?: string };
 };
 
 type Props = {
-  intScore: number;
-  breakdown?: ForensicBreakdownLite | null;
+  /** Skaidrumo indeksas (0–100 model output). */
+  skaidrumoIndeksas: number;
+  breakdown?: ForensicBreakdown | ForensicBreakdownLite | null;
   /** Tailwind-friendly text color for dark cards */
   className?: string;
   variant?: 'banner' | 'inline';
 };
 
-const INT_SENTENCE_LT =
-  'INT (vientisumas) — suvestinis 0–100 balas iš forensinių signalų (Benford, chronologija, balsavimo geometrija, ryšių tinklas ir kt.), kai duomenys prieinami. Tai modelio išvestis, ne teisinis ar oficialus verdiktas.';
+const SKAIDRUMO_SENTENCE_LT =
+  'Skaidrumo indeksas — suvestinis 0–100 balas iš forensinių signalų (Benford, chronologija, balsavimo geometrija, ryšių tinklas ir kt.), kai duomenys prieinami. Tai modelio išvestis, ne teisinis ar oficialus verdiktas.';
 
 export function ForensicExplainer({
-  intScore,
+  skaidrumoIndeksas,
   breakdown,
   className = 'text-[#A9B1D6]/90',
   variant = 'inline',
 }: Props) {
-  const finalScore = breakdown?.final_integrity_score;
-  const adj = breakdown?.total_forensic_adjustment;
+  const finalScore = breakdown?.finalIntegrityScore;
+  const adj = breakdown?.totalForensicAdjustment;
 
   const engines = [
-    { key: 'benford', label: 'Benford (deklaracijos)', d: breakdown?.benford },
-    { key: 'chrono', label: 'Chrono (pataisų laikas)', d: breakdown?.chrono },
-    { key: 'vote_geometry', label: 'Balsavimo geometrija', d: breakdown?.vote_geometry },
-    { key: 'phantom_network', label: 'Phantom (ryšiai)', d: breakdown?.phantom_network },
+    { key: 'benford', wire: 'benford', label: 'Benford (deklaracijos)', d: breakdown?.benford },
+    { key: 'chrono', wire: 'chrono', label: 'Chrono (pataisų laikas)', d: breakdown?.chrono },
+    { key: 'voteGeometry', wire: 'vote_geometry', label: 'Balsavimo geometrija', d: breakdown?.voteGeometry },
+    { key: 'phantomNetwork', wire: 'phantom_network', label: 'Phantom (ryšiai)', d: breakdown?.phantomNetwork },
   ].filter((e) => e.d);
 
   const wrap =
@@ -52,7 +55,9 @@ export function ForensicExplainer({
   return (
     <div className={`${wrap} ${className}`}>
       <p className="leading-relaxed">
-        <strong className="text-[#A9B1D6]">INT {intScore.toFixed(1)}</strong>
+        <strong className="text-[#A9B1D6]">
+          Skaidrumo indeksas {skaidrumoIndeksas.toFixed(1)}
+        </strong>
         {finalScore != null && (
           <>
             {' '}
@@ -67,7 +72,7 @@ export function ForensicExplainer({
             {adj})
           </span>
         )}
-        . {INT_SENTENCE_LT}{' '}
+        . {SKAIDRUMO_SENTENCE_LT}{' '}
         <NavLink to="/dashboard/methodology" className="text-[#7AA2F7] underline underline-offset-2">
           Kaip skaičiuojama
         </NavLink>
@@ -87,11 +92,11 @@ export function ForensicExplainer({
           <PopoverContent className="w-80 max-h-72 overflow-y-auto text-xs" align="start">
             <p className="font-semibold text-foreground mb-2">API laukai (žiniasklaidai)</p>
             <ul className="space-y-2 text-muted-foreground">
-              {engines.map(({ key, label, d }) => (
+              {engines.map(({ key, wire, label, d }) => (
                 <li key={key}>
                   <span className="text-foreground font-medium">{label}</span>
                   <br />
-                  <code className="text-[10px] bg-muted px-1 rounded">forensic_breakdown.{key}</code>
+                  <code className="text-[10px] bg-muted px-1 rounded">forensic_breakdown.{wire}</code>
                   {d?.status != null && (
                     <>
                       {' '}
@@ -104,9 +109,13 @@ export function ForensicExplainer({
                       · penalty: {d.penalty}
                     </>
                   )}
-                  {d?.explanation ? (
-                    <p className="mt-0.5 text-[11px] leading-snug">{d.explanation}</p>
-                  ) : null}
+                  {(() => {
+                    const detail = d as { explanation?: string; description?: string };
+                    const text = detail.explanation ?? detail.description;
+                    return text ? (
+                      <p className="mt-0.5 text-[11px] leading-snug">{text}</p>
+                    ) : null;
+                  })()}
                 </li>
               ))}
             </ul>

@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="lt" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Atviras Seimas</title>
+    <!--
+      Open Graph tags are static (site-level only).
+      Per-route OG is not feasible with HashRouter because the server always
+      serves this file regardless of the hash fragment.
+      TODO(v4): if routing migrates to HTML5 history mode + SSR/SSG, per-route
+      OG tags can be generated at build time.
+      TODO(v4): add og:image (site logo/screenshot) and og:url once deployment
+      domain is confirmed
+    -->
+    <meta property="og:site_name" content="Atviras Seimas" />
+    <meta property="og:title" content="Atviras Seimas" />
+    <meta
+      property="og:description"
+      content="Atviras ir nepriklausomas Seimo narių skaidrumo stebėjimo įrankis."
+    />
+    <meta property="og:type" content="website" />
+    <meta
+      name="description"
+      content="Atviras ir nepriklausomas Seimo narių skaidrumo stebėjimo įrankis."
+    />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Atviras Seimas" />
+    <meta
+      name="twitter:description"
+      content="Atviras ir nepriklausomas Seimo narių skaidrumo stebėjimo įrankis."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;700;900&family=JetBrains+Mono:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

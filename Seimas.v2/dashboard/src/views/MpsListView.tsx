@@ -1,39 +1,101 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Users, Search, ChevronRight, ArrowUpDown, AlertTriangle } from 'lucide-react';
+import { Users, Search, ChevronRight, ArrowUpDown } from 'lucide-react';
 import { motion } from 'motion/react';
-import { api, MpSummary } from '../services/api';
+import { api, MpProfile, MpSummary } from '../services/api';
+import { toast } from 'sonner';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import { MpCard } from '../components/MpCard';
 import { sortMps, SORT_OPTIONS, SortOption } from '../utils/sorting';
+import { ProblemDetailsNotice } from '../components/ProblemDetailsNotice';
+import { LT } from '../i18n/lt';
 
 const MpsListView = () => {
     const [mps, setMps] = useState<MpSummary[]>([]);
+    const [searchResults, setSearchResults] = useState<MpSummary[] | null>(null);
     const [search, setSearch] = useState('');
     const [partyFilter, setPartyFilter] = useState<string | null>(null);
     const [sortBy, setSortBy] = useState<SortOption>('name_asc');
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const [searching, setSearching] = useState(false);
+    const [slowSearch, setSlowSearch] = useState(false);
+    const [error, setError] = useState<unknown>(null);
+
+    const mapMpProfileToSummary = (mpProfile: MpProfile): MpSummary => ({
+        id: mpProfile.mp.id,
+        name: mpProfile.mp.name,
+        normalized_name: mpProfile.mp.name.toLowerCase(),
+        party: mpProfile.mp.party || '',
+        is_active: mpProfile.mp.active !== false,
+        photo_url: mpProfile.mp.photo || '',
+        vote_count: 0,
+        attendance: 0,
+        vote_mode: null,
+    });
 
     useEffect(() => {
         api.getMps()
             .then(data => setMps(data))
             .catch(err => {
                 console.error('Failed to load MPs', err);
-                setError('Failed to load MP data. Please try again.');
+                setError(err);
             })
             .finally(() => setLoading(false));
     }, []);
 
+    useEffect(() => {
+        const q = search.trim();
+        if (q.length < 2) {
+            setSearchResults(null);
+            setSearching(false);
+            return;
+        }
+
+        let cancelled = false;
+        setSearching(true);
+        setSlowSearch(false);
+        const slowTimer = window.setTimeout(() => {
+            if (!cancelled) setSlowSearch(true);
+        }, 1200);
+
+        const timer = window.setTimeout(() => {
+            api.searchMps(q, 50)
+                .then((payload) => {
+                    if (cancelled) return;
+                    setSearchResults(payload.results.map(mapMpProfileToSummary));
+                })
+                .catch((err) => {
+                    if (cancelled) return;
+                    console.error('Server-side search failed', err);
+                    setSearchResults([]);
+                    setError(err);
+                    toast.error(LT.errors.searchUnavailable);
+                })
+                .finally(() => {
+                    if (cancelled) return;
+                    setSearching(false);
+                    setSlowSearch(false);
+                    window.clearTimeout(slowTimer);
+                });
+        }, 300);
+
+        return () => {
+            cancelled = true;
+            window.clearTimeout(timer);
+            window.clearTimeout(slowTimer);
+        };
+    }, [search]);
+
     const processedMps = useMemo(() => {
-        const filtered = mps.filter(mp => {
+        const source = searchResults ?? mps;
+        const filtered = source.filter(mp => {
             const matchesSearch = (mp.name || '').toLowerCase().includes(search.toLowerCase());
             const matchesParty = !partyFilter || mp.party === partyFilter;
             const isActive = mp.is_active !== false;
             return matchesSearch && matchesParty && isActive;
         });
         return sortMps(filtered, sortBy);
-    }, [mps, search, partyFilter, sortBy]);
+    }, [mps, searchResults, search, partyFilter, sortBy]);
 
     const handleMpClick = (mpId: string) => {
         window.location.href = `#/dashboard/mps/${mpId}`;
@@ -124,12 +186,12 @@ const MpsListView = () => {
                 {(search || partyFilter) && (
                     <div className="mt-3 flex items-center justify-between">
                         <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-                            Filters active
+                            {searching ? (slowSearch ? 'Tinklas lėtas, ieškoma…' : 'Ieškoma serveryje...') : 'Filtrai aktyvūs'}
                         </span>
                         <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => { setSearch(''); setPartyFilter(null); }}
+                            onClick={() => { setSearch(''); setPartyFilter(null); setSearchResults(null); }}
                         >
                             Clear
                         </Button>
@@ -139,10 +201,10 @@ const MpsListView = () => {
 
             {/* Error State */}
             {error && (
-                <div className="p-4 border rounded-xl flex items-center gap-3" style={{ borderColor: 'var(--status-danger)', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: 'var(--status-danger)' }}>
-                    <AlertTriangle className="w-5 h-5 shrink-0" />
-                    {error}
-                </div>
+                <ProblemDetailsNotice
+                    error={error}
+                    className="p-4 border rounded-xl flex items-center gap-3"
+                />
             )}
 
             {/* Loading State */}
