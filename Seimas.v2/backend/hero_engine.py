@@ -361,8 +361,8 @@ def _build_forensic_breakdown(
         # per-vote sigma scale is mis-calibrated (correlated faction voting
         # violates the binomial-variance assumption), so we score the per-MP
         # signal by defection count, not raw sigma. Population thresholds
-        # tuned to current distribution (Unknown-party MPs excluded from
-        # rollup, leaving 95 MPs): p90≈2117, p75≈1880. Top decile flagged,
+        # tuned to current distribution (141 MPs after OpenSanctions resolved
+        # the previously-Unknown 46): p90≈2884, p75≈2560. Top decile flagged,
         # next quartile warning, rest clean.
         use_count = geometry_table == "mp_vote_geometry" and count_column is not None
         select_columns = f"COALESCE({sigma_column}, 0) AS max_deviation_sigma"
@@ -388,7 +388,7 @@ def _build_forensic_breakdown(
             elif use_count:
                 sigma = float(row["max_deviation_sigma"] or 0)
                 count = int(row["anomalous_vote_count"] or 0)
-                if count >= 2120:
+                if count >= 2884:
                     vote_geometry = {
                         "status": "flagged",
                         "max_deviation_sigma": sigma,
@@ -398,7 +398,7 @@ def _build_forensic_breakdown(
                             f"Defected from party majority on {count} anomalous votes (top decile)."
                         ),
                     }
-                elif count >= 1880:
+                elif count >= 2560:
                     vote_geometry = {
                         "status": "warning",
                         "max_deviation_sigma": sigma,
