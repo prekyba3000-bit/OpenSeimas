@@ -963,6 +963,60 @@ def calculate_hero_profile(mp_id: str, db_cursor) -> Dict[str, Any]:
     }
 
 
+def fetch_graph_mp_summaries(db_cursor, active_only: bool = True) -> List[Dict[str, Any]]:
+    """Fast path for the OpenPlanter graph: one batched SQL query against politicians +
+    mp_stats_summary, then xp/level/alignment computed in Python. Skips per-MP forensic
+    queries — graph nodes use baseline integrity_score=100 (the per-MP `/heroes/{id}`
+    endpoint still does the precise forensic calculation for detail views)."""
+    where = "WHERE p.is_active = TRUE" if active_only else ""
+    db_cursor.execute(
+        f"""
+        SELECT
+            p.id AS mp_id,
+            p.display_name,
+            COALESCE(NULLIF(p.current_party, ''), 'Unknown') AS current_party,
+            COALESCE(p.bills_authored_count, 0) AS bills_authored_count,
+            COALESCE(s.total_votes_cast, 0) AS total_votes_cast,
+            COALESCE(s.attendance_percentage, 0) AS attendance_percentage,
+            COALESCE(s.party_loyalty, 0) AS party_loyalty
+        FROM politicians p
+        LEFT JOIN mp_stats_summary s ON s.mp_id = p.id
+        {where}
+        ORDER BY p.display_name
+        """
+    )
+    rows = db_cursor.fetchall()
+
+    summaries: List[Dict[str, Any]] = []
+    for row in rows:
+        total_votes_cast = float(row["total_votes_cast"] or 0)
+        bills_authored = float(row["bills_authored_count"] or 0)
+        # bills_passed and high_risk_alerts require per-MP queries; treated as 0 in graph
+        # summary (xp drift vs detail endpoint is small in practice — bills_authored=0 for
+        # most MPs in current dataset, and forensic alerts populate per-MP detail only).
+        xp = int(round(total_votes_cast + (bills_authored * 10)))
+        if xp < 100:
+            level = 0
+        else:
+            level = max(0, int(math.floor(math.log(xp / 100))))
+        alignment = _derive_alignment(
+            party_loyalty=float(row["party_loyalty"] or 0),
+            attendance_percentage=float(row["attendance_percentage"] or 0),
+        )
+        summaries.append(
+            {
+                "mp_id": str(row["mp_id"]),
+                "display_name": row["display_name"],
+                "current_party": row["current_party"],
+                "xp": xp,
+                "level": level,
+                "alignment": alignment,
+                "integrity_score": 100,
+            }
+        )
+    return summaries
+
+
 def calculate_all_hero_profiles(
     db_cursor, active_only: bool = True, limit: int | None = None
 ) -> List[Dict[str, Any]]:
