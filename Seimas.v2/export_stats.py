@@ -28,6 +28,10 @@ cur = conn.cursor()
 cur.execute("SELECT COUNT(DISTINCT sitting_date) FROM votes WHERE sitting_date IS NOT NULL")
 total_sitting_days_global = cur.fetchone()[0] or 1
 
+# Cast-vote filter must match migration 015: empty/Nedalyvavo/unknown
+# vote_choice values count as NOT present. Upstream LRS XML emits
+# kaip_balsavo="" for absent MPs, so a naive "!= 'Nedalyvavo'" filter
+# inflates attendance to ~100% across the board.
 SQL = """
 WITH day_attendance AS (
     SELECT
@@ -37,14 +41,26 @@ WITH day_attendance AS (
         p.current_party,
         COUNT(DISTINCT v.sitting_date) AS total_days,
         COUNT(DISTINCT v.sitting_date) FILTER (
-            WHERE mv.vote_choice != 'Nedalyvavo'
+            WHERE LOWER(COALESCE(mv.vote_choice, '')) IN ('už', 'uz', 'prieš', 'pries')
+               OR LOWER(COALESCE(mv.vote_choice, '')) LIKE 'susilaik%'
         ) AS days_present
     FROM politicians p
     JOIN mp_votes mv ON p.id = mv.politician_id
     JOIN votes v ON mv.vote_id = v.seimas_vote_id
     WHERE p.is_active = TRUE
+      -- Drop stale roster entries with no faction assignment (the Speaker
+      -- is the only legitimate Unknown and her 96% attendance keeps her
+      -- well off the worst-15 list anyway).
+      AND COALESCE(NULLIF(p.current_party, ''), 'Unknown') <> 'Unknown'
     GROUP BY p.id, p.display_name, p.photo_url, p.current_party
     HAVING COUNT(DISTINCT v.sitting_date) > 5
+       -- Zero-attendance active MPs are almost always stale roster rows
+       -- (departed/replaced but is_active not flipped). Exclude them so
+       -- they don't dominate the "worst" list with 0%.
+       AND COUNT(DISTINCT v.sitting_date) FILTER (
+           WHERE LOWER(COALESCE(mv.vote_choice, '')) IN ('už', 'uz', 'prieš', 'pries')
+              OR LOWER(COALESCE(mv.vote_choice, '')) LIKE 'susilaik%'
+       ) > 0
 )
 SELECT
     display_name,
@@ -93,7 +109,7 @@ data = {
     ),
     "methodology": {
         "unit": "posėdžio diena",
-        "present_if": "bent 1 balsavimas ne 'Nedalyvavo' per dieną",
+        "present_if": "bent 1 'Už' / 'Prieš' / 'Susilaikė' balsavimas per dieną",
         "salary_monthly_eur": MONTHLY_SALARY_EUR,
         "daily_rate_eur": DAILY_RATE,
         "total_sitting_days": total_sitting_days_global,
