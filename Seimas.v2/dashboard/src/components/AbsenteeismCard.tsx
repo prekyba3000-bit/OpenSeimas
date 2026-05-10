@@ -22,6 +22,7 @@ interface AbsenteeismData {
   methodology?: {
     daily_rate_eur: number;
     total_sitting_days: number;
+    present_if?: string;
   };
   summary?: {
     top15_total_absent_days: number;
