@@ -1,4 +1,5 @@
 import os
+import re
 from datetime import datetime
 
 import defusedxml.ElementTree as ET
@@ -9,7 +10,11 @@ from utils import fetch_with_retry
 
 
 DB_DSN = os.getenv("DB_DSN")
+# LRS does not expose a per-MP plenary speech feed. This endpoint returns the
+# press releases each MP issued to media — the closest available proxy for
+# public-communication output (CHA in the hero engine).
 BASE_URL = "https://apps.lrs.lt/sip/p2b.ad_sn_pranesimai_ziniasklaidai"
+SOURCE_ID_PATTERN = re.compile(r"[?&]p_t=(\d+)")
 
 
 def parse_date(value: str | None):
@@ -75,7 +80,13 @@ def fetch_speech_rows(seimas_mp_id: int):
             if speech_date is None:
                 continue
 
-            rows.append((speech_date, title_value, url_value))
+            source_id = None
+            if url_value:
+                match = SOURCE_ID_PATTERN.search(url_value)
+                if match:
+                    source_id = match.group(1)
+
+            rows.append((speech_date, title_value, url_value, source_id))
 
     return rows
 
@@ -104,29 +115,41 @@ def run_speech_ingest():
     for mp_uuid, seimas_mp_id in mps:
         try:
             speeches = fetch_speech_rows(int(seimas_mp_id))
-            cur.execute("DELETE FROM speeches WHERE mp_id = %s", (str(mp_uuid),))
+            cur.execute(
+                "DELETE FROM speeches WHERE mp_id = %s AND speech_type = 'press_release'",
+                (str(mp_uuid),),
+            )
             if speeches:
                 payload = [
-                    (str(mp_uuid), row_date, row_title, row_url)
-                    for row_date, row_title, row_url in speeches
+                    (
+                        str(mp_uuid),
+                        row_date,
+                        row_title,
+                        row_url,
+                        row_source_id,
+                        "press_release",
+                    )
+                    for row_date, row_title, row_url, row_source_id in speeches
                 ]
                 execute_values(
                     cur,
                     """
                     INSERT INTO speeches (
-                        mp_id, speech_date, speech_title, speech_url
+                        mp_id, speech_date, speech_title, speech_url,
+                        source_speech_id, speech_type
                     ) VALUES %s
+                    ON CONFLICT (mp_id, speech_url) DO NOTHING
                     """,
                     payload,
                 )
                 total_inserted += len(payload)
+            conn.commit()
             print(f"Synced speeches for MP {seimas_mp_id}: {len(speeches)} rows")
         except Exception as exc:
             print(f"Failed speech ingest for MP {seimas_mp_id}: {exc}")
             conn.rollback()
             continue
 
-    conn.commit()
     cur.close()
     conn.close()
     print(f"Speech ingest complete. Inserted {total_inserted} speech rows.")
