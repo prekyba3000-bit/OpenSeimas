@@ -342,19 +342,38 @@ def _build_forensic_breakdown(
                     "explanation": "No suspiciously fast amendments detected.",
                 }
 
-    if _table_exists(db_cursor, "vote_geometry"):
-        columns = _fetch_table_columns(db_cursor, "vote_geometry")
+    geometry_table = None
+    for candidate in ("mp_vote_geometry", "vote_geometry"):
+        if _table_exists(db_cursor, candidate):
+            geometry_table = candidate
+            break
+
+    if geometry_table:
+        columns = _fetch_table_columns(db_cursor, geometry_table)
         id_column = _pick_existing_column(columns, ["politician_id", "mp_id"])
         sigma_column = _pick_existing_column(
-            columns, ["deviation_sigma", "max_deviation_sigma", "sigma", "deviation_zscore"]
+            columns, ["max_deviation_sigma", "deviation_sigma", "sigma", "deviation_zscore"]
         )
-        ts_column = _pick_existing_column(columns, ["updated_at", "created_at", "analyzed_at"])
+        count_column = _pick_existing_column(columns, ["anomalous_vote_count"])
+        ts_column = _pick_existing_column(columns, ["computed_at", "updated_at", "created_at", "analyzed_at"])
+        # mp_vote_geometry stores a per-MP defection rollup (count of anomalous
+        # votes where the MP voted against their party majority). The raw
+        # per-vote sigma scale is mis-calibrated (correlated faction voting
+        # violates the binomial-variance assumption), so we score the per-MP
+        # signal by defection count, not raw sigma. Population thresholds
+        # tuned to current distribution (Unknown-party MPs excluded from
+        # rollup, leaving 95 MPs): p90≈2117, p75≈1880. Top decile flagged,
+        # next quartile warning, rest clean.
+        use_count = geometry_table == "mp_vote_geometry" and count_column is not None
+        select_columns = f"COALESCE({sigma_column}, 0) AS max_deviation_sigma"
+        if use_count:
+            select_columns += f", COALESCE({count_column}, 0) AS anomalous_vote_count"
         if id_column and sigma_column:
             order_sql = f"ORDER BY {ts_column} DESC" if ts_column else ""
             db_cursor.execute(
                 f"""
-                SELECT COALESCE({sigma_column}, 0) AS max_deviation_sigma
-                FROM vote_geometry
+                SELECT {select_columns}
+                FROM {geometry_table}
                 WHERE {id_column} = %s::uuid
                 {order_sql}
                 LIMIT 1
@@ -362,32 +381,68 @@ def _build_forensic_breakdown(
                 (mp_id,),
             )
             row = db_cursor.fetchone()
-            sigma = float(row["max_deviation_sigma"] or 0) if row else 0.0
-            if sigma > 3.0:
-                vote_geometry = {
-                    "status": "flagged",
-                    "max_deviation_sigma": sigma,
-                    "penalty": -15,
-                    "explanation": (
-                        f"Participated in vote geometry outlier event (sigma={sigma:.2f}, above 3.0)."
-                    ),
-                }
-            elif sigma > 2.0:
-                vote_geometry = {
-                    "status": "warning",
-                    "max_deviation_sigma": sigma,
-                    "penalty": -5,
-                    "explanation": (
-                        f"Participated in mildly anomalous vote pattern (sigma={sigma:.2f})."
-                    ),
-                }
+            if not row:
+                # No rollup for this MP — leave status="unavailable" rather
+                # than reporting a misleading "clean" with no underlying data.
+                pass
+            elif use_count:
+                sigma = float(row["max_deviation_sigma"] or 0)
+                count = int(row["anomalous_vote_count"] or 0)
+                if count >= 2120:
+                    vote_geometry = {
+                        "status": "flagged",
+                        "max_deviation_sigma": sigma,
+                        "anomalous_vote_count": count,
+                        "penalty": -15,
+                        "explanation": (
+                            f"Defected from party majority on {count} anomalous votes (top decile)."
+                        ),
+                    }
+                elif count >= 1880:
+                    vote_geometry = {
+                        "status": "warning",
+                        "max_deviation_sigma": sigma,
+                        "anomalous_vote_count": count,
+                        "penalty": -5,
+                        "explanation": (
+                            f"Defected from party majority on {count} anomalous votes."
+                        ),
+                    }
+                else:
+                    vote_geometry = {
+                        "status": "clean",
+                        "max_deviation_sigma": sigma,
+                        "anomalous_vote_count": count,
+                        "penalty": 0,
+                        "explanation": "Few defections from party majority on anomalous votes.",
+                    }
             else:
-                vote_geometry = {
-                    "status": "clean",
-                    "max_deviation_sigma": sigma,
-                    "penalty": 0,
-                    "explanation": "No statistically unusual vote geometry signals.",
-                }
+                sigma = float(row["max_deviation_sigma"] or 0)
+                if sigma > 3.0:
+                    vote_geometry = {
+                        "status": "flagged",
+                        "max_deviation_sigma": sigma,
+                        "penalty": -15,
+                        "explanation": (
+                            f"Participated in vote geometry outlier event (sigma={sigma:.2f}, above 3.0)."
+                        ),
+                    }
+                elif sigma > 2.0:
+                    vote_geometry = {
+                        "status": "warning",
+                        "max_deviation_sigma": sigma,
+                        "penalty": -5,
+                        "explanation": (
+                            f"Participated in mildly anomalous vote pattern (sigma={sigma:.2f})."
+                        ),
+                    }
+                else:
+                    vote_geometry = {
+                        "status": "clean",
+                        "max_deviation_sigma": sigma,
+                        "penalty": 0,
+                        "explanation": "No statistically unusual vote geometry signals.",
+                    }
 
     phantom_table = None
     for candidate in ("phantom_network", "phantom_network_hits", "phantom_links"):
