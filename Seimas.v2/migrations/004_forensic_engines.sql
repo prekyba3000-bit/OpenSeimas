@@ -1,9 +1,12 @@
 -- Migration: Forensic Engine tables (Engines 01-05)
 
 -- Engine 01: Amendment temporal profiling
+-- amendment_id is UNIQUE but not a foreign key: no `amendments` source table exists in
+-- this schema (ingest_amendments.py writes counts to mp_amendment_counts, never inserts
+-- into an amendments table). amendment_profiles is the system of record for per-amendment data.
 CREATE TABLE IF NOT EXISTS amendment_profiles (
     id SERIAL PRIMARY KEY,
-    amendment_id TEXT UNIQUE REFERENCES amendments(amendment_id),
+    amendment_id TEXT UNIQUE,
     word_count INTEGER,
     legal_citation_count INTEGER,
     complexity_score REAL,
@@ -15,9 +18,11 @@ CREATE TABLE IF NOT EXISTS amendment_profiles (
 CREATE INDEX IF NOT EXISTS ix_amp_speed ON amendment_profiles(speed_anomaly_zscore);
 
 -- Engine 02: Benford's Law analysis per MP
+-- mp_id is UUID to match politicians.id (the system of record uses uuid PKs);
+-- hero_engine.py queries this table with `WHERE mp_id = %s::uuid`.
 CREATE TABLE IF NOT EXISTS benford_analyses (
     id SERIAL PRIMARY KEY,
-    mp_id INTEGER,
+    mp_id UUID,
     sample_size INTEGER,
     chi_squared REAL,
     p_value REAL,
@@ -77,6 +82,8 @@ CREATE INDEX IF NOT EXISTS ix_ownership_source ON ownership_edges(source_entity_
 CREATE INDEX IF NOT EXISTS ix_ownership_target ON ownership_edges(target_entity_code);
 CREATE INDEX IF NOT EXISTS ix_ownership_source_target ON ownership_edges(source_entity_code, target_entity_code);
 
+-- indirect_links.mp_id holds politicians.seimas_mp_id (Seimas integer id), not the
+-- internal UUID — main.py joins via `p.seimas_mp_id = il.mp_id` to resolve the politician.
 CREATE TABLE IF NOT EXISTS indirect_links (
     id SERIAL PRIMARY KEY,
     mp_id INTEGER,
