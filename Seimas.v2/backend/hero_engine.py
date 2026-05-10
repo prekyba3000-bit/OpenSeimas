@@ -714,7 +714,9 @@ def _fetch_mp_metrics(mp_id: str, db_cursor) -> Dict[str, Any] | None:
             GROUP BY mv.politician_id
         ),
         speech_rollup AS (
-            SELECT mp_id, COUNT(*) AS speeches_given
+            SELECT mp_id,
+                   (COUNT(*) FILTER (WHERE speech_type='floor_speech') * 2
+                  + COUNT(*) FILTER (WHERE speech_type='press_release')) AS speeches_given
             FROM speeches
             GROUP BY mp_id
         ),
@@ -780,7 +782,11 @@ def _fetch_metric_maxima(db_cursor) -> Dict[str, float]:
             GROUP BY p.id
         ),
         speech_rollup AS (
-            SELECT p.id AS mp_id, COALESCE(COUNT(sp.id), 0) AS speeches_given
+            SELECT p.id AS mp_id,
+                   COALESCE(
+                       COUNT(sp.id) FILTER (WHERE sp.speech_type='floor_speech') * 2
+                     + COUNT(sp.id) FILTER (WHERE sp.speech_type='press_release'),
+                   0) AS speeches_given
             FROM politicians p
             LEFT JOIN speeches sp ON p.id = sp.mp_id
             GROUP BY p.id
@@ -886,7 +892,12 @@ def calculate_hero_profile(mp_id: str, db_cursor) -> Dict[str, Any]:
     bills_passed = float(mp_row["votes_for_passed"] or 0)
     total_votes_cast = float(mp_row["total_votes_cast"] or 0)
     # Direct source of CHA: count communication entries in speeches table for this MP.
-    db_cursor.execute("SELECT COUNT(*) AS speech_count FROM speeches WHERE mp_id::text = %s", (mp_id,))
+    db_cursor.execute(
+        "SELECT (COUNT(*) FILTER (WHERE speech_type='floor_speech') * 2 "
+        "      + COUNT(*) FILTER (WHERE speech_type='press_release')) AS speech_count "
+        "FROM speeches WHERE mp_id::text = %s",
+        (mp_id,),
+    )
     speech_row = db_cursor.fetchone()
     speeches_given = float(speech_row["speech_count"] or 0) if speech_row else 0.0
     attendance_percentage = float(mp_row["attendance_percentage"] or 0)
