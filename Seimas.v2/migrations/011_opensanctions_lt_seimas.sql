@@ -1,0 +1,21 @@
+-- Migration 011: OpenSanctions LT Seimas linkage notes.
+--
+-- politicians.open_sanctions_id and politicians.date_of_birth already exist
+-- (from the original schema). No DDL is required — this file documents the
+-- intent and acts as a no-op marker so the migration sequence is contiguous.
+--
+-- Source: https://data.opensanctions.org/datasets/latest/lt_seimas/
+-- The dataset publishes 141 current MPs with a Wikidata QID, English-language
+-- party label, ISO birth date (where Wikidata has it), and a sourceUrl that
+-- embeds LRS p_asm_id — the same id used in politicians.seimas_mp_id, which
+-- gives us a deterministic join.
+--
+-- Use of the data:
+--   - open_sanctions_id   ← QID for every matched MP (always set).
+--   - date_of_birth       ← only set when currently NULL.
+--   - current_party       ← only overwritten when currently 'Unknown', and
+--     only when the OpenSanctions English label maps to a known LRS frakcija
+--     name. Existing non-Unknown LRS values are left intact (LRS is the
+--     authoritative source for current frakcija).
+
+SELECT 1;
