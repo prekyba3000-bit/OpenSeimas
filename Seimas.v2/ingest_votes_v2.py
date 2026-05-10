@@ -69,19 +69,49 @@ def process_sitting(sess_id, sit_id):
 
     votes_to_insert = [] # List of tuples for 'votes' table
     mp_votes_batch = []  # List of tuples for 'mp_votes' table
-    
+
     local_votes_count = 0
+
+    # Build kl_gr_id -> [(nr, pavadinimas, registracijos_nr), ...] map for resolving
+    # "Klausimų grupė" placeholder titles (LRS uses this for package votes that
+    # bundle multiple individual agenda items sharing the same group id).
+    kl_gr_children = {}
+    for q in agenda.findall('.//darbotvarkes-klausimas'):
+        kg = q.get('kl_gr_id')
+        pav = q.findtext('pavadinimas') or ''
+        if kg and pav and pav.strip() != 'Klausimų grupė':
+            kl_gr_children.setdefault(kg, []).append((
+                (q.findtext('nr') or '').strip(),
+                pav.strip(),
+                q.get('registracijos_nr'),
+            ))
 
     # Iterate 'darbotvarkes-klausimas' (Agenda Item)
     for q in agenda.findall('.//darbotvarkes-klausimas'):
         title_base = q.findtext('pavadinimas') or "Unknown Motion"
         stadija = q.findtext('stadija') # e.g. Pateikimas
-        
+
         # Extract Project ID
         project_id = q.get('registracijos_nr')
         if not project_id:
             match = re.search(r'Nr\.\s*([A-Za-z0-9-]+)', title_base)
             if match: project_id = match.group(1)
+
+        # Resolve "Klausimų grupė" placeholder via kl_gr_id sibling lookup.
+        if title_base.strip() == 'Klausimų grupė':
+            kg = q.get('kl_gr_id')
+            children = kl_gr_children.get(kg, []) if kg else []
+            nr_label = (q.findtext('nr') or '').strip()
+            if children:
+                joined = ' • '.join(c[1] for c in children)
+                title_base = f"Klausimų grupė ({nr_label}): {joined}" if nr_label else f"Klausimų grupė: {joined}"
+                if not project_id:
+                    for _, _, rn in children:
+                        if rn:
+                            project_id = rn
+                            break
+            elif nr_label:
+                title_base = f"Klausimų grupė (Nr. {nr_label})"
         
         # Find votes inside this question
         for b in q.findall('.//balsavimas'):
