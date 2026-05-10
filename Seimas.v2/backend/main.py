@@ -16,9 +16,17 @@ import hashlib
 from typing import List, Dict, Optional, Any
 from collections import defaultdict
 try:
-    from backend.hero_engine import calculate_hero_profile, calculate_all_hero_profiles
+    from backend.hero_engine import (
+        calculate_hero_profile,
+        calculate_all_hero_profiles,
+        fetch_graph_mp_summaries,
+    )
 except ImportError:
-    from hero_engine import calculate_hero_profile, calculate_all_hero_profiles
+    from hero_engine import (
+        calculate_hero_profile,
+        calculate_all_hero_profiles,
+        fetch_graph_mp_summaries,
+    )
 try:
     from backend.share_card_renderer import render_share_card
 except ImportError:
@@ -732,34 +740,26 @@ def get_hero_profile(mp_id: str):
 
 def _build_openplanter_graph_payload(cur) -> Dict:
     """Build Cytoscape-style nodes/edges: MPs, phantom links, parties, committees, wealth, interests, votes."""
-    all_profiles = calculate_all_hero_profiles(
-        db_cursor=cur, active_only=True, limit=500
-    )
+    summaries = fetch_graph_mp_summaries(db_cursor=cur, active_only=True)
 
     nodes: List[Dict] = []
     mp_ids: set = set()
-    for prof in all_profiles:
-        mp = prof.get("mp") or {}
-        mp_id = str(mp.get("id") or "")
+    for summary in summaries:
+        mp_id = summary["mp_id"]
         if not mp_id:
             continue
         mp_ids.add(mp_id)
-        int_score = prof.get("attributes", {}).get("INT")
-        try:
-            integrity_score = int(round(float(int_score))) if int_score is not None else 0
-        except (TypeError, ValueError):
-            integrity_score = 0
         nodes.append(
             {
                 "data": {
                     "id": mp_id,
-                    "label": mp.get("name") or "Unknown",
+                    "label": summary["display_name"] or "Unknown",
                     "category": "politician",
-                    "party": mp.get("party") or "Unknown",
-                    "alignment": prof.get("alignment") or "Unknown",
-                    "integrity_score": integrity_score,
-                    "xp": int(prof.get("xp") or 0),
-                    "level": int(prof.get("level") or 0),
+                    "party": summary["current_party"] or "Unknown",
+                    "alignment": summary["alignment"] or "Unknown",
+                    "integrity_score": int(summary["integrity_score"]),
+                    "xp": int(summary["xp"]),
+                    "level": int(summary["level"]),
                 }
             }
         )
