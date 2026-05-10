@@ -47,3 +47,4 @@ _bmad-output/
 
 # OpenPlanter-generated MP wikis (runtime artefacts)
 dashboard/public/wikis/*.md
+.openplanter/
