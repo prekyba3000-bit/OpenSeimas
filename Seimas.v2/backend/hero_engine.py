@@ -342,19 +342,38 @@ def _build_forensic_breakdown(
                     "explanation": "No suspiciously fast amendments detected.",
                 }
 
-    if _table_exists(db_cursor, "vote_geometry"):
-        columns = _fetch_table_columns(db_cursor, "vote_geometry")
+    geometry_table = None
+    for candidate in ("mp_vote_geometry", "vote_geometry"):
+        if _table_exists(db_cursor, candidate):
+            geometry_table = candidate
+            break
+
+    if geometry_table:
+        columns = _fetch_table_columns(db_cursor, geometry_table)
         id_column = _pick_existing_column(columns, ["politician_id", "mp_id"])
         sigma_column = _pick_existing_column(
-            columns, ["deviation_sigma", "max_deviation_sigma", "sigma", "deviation_zscore"]
+            columns, ["max_deviation_sigma", "deviation_sigma", "sigma", "deviation_zscore"]
         )
-        ts_column = _pick_existing_column(columns, ["updated_at", "created_at", "analyzed_at"])
+        count_column = _pick_existing_column(columns, ["anomalous_vote_count"])
+        ts_column = _pick_existing_column(columns, ["computed_at", "updated_at", "created_at", "analyzed_at"])
+        # mp_vote_geometry stores a per-MP defection rollup (count of anomalous
+        # votes where the MP voted against their party majority). The raw
+        # per-vote sigma scale is mis-calibrated (correlated faction voting
+        # violates the binomial-variance assumption), so we score the per-MP
+        # signal by defection count, not raw sigma. Population thresholds
+        # tuned to current distribution (141 MPs after OpenSanctions resolved
+        # the previously-Unknown 46): p90≈2884, p75≈2560. Top decile flagged,
+        # next quartile warning, rest clean.
+        use_count = geometry_table == "mp_vote_geometry" and count_column is not None
+        select_columns = f"COALESCE({sigma_column}, 0) AS max_deviation_sigma"
+        if use_count:
+            select_columns += f", COALESCE({count_column}, 0) AS anomalous_vote_count"
         if id_column and sigma_column:
             order_sql = f"ORDER BY {ts_column} DESC" if ts_column else ""
             db_cursor.execute(
                 f"""
-                SELECT COALESCE({sigma_column}, 0) AS max_deviation_sigma
-                FROM vote_geometry
+                SELECT {select_columns}
+                FROM {geometry_table}
                 WHERE {id_column} = %s::uuid
                 {order_sql}
                 LIMIT 1
@@ -362,32 +381,68 @@ def _build_forensic_breakdown(
                 (mp_id,),
             )
             row = db_cursor.fetchone()
-            sigma = float(row["max_deviation_sigma"] or 0) if row else 0.0
-            if sigma > 3.0:
-                vote_geometry = {
-                    "status": "flagged",
-                    "max_deviation_sigma": sigma,
-                    "penalty": -15,
-                    "explanation": (
-                        f"Participated in vote geometry outlier event (sigma={sigma:.2f}, above 3.0)."
-                    ),
-                }
-            elif sigma > 2.0:
-                vote_geometry = {
-                    "status": "warning",
-                    "max_deviation_sigma": sigma,
-                    "penalty": -5,
-                    "explanation": (
-                        f"Participated in mildly anomalous vote pattern (sigma={sigma:.2f})."
-                    ),
-                }
+            if not row:
+                # No rollup for this MP — leave status="unavailable" rather
+                # than reporting a misleading "clean" with no underlying data.
+                pass
+            elif use_count:
+                sigma = float(row["max_deviation_sigma"] or 0)
+                count = int(row["anomalous_vote_count"] or 0)
+                if count >= 2884:
+                    vote_geometry = {
+                        "status": "flagged",
+                        "max_deviation_sigma": sigma,
+                        "anomalous_vote_count": count,
+                        "penalty": -15,
+                        "explanation": (
+                            f"Defected from party majority on {count} anomalous votes (top decile)."
+                        ),
+                    }
+                elif count >= 2560:
+                    vote_geometry = {
+                        "status": "warning",
+                        "max_deviation_sigma": sigma,
+                        "anomalous_vote_count": count,
+                        "penalty": -5,
+                        "explanation": (
+                            f"Defected from party majority on {count} anomalous votes."
+                        ),
+                    }
+                else:
+                    vote_geometry = {
+                        "status": "clean",
+                        "max_deviation_sigma": sigma,
+                        "anomalous_vote_count": count,
+                        "penalty": 0,
+                        "explanation": "Few defections from party majority on anomalous votes.",
+                    }
             else:
-                vote_geometry = {
-                    "status": "clean",
-                    "max_deviation_sigma": sigma,
-                    "penalty": 0,
-                    "explanation": "No statistically unusual vote geometry signals.",
-                }
+                sigma = float(row["max_deviation_sigma"] or 0)
+                if sigma > 3.0:
+                    vote_geometry = {
+                        "status": "flagged",
+                        "max_deviation_sigma": sigma,
+                        "penalty": -15,
+                        "explanation": (
+                            f"Participated in vote geometry outlier event (sigma={sigma:.2f}, above 3.0)."
+                        ),
+                    }
+                elif sigma > 2.0:
+                    vote_geometry = {
+                        "status": "warning",
+                        "max_deviation_sigma": sigma,
+                        "penalty": -5,
+                        "explanation": (
+                            f"Participated in mildly anomalous vote pattern (sigma={sigma:.2f})."
+                        ),
+                    }
+                else:
+                    vote_geometry = {
+                        "status": "clean",
+                        "max_deviation_sigma": sigma,
+                        "penalty": 0,
+                        "explanation": "No statistically unusual vote geometry signals.",
+                    }
 
     phantom_table = None
     for candidate in ("phantom_network", "phantom_network_hits", "phantom_links"):
@@ -961,6 +1016,60 @@ def calculate_hero_profile(mp_id: str, db_cursor) -> Dict[str, Any]:
         "metrics_provenance": metrics_provenance,
         "forensic_breakdown": forensic_breakdown,
     }
+
+
+def fetch_graph_mp_summaries(db_cursor, active_only: bool = True) -> List[Dict[str, Any]]:
+    """Fast path for the OpenPlanter graph: one batched SQL query against politicians +
+    mp_stats_summary, then xp/level/alignment computed in Python. Skips per-MP forensic
+    queries — graph nodes use baseline integrity_score=100 (the per-MP `/heroes/{id}`
+    endpoint still does the precise forensic calculation for detail views)."""
+    where = "WHERE p.is_active = TRUE" if active_only else ""
+    db_cursor.execute(
+        f"""
+        SELECT
+            p.id AS mp_id,
+            p.display_name,
+            COALESCE(NULLIF(p.current_party, ''), 'Unknown') AS current_party,
+            COALESCE(p.bills_authored_count, 0) AS bills_authored_count,
+            COALESCE(s.total_votes_cast, 0) AS total_votes_cast,
+            COALESCE(s.attendance_percentage, 0) AS attendance_percentage,
+            COALESCE(s.party_loyalty, 0) AS party_loyalty
+        FROM politicians p
+        LEFT JOIN mp_stats_summary s ON s.mp_id = p.id
+        {where}
+        ORDER BY p.display_name
+        """
+    )
+    rows = db_cursor.fetchall()
+
+    summaries: List[Dict[str, Any]] = []
+    for row in rows:
+        total_votes_cast = float(row["total_votes_cast"] or 0)
+        bills_authored = float(row["bills_authored_count"] or 0)
+        # bills_passed and high_risk_alerts require per-MP queries; treated as 0 in graph
+        # summary (xp drift vs detail endpoint is small in practice — bills_authored=0 for
+        # most MPs in current dataset, and forensic alerts populate per-MP detail only).
+        xp = int(round(total_votes_cast + (bills_authored * 10)))
+        if xp < 100:
+            level = 0
+        else:
+            level = max(0, int(math.floor(math.log(xp / 100))))
+        alignment = _derive_alignment(
+            party_loyalty=float(row["party_loyalty"] or 0),
+            attendance_percentage=float(row["attendance_percentage"] or 0),
+        )
+        summaries.append(
+            {
+                "mp_id": str(row["mp_id"]),
+                "display_name": row["display_name"],
+                "current_party": row["current_party"],
+                "xp": xp,
+                "level": level,
+                "alignment": alignment,
+                "integrity_score": 100,
+            }
+        )
+    return summaries
 
 
 def calculate_all_hero_profiles(
