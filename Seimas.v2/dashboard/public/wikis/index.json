@@ -21,7 +21,8 @@
     "mp_id": "92f34bd9-d596-465f-bfdf-fbe8bca6c617",
     "display_name": "Simonas Gentvilas",
     "risk_level": "High",
-    "wiki_path": "/wikis/92f34bd9-d596-465f-bfdf-fbe8bca6c617.md"
+    "wiki_path": "/wikis/92f34bd9-d596-465f-bfdf-fbe8bca6c617.md",
+    "_todo": "risk_level mismatch: this entry says High, but the published wiki frontmatter and body say Low (no supporting web evidence). Reconcile on next regeneration — index.json should follow the file, or the file should be regenerated with corroborating evidence."
   },
   {
     "mp_id": "45f0a213-f8bc-4eee-9e4e-4627502339fe",
