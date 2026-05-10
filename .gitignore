@@ -2,6 +2,9 @@
 .env
 .env.*
 !.env.template
+# Vite/React dev defaults are non-secret and must be committed so first-time
+# checkout does not white-screen on missing VITE_API_URL.
+!Seimas.v2/dashboard/.env.development
 
 # OpenPlanter agent sessions (traces often contain API keys — never push)
 Seimas.v2/.openplanter/sessions/
