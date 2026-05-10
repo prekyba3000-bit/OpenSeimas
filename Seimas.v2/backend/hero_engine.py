@@ -1110,3 +1110,259 @@ def calculate_all_hero_profiles(
 
     profiles.sort(key=lambda p: (p["level"], p["xp"]), reverse=True)
     return profiles
+
+
+def _build_geometry_from_row(row: Dict[str, Any]) -> Dict[str, Any]:
+    if not row.get("has_geometry_row"):
+        return {
+            "status": "unavailable",
+            "max_deviation_sigma": None,
+            "penalty": 0,
+            "explanation": "Vote geometry table is unavailable.",
+        }
+    sigma = float(row.get("geometry_max_deviation_sigma") or 0)
+    count = int(row.get("geometry_anomalous_vote_count") or 0)
+    if count >= 2884:
+        return {
+            "status": "flagged",
+            "max_deviation_sigma": sigma,
+            "anomalous_vote_count": count,
+            "penalty": -15,
+            "explanation": (
+                f"Defected from party majority on {count} anomalous votes (top decile)."
+            ),
+        }
+    if count >= 2560:
+        return {
+            "status": "warning",
+            "max_deviation_sigma": sigma,
+            "anomalous_vote_count": count,
+            "penalty": -5,
+            "explanation": (
+                f"Defected from party majority on {count} anomalous votes."
+            ),
+        }
+    return {
+        "status": "clean",
+        "max_deviation_sigma": sigma,
+        "anomalous_vote_count": count,
+        "penalty": 0,
+        "explanation": "Few defections from party majority on anomalous votes.",
+    }
+
+
+def _build_forensic_breakdown_fast(row: Dict[str, Any], party_loyalty_pct: float) -> Dict[str, Any]:
+    """Forensic breakdown computed from a single mp_leaderboard_metrics row.
+
+    benford_analyses / amendment_profiles / phantom_* tables are empty or absent
+    in the current schema, so those sections stay at their unavailable defaults
+    (matching the per-MP path's behavior on those tables). Only mp_vote_geometry
+    contributes a live signal."""
+    benford = {
+        "status": "unavailable",
+        "p_value": None,
+        "penalty": 0,
+        "explanation": "Benford analysis table is unavailable.",
+    }
+    chrono = {
+        "status": "unavailable",
+        "worst_zscore": None,
+        "penalty": 0,
+        "explanation": "Chrono-forensics table is unavailable.",
+    }
+    phantom_network = {
+        "status": "unavailable",
+        "procurement_links": 0,
+        "closest_hop_count": None,
+        "debtor_links": 0,
+        "penalty": 0,
+        "explanation": "Phantom network table is unavailable.",
+    }
+    vote_geometry = _build_geometry_from_row(row)
+
+    disloyalty_pct = _clamp(100.0 - party_loyalty_pct, 0.0, 100.0)
+    loyalty_bonus = 10 if 10.0 < disloyalty_pct < 40.0 else 0
+    loyalty_bonus_obj = {
+        "status": "warning" if loyalty_bonus > 0 else "clean",
+        "independent_voting_days_pct": round(disloyalty_pct, 2),
+        "bonus": loyalty_bonus,
+        "explanation": (
+            (
+                f"Estimated independent voting rate is {disloyalty_pct:.1f}%; "
+                "this is independent but not fully detached, so integrity bonus is applied."
+            )
+            if loyalty_bonus > 0
+            else (
+                f"Estimated independent voting rate is {disloyalty_pct:.1f}%; "
+                "outside the calibrated 10-40% independent range, so no loyalty bonus is applied."
+            )
+        ),
+    }
+
+    raw_penalty_sum = (
+        benford["penalty"] + chrono["penalty"] + vote_geometry["penalty"] + phantom_network["penalty"]
+    )
+    forensic_penalty = max(-60, raw_penalty_sum)
+    total_forensic_adjustment = forensic_penalty + loyalty_bonus
+    final_integrity_score = _clamp(100 + total_forensic_adjustment)
+
+    return {
+        "base_risk_score": 0.0,
+        "base_risk_penalty": 0.0,
+        "benford": benford,
+        "chrono": chrono,
+        "vote_geometry": vote_geometry,
+        "phantom_network": phantom_network,
+        "loyalty_bonus": loyalty_bonus_obj,
+        "raw_forensic_penalty_sum": raw_penalty_sum,
+        "capped_forensic_penalty": forensic_penalty,
+        "total_forensic_adjustment": total_forensic_adjustment,
+        "final_integrity_score": round(final_integrity_score, 2),
+    }
+
+
+def calculate_all_hero_profiles_fast(
+    db_cursor, active_only: bool = True, limit: int | None = None
+) -> List[Dict[str, Any]]:
+    """Bulk leaderboard path — single SELECT against mp_leaderboard_metrics, no
+    per-MP queries. Targets sub-3s cold for 141 active MPs.
+
+    Falls back to the per-MP path (`calculate_all_hero_profiles`) if the
+    materialized view is missing (e.g. fresh checkout before running migration
+    014)."""
+    db_cursor.execute("SELECT to_regclass('public.mp_leaderboard_metrics') AS t")
+    if not db_cursor.fetchone()["t"]:
+        return calculate_all_hero_profiles(db_cursor, active_only=active_only, limit=limit)
+
+    where = "WHERE is_active = TRUE" if active_only else ""
+    db_cursor.execute(f"SELECT * FROM mp_leaderboard_metrics {where}")
+    rows = db_cursor.fetchall()
+    if not rows:
+        return []
+
+    def _safe_max(key: str) -> float:
+        return max((float(r[key] or 0) for r in rows), default=0.0)
+
+    max_bills_authored = _safe_max("bills_authored_count")
+    max_committee_leadership = _safe_max("committee_leadership_roles")
+    max_speeches_given = _safe_max("speeches_given")
+    max_amendments_proposed_proxy = _safe_max("amendment_votes")
+    max_amendments_proposed_count = _safe_max("amendments_proposed_count")
+    max_total_votes_cast = _safe_max("total_votes_cast")
+    max_years_in_parliament = max(
+        (_years_since(r["first_vote_date"]) for r in rows), default=0.0
+    )
+
+    profiles: List[Dict[str, Any]] = []
+    for row in rows:
+        bills_authored = float(row["bills_authored_count"] or 0)
+        committee_leadership = float(row["committee_leadership_roles"] or 0)
+        bills_passed = float(row["votes_for_passed"] or 0)
+        total_votes_cast = float(row["total_votes_cast"] or 0)
+        speeches_given = float(row["speeches_given"] or 0)
+        attendance_percentage = float(row["attendance_percentage"] or 0)
+        amendments_proposed_count = float(row["amendments_proposed_count"] or 0)
+        # amendment_profiles is empty in current schema => no direct signal,
+        # so the proxy (amendments_proposed_count) drives the STA contribution.
+        amendments_proposed = amendments_proposed_count
+        bills_proposed = bills_authored
+        years_in_parliament = _years_since(row["first_vote_date"])
+        party_loyalty = float(row["party_loyalty"] or 0)
+        social_bonus = 0.0  # politicians.social_links column not present in current schema
+
+        forensic_breakdown = _build_forensic_breakdown_fast(row, party_loyalty)
+        # Geometry-derived high-risk alert proxy: count >= 2884 was the
+        # critical bucket in the per-MP path's risk_score signal source.
+        geom = forensic_breakdown["vote_geometry"]
+        high_risk_alerts = 1 if geom.get("status") == "flagged" else 0
+
+        str_score = (0.6 * _normalize(bills_authored, max_bills_authored)) + (
+            0.4 * _normalize(committee_leadership, max_committee_leadership)
+        )
+        wis_score = (
+            0.5 * _normalize(years_in_parliament, max_years_in_parliament)
+            + 0.3 * _normalize(total_votes_cast, max_total_votes_cast)
+            + 0.2 * _normalize(amendments_proposed_count, max_amendments_proposed_count)
+        )
+        cha_score = (0.5 * _normalize(speeches_given, max_speeches_given)) + (0.5 * social_bonus)
+        int_score = float(forensic_breakdown["final_integrity_score"])
+        sta_score = (0.8 * _clamp(attendance_percentage)) + (
+            0.2 * _normalize(amendments_proposed, max_amendments_proposed_proxy)
+        )
+
+        metrics_provenance = {
+            "STR": "direct" if bills_authored > 0 and (max_bills_authored > 0 or max_committee_leadership > 0) else "unavailable",
+            "WIS": "direct",
+            "CHA": "direct" if max_speeches_given > 0 else "proxy",
+            "INT": "direct" if row.get("has_geometry_row") else "proxy",
+            "STA": "proxy",
+        }
+
+        xp = int(round(total_votes_cast + (bills_proposed * 10) + (bills_passed * 50) - (high_risk_alerts * 100)))
+        if xp < 100:
+            level = 0
+        else:
+            level = max(0, int(math.floor(math.log(xp / 100))))
+
+        alignment = _derive_alignment(
+            party_loyalty=party_loyalty, attendance_percentage=attendance_percentage
+        )
+        current_level_xp, next_level_xp = _xp_progress(xp=xp, level=level)
+
+        metrics = {
+            "bills_authored_count": bills_authored,
+            "bills_passed": bills_passed,
+            "committee_leadership": committee_leadership,
+            "years_in_parliament": years_in_parliament,
+            "total_votes_cast": total_votes_cast,
+            "speeches_given": speeches_given,
+            "social_bonus": social_bonus,
+            "risk_score": 0.0,
+            "forensic_penalties": {
+                "benford_penalty": forensic_breakdown["benford"]["penalty"],
+                "chrono_penalty": forensic_breakdown["chrono"]["penalty"],
+                "geometry_penalty": forensic_breakdown["vote_geometry"]["penalty"],
+                "phantom_penalty": forensic_breakdown["phantom_network"]["penalty"],
+                "loyalty_bonus": forensic_breakdown["loyalty_bonus"]["bonus"],
+                "total_forensic_adjustment": forensic_breakdown["total_forensic_adjustment"],
+            },
+            "attendance_percentage": attendance_percentage,
+            "amendments_proposed": amendments_proposed,
+            "amendments_proposed_proxy": amendments_proposed_count,
+            "bills_proposed": bills_proposed,
+            "party_loyalty": party_loyalty,
+            "high_risk_alerts": high_risk_alerts,
+        }
+
+        profiles.append({
+            "mp": {
+                "id": str(row["mp_id"]),
+                "name": row["display_name"],
+                "party": row["current_party"],
+                "photo": row["photo_url"],
+                "active": row["is_active"],
+                "seimas_id": row["seimas_mp_id"],
+                "last_synced_at": str(row["last_synced_at"]) if row.get("last_synced_at") else None,
+            },
+            "level": level,
+            "xp": xp,
+            "xp_current_level": current_level_xp,
+            "xp_next_level": next_level_xp,
+            "alignment": alignment,
+            "attributes": {
+                "STR": round(_clamp(str_score), 2),
+                "WIS": round(_clamp(wis_score), 2),
+                "CHA": round(_clamp(cha_score), 2),
+                "INT": round(_clamp(int_score), 2),
+                "STA": round(_clamp(sta_score), 2),
+            },
+            "artifacts": _award_artifacts(metrics=metrics, integrity_score=int_score, level=level),
+            "metrics": metrics,
+            "metrics_provenance": metrics_provenance,
+            "forensic_breakdown": forensic_breakdown,
+        })
+
+    profiles.sort(key=lambda p: (p["level"], p["xp"]), reverse=True)
+    if limit is not None:
+        return profiles[:limit]
+    return profiles

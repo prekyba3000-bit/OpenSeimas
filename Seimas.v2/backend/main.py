@@ -19,12 +19,14 @@ try:
     from backend.hero_engine import (
         calculate_hero_profile,
         calculate_all_hero_profiles,
+        calculate_all_hero_profiles_fast,
         fetch_graph_mp_summaries,
     )
 except ImportError:
     from hero_engine import (
         calculate_hero_profile,
         calculate_all_hero_profiles,
+        calculate_all_hero_profiles_fast,
         fetch_graph_mp_summaries,
     )
 try:
@@ -143,7 +145,8 @@ def _openplanter_graph_node_element(
 
 
 def _refresh_materialized_view():
-    """Refresh mp_stats_summary. Runs in a background thread."""
+    """Refresh mp_stats_summary then mp_leaderboard_metrics (which depends on it).
+    Runs in a background thread."""
     try:
         if not DB_DSN:
             _refresh_state["last_error"] = "DB_DSN not set"
@@ -152,6 +155,9 @@ def _refresh_materialized_view():
         conn.autocommit = True
         with conn.cursor() as cur:
             cur.execute("REFRESH MATERIALIZED VIEW CONCURRENTLY mp_stats_summary;")
+            cur.execute("SELECT to_regclass('public.mp_leaderboard_metrics') AS t")
+            if cur.fetchone()[0]:
+                cur.execute("REFRESH MATERIALIZED VIEW CONCURRENTLY mp_leaderboard_metrics;")
         conn.close()
         _refresh_state["last_refresh"] = datetime.datetime.utcnow().isoformat() + "Z"
         _refresh_state["last_error"] = None
@@ -652,7 +658,7 @@ def get_hero_leaderboard(limit: int = 20):
         with conn.cursor() as cur:
             try:
                 print("Leaderboard: re-calculating and caching.")
-                all_profiles = calculate_all_hero_profiles(
+                all_profiles = calculate_all_hero_profiles_fast(
                     db_cursor=cur, active_only=True, limit=safe_limit
                 )
                 with _leaderboard_cache_lock:
