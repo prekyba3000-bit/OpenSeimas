@@ -46,3 +46,4 @@ Thumbs.db
 
 # OS / tooling
 *.orig
+.claude/
