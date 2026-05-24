@@ -154,28 +154,49 @@ def process_sitting(sess_id, sit_id):
     # Batch Insert into DB
     if not votes_to_insert: return 0
 
+    # Dedupe by vid before the UPSERT: LRS XML lists the same <balsavimas>
+    # under both a "Klausimų grupė" wrapper darbotvarkes-klausimas and its
+    # child items (the deep-or-self .//balsavimas yields it twice), which
+    # makes Postgres reject the batch with "ON CONFLICT DO UPDATE command
+    # cannot affect row a second time". Prefer the child's resolved title
+    # over the wrapper placeholder when both reference the same vid.
+    def _is_placeholder(t):
+        return (t or '').strip() in ('Klausimų grupė', 'Unknown Motion', '')
+
+    votes_by_vid = {}
+    for row in votes_to_insert:
+        vid = row[0]
+        existing = votes_by_vid.get(vid)
+        if existing is None or _is_placeholder(existing[2]):
+            votes_by_vid[vid] = row
+    votes_to_insert = list(votes_by_vid.values())
+
+    # mp_votes uses ON CONFLICT DO NOTHING, which tolerates intra-batch
+    # duplicates, but dedupe anyway for cleanliness.
+    mp_votes_batch = list({(r[0], r[1]): r for r in mp_votes_batch}.values())
+
     with get_db_conn() as conn:
         with conn.cursor() as cur:
             # Upsert Votes
             extras.execute_values(cur, """
                 INSERT INTO votes (seimas_vote_id, sitting_date, title, project_id, vote_type)
                 VALUES %s
-                ON CONFLICT (seimas_vote_id) 
-                DO UPDATE SET 
-                    title = EXCLUDED.title, 
+                ON CONFLICT (seimas_vote_id)
+                DO UPDATE SET
+                    title = EXCLUDED.title,
                     sitting_date = EXCLUDED.sitting_date,
                     project_id = EXCLUDED.project_id,
                     vote_type = EXCLUDED.vote_type
             """, votes_to_insert)
-            
+
             # Upsert MP Votes
             if mp_votes_batch:
                 extras.execute_values(cur, """
-                    INSERT INTO mp_votes (vote_id, politician_id, vote_choice) 
-                    VALUES %s 
+                    INSERT INTO mp_votes (vote_id, politician_id, vote_choice)
+                    VALUES %s
                     ON CONFLICT DO NOTHING
                 """, mp_votes_batch)
-            
+
             conn.commit()
             
     print(f"  > Sitting {sit_id}: Synced {local_votes_count} votes.")
