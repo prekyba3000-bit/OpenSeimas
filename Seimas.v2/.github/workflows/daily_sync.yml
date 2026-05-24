@@ -46,19 +46,24 @@ jobs:
           DB_DSN: ${{ secrets.DB_DSN }}
         run: python3 ingest_votes_v2.py
 
-      - name: Recreate Materialized View (day-based attendance)
+      - name: Recreate Materialized Views (cast-vote filter aligned)
         env:
           DB_DSN: ${{ secrets.DB_DSN }}
+        # Migration 015 DROPs and CREATEs both mp_stats_summary and
+        # mp_leaderboard_metrics with the corrected positive-whitelist
+        # cast-vote filter. Earlier migrations (002/007/014) are subsumed
+        # by 015 — running 002 alone here previously reverted the fix
+        # nightly. See OpenSeimas#1.
         run: |
           python3 -c "
           import psycopg2, os
           c = psycopg2.connect(os.environ['DB_DSN'])
           c.autocommit = True
           cur = c.cursor()
-          with open('migrations/002_create_stats_view.sql') as f:
+          with open('migrations/015_fix_cast_vote_filter.sql') as f:
               cur.execute(f.read())
           c.close()
-          print('Materialized view recreated with day-based attendance')
+          print('Materialized views recreated with cast-vote filter from migration 015')
           "
 
       - name: Export Stats JSON
@@ -86,7 +91,7 @@ jobs:
         run: |
           git add dashboard/public/data/absenteeism.json
           git commit -m "data: daily sync [skip ci]"
-          git pull --rebase origin master
+          git pull --rebase origin main
           git push
 
       - name: Sync Complete

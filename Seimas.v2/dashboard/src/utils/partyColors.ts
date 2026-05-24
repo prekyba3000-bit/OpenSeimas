@@ -9,9 +9,10 @@ const PARTY_MAP: Record<string, PartyMeta> = {
     { short: 'LSDP', hex: '#ef4444', tailwind: 'bg-red-500' },
   'Tėvynės sąjungos-Lietuvos krikščionių demokratų frakcija':
     { short: 'TS-LKD', hex: '#2563eb', tailwind: 'bg-blue-600' },
-  '„Nemuno aušros" frakcija':
+  '„Nemuno aušros“ frakcija':
     { short: 'Nemuno aušra', hex: '#f59e0b', tailwind: 'bg-amber-500' },
-  'Demokratų frakcija „Vardan Lietuvos"':
+  // Lithuanian closing quote U+201C (") — DB value uses it; ASCII " miss-matched.
+  'Demokratų frakcija „Vardan Lietuvos“':
     { short: 'Vardan LT', hex: '#10b981', tailwind: 'bg-emerald-500' },
   'Liberalų  sąjūdžio frakcija':
     { short: 'LRLS', hex: '#f97316', tailwind: 'bg-orange-500' },
