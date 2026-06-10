@@ -15,6 +15,9 @@ import datetime
 import hashlib
 from typing import List, Dict, Optional, Any
 from collections import defaultdict
+import logging
+
+logger = logging.getLogger("seimas.api")
 try:
     from backend.hero_engine import (
         calculate_hero_profile,
@@ -668,7 +671,8 @@ def get_hero_leaderboard(limit: int = 20):
                     }
                 return all_profiles
             except Exception as exc:
-                raise HTTPException(status_code=500, detail=f"Failed to build leaderboard: {exc}")
+                logger.exception("Failed to build leaderboard")
+                raise HTTPException(status_code=500, detail="Failed to build leaderboard")
 
 
 @app.get("/api/v2/heroes/search", response_model=HeroSearchResponse)
@@ -725,7 +729,8 @@ def search_heroes(
             except HTTPException:
                 raise
             except Exception as exc:
-                raise HTTPException(status_code=500, detail=f"Failed to search heroes: {exc}")
+                logger.exception("Failed to search heroes")
+                raise HTTPException(status_code=500, detail="Failed to search heroes")
 
 
 @app.get("/api/v2/heroes/{mp_id}", response_model=HeroProfileResponse)
@@ -741,7 +746,8 @@ def get_hero_profile(mp_id: str):
             except ValueError:
                 raise HTTPException(status_code=404, detail="MP not found")
             except Exception as exc:
-                raise HTTPException(status_code=500, detail=f"Failed to build hero profile: {exc}")
+                logger.exception("Failed to build hero profile")
+                raise HTTPException(status_code=500, detail="Failed to build hero profile")
 
 
 def _build_openplanter_graph_payload(cur) -> Dict:
@@ -1157,8 +1163,9 @@ def get_openplanter_graph(request: Request):
                     }
                 return payload
             except Exception as exc:
+                logger.exception("Failed to build OpenPlanter graph")
                 raise HTTPException(
-                    status_code=500, detail=f"Failed to build OpenPlanter graph: {exc}"
+                    status_code=500, detail="Failed to build OpenPlanter graph"
                 )
 
 
@@ -1176,7 +1183,8 @@ def get_hero_share_card(mp_id: str, format: str = "primary"):
             except ValueError:
                 raise HTTPException(status_code=404, detail="MP not found")
             except Exception as exc:
-                raise HTTPException(status_code=500, detail=f"Failed to render share card: {exc}")
+                logger.exception("Failed to render share card")
+                raise HTTPException(status_code=500, detail="Failed to render share card")
 
     safe_name = str(hero_profile.get("mp", {}).get("name", "hero")).strip().replace(" ", "-").lower()
     safe_name = "".join(ch for ch in safe_name if ch.isalnum() or ch in ("-", "_"))
