@@ -50,3 +50,8 @@ Thumbs.db
 # OS / tooling
 *.orig
 .claude/
+
+# One-off artifacts / local scratch (Seimas.v2)
+Seimas.v2/tmp_xml/
+Seimas.v2/*.png
+Seimas.v2/leaderboard.json
