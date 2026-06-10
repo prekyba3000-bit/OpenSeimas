@@ -9,7 +9,7 @@ from backend.main import app
 
 @pytest.mark.asyncio
 async def test_http_exception_uses_problem_details(monkeypatch):
-    import backend.main as main_mod
+    import backend.core as main_mod
 
     monkeypatch.setattr(main_mod, "check_rate_limit", lambda _ip: True)
 
@@ -49,7 +49,7 @@ async def test_validation_exception_uses_problem_details():
 
 @pytest.mark.asyncio
 async def test_unhandled_exception_uses_problem_details(monkeypatch):
-    import backend.main as main_mod
+    import backend.core as main_mod
 
     def _boom(_ip: str):
         raise RuntimeError("unexpected-failure")

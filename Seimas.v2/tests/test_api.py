@@ -10,7 +10,7 @@ from backend.main import app
 @pytest.mark.asyncio
 async def test_openplanter_graph_ok(monkeypatch):
     """Graph endpoint returns Cytoscape payload with nodes and edges (DB mocked)."""
-    import backend.main as main_mod
+    import backend.core as main_mod
 
     fake_summaries = [
         {
