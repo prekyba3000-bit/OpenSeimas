@@ -10,25 +10,22 @@ from backend.main import app
 @pytest.mark.asyncio
 async def test_openplanter_graph_ok(monkeypatch):
     """Graph endpoint returns Cytoscape payload with nodes and edges (DB mocked)."""
-    import backend.main as main_mod
+    import backend.core as main_mod
 
-    fake_profiles = [
+    fake_summaries = [
         {
-            "mp": {
-                "id": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
-                "name": "Test MP",
-                "party": "Test Party",
-                "active": True,
-            },
+            "mp_id": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+            "display_name": "Test MP",
+            "current_party": "Test Party",
             "alignment": "Lawful Good",
-            "attributes": {"INT": 72.0},
-            "level": 2,
+            "integrity_score": 72,
             "xp": 500,
+            "level": 2,
         }
     ]
 
-    def fake_calculate_all(*, db_cursor, active_only=True, limit=None):
-        return fake_profiles
+    def fake_fetch_summaries(*, db_cursor, active_only=True):
+        return fake_summaries
 
     def fake_table_exists(cur, name):
         return False
@@ -43,10 +40,12 @@ async def test_openplanter_graph_ok(monkeypatch):
         conn.cursor.return_value = cm
         yield conn
 
-    monkeypatch.setattr(main_mod, "calculate_all_hero_profiles", fake_calculate_all)
+    monkeypatch.setattr(main_mod, "fetch_graph_mp_summaries", fake_fetch_summaries)
     monkeypatch.setattr(main_mod, "_table_exists", fake_table_exists)
     monkeypatch.setattr(main_mod, "get_db_conn", fake_get_db)
     monkeypatch.setattr(main_mod, "check_rate_limit", lambda ip: True)
+    with main_mod._leaderboard_cache_lock:
+        main_mod._leaderboard_cache["openplanter_graph"] = None
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         response = await ac.get("/api/v2/openplanter/graph")
