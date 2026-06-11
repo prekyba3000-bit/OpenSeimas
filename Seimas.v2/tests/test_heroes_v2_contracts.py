@@ -77,7 +77,7 @@ class FakeConnection:
 
 
 def _patch_db(monkeypatch, rows):
-    import backend.main as main_mod
+    import backend.core as main_mod
 
     fake_conn = FakeConnection(rows)
 
@@ -127,7 +127,7 @@ async def test_heroes_search_requires_query_param():
 
 @pytest.mark.asyncio
 async def test_heroes_search_rejects_blank_query(monkeypatch):
-    import backend.main as main_mod
+    import backend.core as main_mod
 
     monkeypatch.setattr(main_mod, "check_rate_limit", lambda _ip: True)
     _patch_db(monkeypatch, [])
@@ -138,7 +138,7 @@ async def test_heroes_search_rejects_blank_query(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_heroes_search_rejects_overlong_query(monkeypatch):
-    import backend.main as main_mod
+    import backend.core as main_mod
 
     monkeypatch.setattr(main_mod, "check_rate_limit", lambda _ip: True)
     _patch_db(monkeypatch, [])
@@ -150,7 +150,7 @@ async def test_heroes_search_rejects_overlong_query(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_heroes_search_returns_results(monkeypatch):
-    import backend.main as main_mod
+    import backend.core as main_mod
 
     monkeypatch.setattr(main_mod, "check_rate_limit", lambda _ip: True)
     monkeypatch.setattr(main_mod, "calculate_hero_profile", lambda mp_id, db_cursor: _fake_hero_profile(mp_id))
@@ -168,7 +168,7 @@ async def test_heroes_search_returns_results(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_heroes_search_is_parameterized_against_injection(monkeypatch):
-    import backend.main as main_mod
+    import backend.core as main_mod
 
     monkeypatch.setattr(main_mod, "check_rate_limit", lambda _ip: True)
     monkeypatch.setattr(main_mod, "calculate_hero_profile", lambda mp_id, db_cursor: _fake_hero_profile(mp_id))
@@ -185,7 +185,7 @@ async def test_heroes_search_is_parameterized_against_injection(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_heroes_search_clamps_limit(monkeypatch):
-    import backend.main as main_mod
+    import backend.core as main_mod
 
     monkeypatch.setattr(main_mod, "check_rate_limit", lambda _ip: True)
     monkeypatch.setattr(main_mod, "calculate_hero_profile", lambda mp_id, db_cursor: _fake_hero_profile(mp_id))
@@ -199,7 +199,7 @@ async def test_heroes_search_clamps_limit(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_heroes_search_returns_500_when_db_unavailable(monkeypatch):
-    import backend.main as main_mod
+    import backend.core as main_mod
 
     monkeypatch.setattr(main_mod, "check_rate_limit", lambda _ip: True)
 
@@ -215,7 +215,7 @@ async def test_heroes_search_returns_500_when_db_unavailable(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_heroes_search_returns_429_on_rate_limit(monkeypatch):
-    import backend.main as main_mod
+    import backend.core as main_mod
 
     monkeypatch.setattr(main_mod, "check_rate_limit", lambda _ip: False)
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
@@ -225,7 +225,7 @@ async def test_heroes_search_returns_429_on_rate_limit(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_heroes_search_returns_empty_results(monkeypatch):
-    import backend.main as main_mod
+    import backend.core as main_mod
 
     monkeypatch.setattr(main_mod, "check_rate_limit", lambda _ip: True)
     _patch_db(monkeypatch, [])
