@@ -264,8 +264,20 @@ def get_mp(mp_id: str):
             raise HTTPException(status_code=500, detail="Database connection failed")
 
         with conn.cursor() as cur:
+            # social_links is optional in older schemas; build the SELECT
+            # defensively to match the pattern in /api/mps. Without this,
+            # databases missing the column 500 instead of degrading to {}.
             cur.execute("""
-                SELECT p.id, p.display_name, p.current_party, p.photo_url, p.social_links,
+                SELECT EXISTS (
+                    SELECT 1 FROM information_schema.columns
+                    WHERE table_name = 'politicians' AND column_name = 'social_links'
+                ) AS has_social
+            """)
+            has_social = cur.fetchone()["has_social"]
+            social_col = "p.social_links," if has_social else ""
+
+            cur.execute(f"""
+                SELECT p.id, p.display_name, p.current_party, p.photo_url, {social_col}
                        p.is_active, p.seimas_mp_id,
                        COUNT(DISTINCT mv.vote_id) as vote_count
                 FROM politicians p
@@ -283,7 +295,7 @@ def get_mp(mp_id: str):
                 "name": row["display_name"],
                 "party": row["current_party"],
                 "photo": row["photo_url"],
-                "social_links": row["social_links"] or {},
+                "social_links": (row.get("social_links") if has_social else {}) or {},
                 "active": row["is_active"],
                 "seimas_id": row["seimas_mp_id"],
                 "vote_count": row["vote_count"],
