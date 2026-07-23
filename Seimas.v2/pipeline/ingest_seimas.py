@@ -168,7 +168,8 @@ def sync_db():
             current_party = EXCLUDED.current_party,
             is_active = EXCLUDED.is_active,
             term_end_date = EXCLUDED.term_end_date,
-            photo_url = EXCLUDED.photo_url;
+            photo_url = EXCLUDED.photo_url,
+            last_synced_at = NOW();
     """
     
     execute_values(cur, sql, mps)
