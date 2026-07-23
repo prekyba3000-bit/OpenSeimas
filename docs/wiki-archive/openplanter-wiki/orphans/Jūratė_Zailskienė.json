@@ -1,0 +1,60 @@
+{
+  "name": "Jūratė Zailskienė",
+  "birth_date": "1965-12-06",
+  "birth_place": "Utena, Lithuania",
+  "education": [
+    {
+      "degree": "Bachelor's in History and Civic Education",
+      "institution": "Vilnius University",
+      "year": 1989
+    }
+  ],
+  "career": [
+    {
+      "role": "Teacher",
+      "term": "1989-1994",
+      "organization": "Birštonas Secondary School"
+    },
+    {
+      "role": "Editor",
+      "term": "1997-2015",
+      "organization": "Publications: Vingis, Pienų pieva, Ekspress leidyba, Presa"
+    },
+    {
+      "role": "Director",
+      "term": "2014-2024",
+      "organization": "Su pliusu"
+    },
+    {
+      "role": "Director",
+      "term": "2019-2023",
+      "organization": "Prienai District Municipality Administration"
+    },
+    {
+      "role": "Advisor to the Mayor",
+      "term": "2023",
+      "organization": "Prienai District Municipality"
+    },
+    {
+      "role": "Member of the Lithuanian Parliament (Seimas)",
+      "term": "2024-present",
+      "organization": "Lithuanian Parliament"
+    },
+    {
+      "role": "Minister of Social Security and Labor",
+      "term": "2025-present",
+      "organization": "Government of Inga Ruginienė"
+    }
+  ],
+  "political_affiliation": "Lithuanian Social Democratic Party (LSDP)",
+  "current_position": "Minister of Social Security and Labor",
+  "other_activities": [
+    "Active in the Lithuanian Red Cross",
+    "Lectures at Third Age Universities",
+    "Member of the folk ensemble 'Raskila'"
+  ],
+  "sources": [
+    "https://lt.wikipedia.org/wiki/J%C5%ABrat%C4%97_Zailskien%C4%97",
+    "https://pasiskaitom.lt/jurate-zailskiene-biografija-karjera-ir-kelias-i-lietuvos-vyriausybe/"
+  ]
+}

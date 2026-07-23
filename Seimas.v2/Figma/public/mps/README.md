@@ -1,1 +1,0 @@
-This directory holds the MP photos synced from the LRS website.
