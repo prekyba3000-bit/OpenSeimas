@@ -1,3 +1,5 @@
+Below is the complete V.4 migration plan, structured for direct use by product, engineering, design, and civic stakeholders.
+
 ## OpenSeimas V.4 Build Plan
 This plan was created by an AI assistant to guide the migration of OpenSeimas toward a voter-first civic observatory. The objective is to help everyday Lithuanian voters understand what each vote means, feel that their choice is important, and make decisions with transparent, non-partisan guidance.
 
@@ -122,16 +124,7 @@ For React/Vite, organize the `dashboard` around feature modules for onboarding, 
 A minimal stack is sufficient: Python, FastAPI, Pydantic, standard database tooling, React, Vite, and accessible frontend components. Proprietary services should not be architectural requirements.
 
 ## 10. Success Metrics
-
-| Metric | Definition | Target |
-|---|---|---|
-| **Comprehension** | % of users able to summarize a recommendation correctly | ≥ 80% |
-| **Trust** | Average user trust rating after interacting with guidance | ≥ 4.0 / 5 |
-| **Action** | % of users who click source links or take a follow-up action | ≥ 15% |
-| **Feedback** | % of active users who provide ratings/comments | ≥ 10% |
-| **Data Freshness** | Median time from legislative publication to availability | ≤ 12 hours |
-| **Provenance coverage** | % of outputs with explicit source references | 100% |
-
+MetricDefinitionTarget behaviorComprehensionUsers correctly explain a recommendationIncreasingTrustUsers rate explanations as credibleHigh and stableActionUsers explore issues or sourcesMeaningful engagementFeedbackActionable feedback completionSufficient for iterationData freshnessRecords within expected ingest window>95% compliantProvenance coverageClaims linked to evidence100% recommendations
 ## 11. Risks and Mitigation
 
 - **Perceived bias:** destroys civic trust. Mitigate with transparent rules, evidence links, non-partisan review, and reading mode.
