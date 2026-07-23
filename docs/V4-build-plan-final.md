@@ -2,158 +2,202 @@
 This plan was created by an AI assistant to guide the migration of OpenSeimas toward a voter-first civic observatory. The objective is to help everyday Lithuanian voters understand what each vote means, feel that their choice is important, and make decisions with transparent, non-partisan guidance.
 
 ## 1. Executive Summary
-**Mission:** Make Lithuanian voting choices understandable, relevant, and personally meaningful through transparent evidence and explainable civic guidance.
+**Mission:** OpenSeimas V.4 transforms complex parliamentary data into clear, personalized, and actionable civic insights that empower citizens to participate confidently in the democratic process.
 
-OpenSeimas V.4 should become a mobile-first civic decision-support platform that transforms parliamentary data into clear explanations of political decisions, their real-world consequences, and their relevance to individual voters. It should combine reliable data ingestion, explainable recommendation logic, Lithuanian language UX, and visible provenance without presenting itself as an authority that tells people how to vote.
+The V.4 Vision: OpenSeimas V.4 shifts from a raw data repository to an intelligent civic engine. It leverages automated agents to digest legislative changes, summarize their direct impact on daily life, and present these insights through an accessible, mobile-first dashboard. The system must keep recommendations non-partisan and explainable, ensuring that technology bridges the gap between the Seimas and the street.
 
-For an ordinary Lithuanian voter, parliamentary information is often fragmented, technical, and disconnected from daily concerns. V.4 should reduce that distance by explaining what decisions affect housing, income, healthcare, education, transport, security, and other practical priorities. The experience should leave voters better informed, more confident, and more aware that their vote is important and relevant.
+Why It Matters: A typical Lithuanian voter—perhaps a busy parent in Kaunas or a small business owner in Klaipėda—often feels disconnected from the legislative processes in Vilnius. They need to know that their vote is important and relevant to their community's future. By translating dense legal text into practical consequences, OpenSeimas V.4 restores civic agency, proving that individual engagement directly influences national outcomes.
 
 ## 2. Current State
-The repository already provides a credible foundation for V.4:
+Repository Audit: The project currently resides in the OpenSeimas repository on the main branch. The structure includes Seimas.v2 for Python backend and ingestion, dashboard for the React/Vite web prototype, and archive for legacy .openplanter prompts and artifacts. Key documentation exists in AGENTS.md and memory-bank.md.
 
-- `Seimas.v2` contains the FastAPI backend, processing logic, and consolidated `pipeline`.
-- `dashboard` provides the React/Vite frontend starting point.
-- `archive` preserves V3 `.openplanter` prompts, tools, and wiki artifacts.
-- `AGENTS.md` defines emerging agent responsibilities.
-- `memory-bank.md` establishes voter-centered content principles.
-- V3 has been archived and tagged.
-- Desktop/Tauri code and large binaries have been removed.
-- Prototype and demo UI have been trimmed.
-- Data ingestion scripts have been consolidated into the pipeline.
-**Strengths:** working backend foundations, cleaner repository boundaries, reusable ingestion logic, and explicit voter-first guidance.
+Completed Milestones:
+- V3 artifacts have been successfully archived and tagged.
+- The desktop/Tauri app code and large binaries are removed.
+- The prototype/demo UI has been trimmed for clarity.
+- Data ingestion scripts are consolidated into a unified pipeline.
+- Voter-first documentation is drafted and centralized.
 
-**Remaining gaps:** no production-ready recommendation model, incomplete provenance and confidence handling, and no validated end-to-end voter experience.
+Repository Fit: The current OpenSeimas repository is highly suitable for this transition because it already possesses a clean separation of concerns. The foundational pipeline is centralized, legacy bloat has been stripped, and the presence of AGENTS.md and memory-bank.md provides a ready-made architectural blueprint for deploying intelligent services.
 
-**Repository fit:** OpenSeimas is suitable for this transition because its backend, pipeline, frontend, agent guidance, and historical artifacts are already separated sufficiently to evolve incrementally rather than requiring another rewrite.
+Strengths:
+- Clean, modular pipeline architecture ready for expansion.
+- Strong foundational guidelines for agent behavior and voter-centric content.
+- Lightweight frontend prototype primed for rapid iteration.
+
+Remaining Gaps:
+- Lack of a production-ready explainability layer linking summaries to raw sources.
+- Absence of a structured metric capture system to evaluate voter comprehension and trust.
 
 ## 3. Problem Statement
-V.4 must **“Make voting choices understandable, relevant, and personally meaningful.”**
+Core Problem: Make voting choices understandable, relevant, and personally meaningful.
 
-The average Lithuanian voter needs clarity about what political decisions mean, trust in where information comes from, and actionable explanations connected to personal priorities.
+User Need: The average Lithuanian voter needs clarity, trust, and actionability. They are overwhelmed by political noise and require a secure, culturally attuned tool that cuts through jargon without telling them what to think.
 
-**Product challenge:** Convert complex parliamentary evidence into concise, personalized guidance without oversimplifying uncertainty or introducing partisan influence.
+Product Challenge: We must architect an automated system that translates high-volume, complex parliamentary data into concise, unbiased, and highly accurate civic insights that everyday citizens can confidently act upon.
 
 ## 4. Strategic Objectives
-
-1. Help voters understand what each relevant bill or political decision means for daily life.
-2. Connect parliamentary activity to user-selected priorities without invasive profiling.
-3. Reduce uncertainty through clear rationale and explicit confidence levels.
-4. Preserve non-partisan trust through transparent evidence and source provenance.
-5. Deliver a high-quality Lithuanian language UX accessible to non-expert users.
-6. Build one reliable data pipeline serving APIs, agents, and frontend experiences.
-7. Measure comprehension and trust rather than optimizing only for engagement.
+- Empower the Citizen: Help voters understand what each bill means for their daily life.
+- Build Confidence: Reduce uncertainty by presenting clear rationale and confidence levels alongside every insight.
+- Ensure Neutrality: Preserve non-partisan trust through transparent evidence and direct source linking.
+- Optimize Accessibility: Deliver a seamless, mobile-first Lithuanian language UX that welcomes users of all technical proficiencies.
+- Scale Ingestion: Automate the reliable normalization of Seimas data into a structured, queryable format.
+- Protect Privacy: Implement lightweight preference onboarding without invasive tracking or data harvesting.
 
 ## 5. Proposed Solution Architecture
-V.4 should use six connected layers:
+The V.4 architecture is a layered, decoupled system designed for transparency and speed.
 
-- **Data ingestion and normalization:** `pipeline` acquires, validates, and standardizes parliamentary records.
-- **API/service layer:** `main.py` exposes stable domain and recommendation endpoints.
-- **Voter recommendation engine:** agent modules evaluate relevance and alignment.
-- **Explainability and provenance:** every recommendation carries reasoning, uncertainty, and sources.
-- **Frontend experience:** `dashboard` presents mobile-first voter guidance.
-- **Feedback and metrics:** captures usefulness, comprehension, trust, and failures.
-`cli.py` should remain the operational entry point for repeatable ingestion, normalization, validation, and maintenance jobs. Raw parliamentary data should flow through the pipeline into normalized domain models, then through recommendation and explainability components, before reaching the API and voter-facing interface.
+- **Data Ingestion and Normalization:** Hosted in the pipeline directory, this layer fetches raw Seimas data, cleans it, and structures it into a unified schema using cli.py for task orchestration.
+- **API / Service Layer:** Driven by main.py using FastAPI, this layer exposes secure endpoints for the frontend to request legislative summaries and user-specific data.
+- **Voter Recommendation Engine:** This logic layer routes processed bills through the agent network to generate personalized, non-partisan insights.
+- **Explainability and Provenance Layer:** Attaches exact source links, metadata, and confidence scores to every generated output, ensuring the AI's reasoning is visible.
+- **Frontend Experience:** The dashboard (React/Vite) consumes the API, rendering responsive, accessibility-first interfaces for the end user.
+- **Feedback and Metrics Layer:** Captures anonymous user trust signals and comprehension ratings, feeding them back into the system for continuous calibration.
+
+System Flow: Raw parliamentary data is pulled via the pipeline, processed by the PipelineAgent, and stored. When a user queries the dashboard, the API triggers the VoterGuideAgent and PersonalizationAgent. They generate a summary, which is verified by the ExplainabilityAgent and SafetyAgent before being delivered to the React frontend.
 
 ## 6. Phased Roadmap
+### Phase 1: Archive, cleanup, and architectural stabilization
+Scope: Finalize the transition from V.3 and establish the V.4 baseline.
+Deliverables: Locked dependency files, finalized repository directory structure, and a deployed staging environment.
+Duration: 2 weeks.
+Success Criteria: The V.3 archive is sealed, all legacy code is fully excised, and the V.4 baseline builds successfully in continuous integration without warnings.
 
-### Phase 1: Archive, Cleanup, and Architectural Stabilization
-**Duration:** 1 week. Confirm V3 archive/tag integrity, remove remaining obsolete dependencies, document repository boundaries, and freeze the initial V.4 package structure. Align `AGENTS.md` and `memory-bank.md` with the build plan. Define ownership for backend, pipeline, frontend, and civic review. **Success:** every active directory has a documented V.4 purpose and CI runs against a clean baseline.
-
-### Phase 2: Pipeline Hardening and Data Model Design
-**Duration:** 2–3 weeks. Define canonical models for bills, votes, members, parties, topics, sources, and timestamps. Make ingestion idempotent, observable, and restartable through `cli.py`. Add validation for missing or inconsistent source data. **Success:** repeated pipeline runs produce deterministic normalized records with freshness and validation status.
+### Phase 2: Pipeline hardening and data model design
+Scope: Fortify the backend to handle continuous, automated data ingestion.
+Deliverables: Pydantic schemas for all legislative data, automated cli.py cron jobs, and database migration scripts.
+Duration: 3 weeks.
+Success Criteria: The pipeline successfully ingests, normalizes, and stores one full week of Seimas activity without manual intervention or data loss.
 
 ### Phase 3: VoterGuideAgent MVP
-**Duration:** 2–3 weeks. Build `VoterGuideAgent` around normalized evidence and explicit user preferences. Return relevance, a recommendation or comparison signal, three reasons, uncertainty, and supporting records. Keep decision rules inspectable and non-partisan. **Success:** representative test cases produce understandable, reproducible outputs without unsupported claims.
+Scope: Build and prompt the core intelligence layer to generate civic summaries.
+Deliverables: Implementation of the VoterGuideAgent in Seimas.v2/agents/voter_guide.py, connected to the internal LLM gateway.
+Duration: 3 weeks.
+Success Criteria: The agent consistently transforms raw bill text into a localized, three-bullet summary that passes internal non-partisan quality checks.
 
-### Phase 4: Explainability, Provenance, and Safety
-**Duration:** 2 weeks. Introduce mandatory provenance markers, confidence rules, contradiction handling, and low-confidence fallbacks. `ExplainabilityAgent` should simplify reasoning while `SafetyAgent` checks unsupported conclusions and partisan framing. Recommendations must remain explainable rather than appearing authoritative. **Success:** every recommendation exposes its evidence and uncertainty.
+### Phase 4: Explainability, provenance, and safety
+Scope: Add trust guardrails to all generated content.
+Deliverables: Implementation of the ExplainabilityAgent and SafetyAgent, appending confidence bars and source links to the API payload.
+Duration: 2 weeks.
+Success Criteria: Every API response containing a recommendation includes a valid source URL, a confidence score, and passes the SafetyAgent's bias filter.
 
-### Phase 5: Frontend MVP and Mobile Usability
-**Duration:** 2–3 weeks. Rebuild the essential `dashboard` journey around preference onboarding, recommendation cards, issue exploration, and source inspection. Prioritize Lithuanian language UX, readable typography, accessibility, and one-handed mobile use. Avoid political-dashboard complexity. **Success:** test users can reach and understand a recommendation without instruction.
+### Phase 5: Frontend MVP and mobile usability
+Scope: Develop the React/Vite user interface focusing on a premium Lithuanian language UX.
+Deliverables: Mobile-responsive dashboard featuring recommendation cards, reading modes, and preference toggles.
+Duration: 4 weeks.
+Success Criteria: The dashboard loads in under two seconds on mobile devices and successfully renders the complete API payload with accurate visual hierarchy.
 
-### Phase 6: Metrics, Historical Calibration, and Beta Launch
-**Duration:** 2–3 weeks. Run the system against historical parliamentary decisions, inspect recommendation stability, and establish baseline metrics. Add lightweight trust and comprehension feedback. Conduct civic and technical reviews before public beta. **Success:** agreed quality thresholds are met and release procedures are repeatable.
+### Phase 6: Metrics, historical calibration, and beta launch
+Scope: Deploy the feedback capture system and open the platform to beta users.
+Deliverables: In-app trust surveys, analytics integration, and the official beta release.
+Duration: 3 weeks.
+Success Criteria: Beta users can submit feedback, system metrics are successfully logged to the database, and zero critical crashes occur during the first week of launch.
 
-### Phase 7: Post-Beta Iteration
-Use observed misunderstanding, low-confidence cases, accessibility issues, and user feedback to prioritize improvements rather than expanding scope by default.
+### Phase 7: Iteration and scaling (Optional)
+Scope: Post-beta refinement based on real-world voter interactions.
+Deliverables: Adjusted agent prompts, enhanced UI components, and expanded data sources.
+Duration: Ongoing.
+Success Criteria: A measurable increase in user trust scores and a reduction in reported data anomalies.
 
 ## 7. Detailed Feature Set
+Recommendation cards with headline + 3 bullet reasons: Distills complex bills into a clear title and three distinct impacts. Immediate voter benefit: Rapid comprehension of dense legal text.
 
-- **Recommendation cards:** headline plus three evidence-based reasons; gives voters an immediate summary.
-- **Compact Lithuanian explanation:** plain-language interpretation; reduces institutional and technical barriers.
-- **Confidence/uncertainty bar:** communicates evidence strength; prevents false certainty.
-- **Source links and provenance markers:** lets voters verify claims independently.
-- **Lightweight preference onboarding:** captures priorities without invasive tracking.
-- **Trust survey and feedback:** identifies confusing or unconvincing explanations.
-- **Accessibility-first mobile layout:** supports broader practical access.
-- **Non-partisan reading mode:** presents evidence without recommendation emphasis.
-- **“Why this matters to you”:** connects policy decisions to selected personal priorities.
-**User empathy:** V.4 should assume a voter checking a phone between work and daily responsibilities, with limited time and no desire to decode parliamentary procedure. The product should speak clearly, respect uncertainty, and never require political expertise.
+Compact explanation in Lithuanian: A high-quality, localized Lithuanian language UX that respects the user's cultural context. Immediate voter benefit: Builds foundational trust and accessibility for non-English speakers.
+
+Explicit confidence/uncertainty bar: A visual indicator showing how certain the system is about the bill's outcome. Immediate voter benefit: Fosters trust by acknowledging system limitations transparently.
+
+Source links and provenance markers: Direct links to the official Seimas registry for every claim. Immediate voter benefit: Allows skeptical voters to verify facts independently.
+
+Lightweight preference onboarding: Allows users to select topics of interest (e.g., healthcare, taxes) without invasive tracking. Immediate voter benefit: Delivers personalized relevance without compromising privacy.
+
+Feedback capture and trust survey: A simple module asking "Was this helpful?" Immediate voter benefit: Gives the voter a voice in improving the tool.
+
+Accessibility-first and mobile-first layout: Clean typography, high contrast, and touch-friendly targets. Immediate voter benefit: Ensures the platform is usable on the go for all demographics.
+
+Non-partisan reading mode and "why this matters to you" section: Strips away political rhetoric to focus purely on citizen impact. Immediate voter benefit: Makes voters feel their vote is important and relevant to their daily lives.
 
 ## 8. Agent Roles and Responsibilities
+VoterGuideAgent
+Purpose: Translates legislative jargon into clear, impactful summaries.
+Inputs: Normalized bill text, historical context.
+Outputs: Headlines, 3-bullet summaries, "why this matters" text.
+Voter Support: Bridges the knowledge gap, making politics instantly understandable.
 
-### `VoterGuideAgent`
-**Purpose:** Produce evidence-grounded voter guidance.
-**Inputs:** preferences, normalized parliamentary records.
-**Outputs:** relevance, recommendation signal, reasons, confidence.
-Supports confidence by turning evidence into a consistent decision structure.
+PersonalizationAgent
+Purpose: Maps general summaries to specific user preference profiles.
+Inputs: VoterGuideAgent summaries, user topic preferences (anonymous).
+Outputs: Re-ranked or highlighted content based on relevance.
+Voter Support: Cuts through the noise so the user only sees what directly impacts them.
 
-### `PersonalizationAgent`
-Maps voluntarily supplied priorities to relevant topics and decisions without building intrusive profiles.
+ExplainabilityAgent
+Purpose: Ensures every claim can be traced to a verifiable fact.
+Inputs: Generated summaries, raw pipeline data.
+Outputs: Provenance metadata, confidence scores, exact source URLs.
+Voter Support: Builds absolute trust by proving the system is not hallucinating or guessing.
 
-### `ExplainabilityAgent`
-Transforms reasoning into concise Lithuanian explanations, supporting both code-level structured output and expandable UX explanations.
+SafetyAgent
+Purpose: Acts as a strict gatekeeper against bias and inflammatory rhetoric.
+Inputs: Final drafts from all other agents.
+Outputs: Pass/Fail flags, redaction recommendations.
+Voter Support: Guarantees a safe, non-partisan environment free from political manipulation.
 
-### `SafetyAgent`
-Checks unsupported claims, excessive certainty, missing provenance, and partisan wording before publication.
-
-### `PipelineAgent`
-Coordinates ingest quality, normalization, freshness checks, and processing failures so voter-facing outputs rely on traceable data.
-
-Agents should be implemented as explicit Python services with typed inputs and outputs, while the UX exposes their results as explanations, evidence, and confidence rather than artificial “agent personalities.”
+PipelineAgent
+Purpose: Manages the health and structure of incoming Seimas data.
+Inputs: Raw XML/JSON from government APIs.
+Outputs: Clean, standardized database records.
+Voter Support: Ensures the information the voter relies on is always fresh, accurate, and unbroken.
 
 ## 9. Implementation Details
-Use a clear Python package structure with absolute package imports and shared domain utilities in `common.py`. Keep `cli.py` as the single operational runner for ingestion, normalization, validation, and scheduled maintenance.
+Backend Architecture: Use a modular Python package structure within Seimas.v2. Utilize FastAPI for high-performance, asynchronous endpoints, and Pydantic for strict data validation. The existing cli.py should serve as the primary runner for all pipeline jobs, cron tasks, and manual ingest overrides. common.py must contain shared configurations and logging setups.
 
-Recommendation APIs should return structured fields such as recommendation ID, issue summary, relevance, reasons, confidence, uncertainty notes, and source references. Ingestion should run on a defined cadence appropriate to source updates, with freshness timestamps exposed to clients.
+Frontend Architecture: The dashboard will utilize React and Vite for rapid builds and hot-module replacement. State management should be kept lightweight (e.g., React Context) to avoid bloat. Components must be strictly typed using TypeScript to align with backend Pydantic models.
 
-For React/Vite, organize the `dashboard` around feature modules for onboarding, recommendations, issues, sources, and feedback. Reuse existing pipeline logic, `AGENTS.md`, `memory-bank.md`, and archived V3 material selectively rather than restoring obsolete architecture.
-
-A minimal stack is sufficient: Python, FastAPI, Pydantic, standard database tooling, React, Vite, and accessible frontend components. Proprietary services should not be architectural requirements.
+Integration: Data normalization should occur on a nightly ingest cadence via the CLI. API contracts must enforce a strict schema where recommendation endpoints always return a unified payload containing the summary, provenance data, and safety flags. Existing artifacts in AGENTS.md and memory-bank.md should be directly injected into the system prompt orchestration layer. Avoid proprietary SaaS lock-in; rely on open-source libraries.
 
 ## 10. Success Metrics
-
-| Metric | Definition | Target |
+| Metric Name | Definition | Target Behavior |
 |---|---|---|
-| **Comprehension** | % of users able to summarize a recommendation correctly | ≥ 80% |
-| **Trust** | Average user trust rating after interacting with guidance | ≥ 4.0 / 5 |
-| **Action** | % of users who click source links or take a follow-up action | ≥ 15% |
-| **Feedback** | % of active users who provide ratings/comments | ≥ 10% |
-| **Data Freshness** | Median time from legislative publication to availability | ≤ 12 hours |
-| **Provenance coverage** | % of outputs with explicit source references | 100% |
+| Comprehension Score | User rating of how easily they understood the summary. | Maintain an average rating of 4.5/5.0. |
+| Trust Index | Percentage of users indicating they trust the platform's neutrality. | Exceed 85% positive sentiment. |
+| Action Rate | Percentage of users who click a source link or read a full bill. | Achieve >15% engagement per session. |
+| Feedback Volume | Number of trust surveys submitted per 1,000 active users. | Capture at least 50 responses per 1,000 users. |
+| Data Freshness | Time elapsed between a Seimas publication and dashboard availability. | Keep latency under 24 hours. |
+| Provenance Coverage | Percentage of insights displaying a valid, verifiable source link. | Maintain strict 100% coverage. |
 
 ## 11. Risks and Mitigation
+Perceived Bias:
+Why it matters: If voters suspect the tool favors one party, the project dies instantly.
+Mitigation: Enforce the SafetyAgent strictly; publish the system prompts and open-source the decision logic to ensure total transparency.
 
-- **Perceived bias:** destroys civic trust. Mitigate with transparent rules, evidence links, non-partisan review, and reading mode.
-- **Uncertain recommendations:** can create false confidence. Display uncertainty and allow “insufficient evidence” outcomes.
-- **Stale or incomplete data:** can mislead voters. Track freshness, validation state, and source failures explicitly.
-- **Low trust or adoption:** usefulness may not be immediately obvious. Test language and explanations with ordinary voters early.
-- **Scope creep:** could delay the core product. Freeze MVP capabilities and require evidence before adding features.
+Uncertain Recommendations:
+Why it matters: Hallucinations or vague summaries destroy credibility.
+Mitigation: Require the ExplainabilityAgent to flag low-confidence outputs, and display a prominent "Uncertainty Bar" to the user when data is ambiguous.
+
+Stale or Incomplete Data:
+Why it matters: Outdated information leads to misinformed voters.
+Mitigation: Implement automated alerting in cli.py to notify engineers immediately if the nightly ingestion pipeline fails.
+
+Low User Trust or Adoption:
+Why it matters: A tool no one uses fails its civic mission.
+Mitigation: Focus heavily on the localized Lithuanian language UX and ensure the onboarding process is entirely frictionless and tracking-free.
+
+Engineering Scope Creep:
+Why it matters: Over-engineering delays the launch past critical civic deadlines.
+Mitigation: Stick rigidly to the Phased Roadmap; defer all "nice-to-have" features to Phase 7.
 
 ## 12. Governance and Next Steps
-Immediately:
+Immediate Organizational Decisions:
+- Formally approve the decoupled, agent-based architecture outlined in this document.
+- Freeze the MVP scope to the deliverables listed in Phases 1 through 5.
+- Assign explicit engineering owners for the Python backend pipeline and the React frontend dashboard.
+- Schedule bi-weekly review checkpoints to evaluate agent output quality against the memory-bank.md guidelines.
 
-- Approve the agent-based architecture and responsibility boundaries.
-- Select the exact MVP voter journey and supported policy domains.
-- Assign backend, pipeline, frontend, and civic-content owners.
-- Schedule architecture, civic trust, and beta-readiness checkpoints.
-Next deliverables:
-
-1. `Seimas.v2/agents/voter_guide.py` prototype.
-2. `V4-build-plan-draft.md` refinement into implementation tickets.
-3. CI ingest workflow plus V.4 release checklist.
+Concrete Next Deliverables:
+1. Draft the Seimas.v2/agents/voter_guide.py prototype and run initial local tests.
+2. Refine the V4-build-plan-draft.md with specific ticket assignments and technical constraints.
+3. Configure the CI ingest workflow and finalize the pre-release deployment checklist.
 
 ## 13. Attribution
 This plan was created by an AI assistant.
 
-by Chat GPT 5.6 Sol
+By Gemini 3.1 Pro
