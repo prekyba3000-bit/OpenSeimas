@@ -1,7 +1,20 @@
 # Active Context: Seimas v.2
 
-## Current Focus
-Stabilize the Hero Parliament platform as a transparent, auditable system with persistent agent context and operational runbooks. **Primary orchestration for data and forensic refresh is OpenPlanter** (see below).
+## V.4 CLEANUP (2026-07, branch `cleanup/create-pipeline`) — READ FIRST
+
+The V.3 → V.4 "Observatory pivot" cleanup was executed with Kimi Code. **Everything below the "V.3 era" line is historical context, not current state.**
+
+What changed:
+- **OpenPlanter retired.** Its role is replaced by Kimi Code as the agent layer. Pre-cleanup state preserved on branch `archive/v3`, tags `v3-final` / `v3-archive`.
+- **Prompts → Kimi skills:** `.openplanter/prompts/seimas_pipeline.md` → `.kimi-code/skills/seimas-pipeline/SKILL.md`; `generate_mp_wikis.md` → `.kimi-code/skills/seimas-mp-wikis/SKILL.md`.
+- **Forensic tools moved:** `.openplanter/tools/` → `Seimas.v2/tools/` (seimas_benford/chrono/phantom, validate_wiki_identity).
+- **Wiki content archived:** `docs/wiki-archive/` (openplanter-wiki + mp-wikis).
+- **Deleted (V.3 legacy):** OpenPlanter tree, `.openplanter/`, Figma/, design-system/, drizzle alternate stack, gaming-HUD prototype components (`Live_Spectator_HUD`, `KillFeed`, `DashboardMissionControl`, `*Showcase.tsx`, etc.), `orchestrator.py`, Taskade sync, `analyze_*.py`, `sync_real_mps.py`, one-off SQL/data dumps, graphiti MCP layer (moved to `~/Documents/OpenSeimas-v4-graveyard/`).
+- **Still live (deliberately kept for now):** hero engine + `/api/v2/heroes/*` (powers the current deployed dashboard — remove when the V.4 frontend/API lands), shadcn `ui/` kit, share-card renderer (re-skin planned).
+- **V.4 direction drafts** from several models live in `docs/V4-build-plan-*.md`. A voter-guidance product direction emerged during the same period (see root `AGENTS.md` draft by another agent) — reconcile with the Observatory strategy before building.
+
+## Current Focus (V.3 era — historical)
+Stabilize the Hero Parliament platform as a transparent, auditable system with persistent agent context and operational runbooks. **Primary orchestration for data and forensic refresh is OpenPlanter** (see below). *(Superseded: orchestration is now the `seimas-pipeline` Kimi skill.)*
 
 ## Recent Changes
 - **Operation OpenPlanter Integration** is complete (all four phases). Details: [Operation OpenPlanter Integration](#operation-openplanter-integration).
