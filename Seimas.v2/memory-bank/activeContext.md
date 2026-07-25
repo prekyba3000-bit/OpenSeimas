@@ -1,6 +1,19 @@
 # Active Context: Seimas v.2
 
-## V.4 CLEANUP (2026-07, branch `cleanup/create-pipeline`) — READ FIRST
+## WHERE WE ARE (2026-07-23, branch `cleanup/create-pipeline`) — READ FIRST
+
+**Working plan:** `docs/V4-build-plan-synthesis-kimi.md` — the V.4 direction is decided: one platform, two modes — **"Faktai"** (facts/accountability: MP profiles, ideology galaxy, money web) and **"Tau"** (voter guidance: onboarding → cards: headline + 3 DB-sourced bullets + confidence + sources + "why this matters"). Deterministic-before-generative: cards are generated from DB rows; LLM only rewrites into plain Lithuanian under citation lock. **No agent framework** (OpenPlanter was retired for this reason). Read that doc before writing any V.4 code.
+
+**Done — Week 0 (all committed, pushed):**
+1. tsc fixed in live dashboard code (dead components removed; `vite build` passes). Remaining 39 tsc errors are Storybook/shadcn/tests only — replaced by V.4 frontend.
+2. `GET /api/meta/freshness` (routes_meta.py): per-domain row counts + latest timestamps + MV refresh state. `ingest_seimas.py` now sets `last_synced_at = NOW()` on upsert.
+3. Topic tagging: `pipeline/tag_topics.py` (run via `python -m pipeline.cli tag_topics`), migration `016_vote_topics.sql` (`vote_topics`, `legislation_topics` w/ title_hash), 8 LT categories. 48.5% of votes taggable (rest mostly procedural). 20 tests green.
+
+**NEXT — Weeks 1–2: deterministic card engine.** `cards` table + generator module (headline, ≤3 DB-sourced bullets, source URLs, computed confidence from data completeness, freshness) + `GET /api/cards`, `GET /api/bills/{id}`. No LLM yet. Then Weeks 2–3: "Tau" frontend shell in the Observatory design language (dark, editorial, LT-first, mobile-first).
+
+**Known small debts:** `pipeline/cli.py --list` NameError (`__path__`); `legislation` table missing from schema.sql; `assets`/`interests` tables possibly dead (ingest writes `mp_assets`); no categories yet for agriculture/culture/business.
+
+## V.4 CLEANUP (2026-07, branch `cleanup/create-pipeline`) — historical record
 
 The V.3 → V.4 "Observatory pivot" cleanup was executed with Kimi Code. **Everything below the "V.3 era" line is historical context, not current state.**
 
