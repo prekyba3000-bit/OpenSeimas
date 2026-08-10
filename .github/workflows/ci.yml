@@ -1,0 +1,59 @@
+# CI — gates every PR and push to main.
+# Lives at the MONOREPO ROOT (.github/workflows/) — GitHub ignores workflows in
+# subdirectories (this was OpenSeimas issue #3; do not move this file under Seimas.v2/).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: seimas
+          POSTGRES_PASSWORD: seimas
+          POSTGRES_DB: seimas
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U seimas" --health-interval 5s
+          --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install backend deps
+        run: pip install -r Seimas.v2/requirements.txt
+      - name: Apply schema + all migrations to a fresh DB
+        working-directory: Seimas.v2
+        env:
+          DB_DSN: postgresql://seimas:seimas@localhost:5432/seimas
+        run: python3 apply_migrations.py
+      - name: Backend tests
+        working-directory: Seimas.v2
+        env:
+          PYTHONPATH: .
+          DB_DSN: postgresql://seimas:seimas@localhost:5432/seimas
+        run: python -m pytest tests -q
+
+  dashboard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      # Monorepo workspaces: root package.json includes Seimas.v2/dashboard and
+      # packages/*; --legacy-peer-deps is the documented install path (README).
+      - name: Install
+        run: npm ci --legacy-peer-deps
+      - name: Unit tests (vitest, single run in CI)
+        run: npm run dashboard:test
+      - name: Build
+        run: npm run dashboard:build

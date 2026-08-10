@@ -1,0 +1,38 @@
+# Nightly logical backup of the Postgres DB → GitHub artifact (90-day retention).
+# Zero external dependencies; protects against free-tier DB loss (the 2026-07 outage).
+# For longer retention, mirror the artifact to external storage later.
+# Required secret: DB_DSN
+name: Nightly DB Backup
+
+on:
+  schedule:
+    - cron: '17 2 * * *'   # ~05:17 Vilnius — after daily_sync (04:00 UTC)
+  workflow_dispatch:
+
+permissions:
+  contents: none
+
+jobs:
+  pg_dump:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Dump database
+        env:
+          DB_DSN: ${{ secrets.DB_DSN }}
+        run: |
+          set -euo pipefail
+          test -n "$DB_DSN" || { echo "DB_DSN secret not set"; exit 1; }
+          pg_dump "$DB_DSN" --format=custom --compress=6 --file=seimas_backup.dump
+          ls -lh seimas_backup.dump
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: seimas-db-dump-${{ github.run_number }}
+          path: seimas_backup.dump
+          retention-days: 90
+          if-no-files-found: error

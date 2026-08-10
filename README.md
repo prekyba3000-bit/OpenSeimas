@@ -1,44 +1,64 @@
-# OpenSeimas — Monorepo
+# OpenSeimas
 
-Single Git repository for the **Seimas.v2** Lithuanian Parliament transparency platform (FastAPI + React + PostgreSQL).
+**Make Lithuanian voting choices understandable, relevant, and personally meaningful — through transparent evidence and explainable, non-partisan civic guidance.**
 
-**V.4 ("Observatory pivot") is in preparation.** The former second component — **OpenPlanter** (recursive LLM investigation agent) — was retired in the V.4 cleanup: its product role is replaced by Kimi Code as the agent layer, its prompts live on as Kimi skills (`.kimi-code/skills/`), its forensic tool wrappers moved to `Seimas.v2/tools/`, and its generated wiki content is archived in `docs/wiki-archive/`. The full pre-cleanup state is preserved on branch `archive/v3` and tags `v3-final` / `v3-archive`.
+OpenSeimas V.4 is a voter-first civic platform for the Lithuanian Parliament (Seimas), in two modes:
 
-**Previous standalone remotes (for history / comparison):**
+- **Facts mode** — anonymous public evidence explorer: bills in plain Lithuanian, true MP attendance, voting records by topic, provenance on every number.
+- **Tau mode** (opt-in) — personalized guidance: 5-question value onboarding (stored on your device), recommendation cards with reasons, confidence, and sources. Deterministic rules, never an LLM deciding content.
 
-- `Seimas.v2` was `https://github.com/prekyba3000-bit/Seimas.v2.git`
-- `OpenPlanter` was `https://github.com/ShinMegamiBoson/OpenPlanter.git`
+**The canonical plan is [`docs/V4-MASTER-PLAN.md`](docs/V4-MASTER-PLAN.md).** Historical versions (V.3 forensic dashboard, OpenPlanter agent) are frozen in `archive/v3` / `docs/wiki-archive/` / `docs/archive/`.
 
 ## Structure
 
-| Directory | Description |
+| Path | What |
 |---|---|
-| `Seimas.v2/` | Lithuanian Parliament transparency platform (FastAPI + React + PostgreSQL) |
-| `Seimas.v2/tools/` | Forensic engine CLI wrappers (Benford, chrono, phantom) + wiki identity validator |
-| `packages/` | Shared TypeScript contracts (`open-seimas-contracts`) |
-| `docs/` | ADRs, V.4 build-plan drafts, wiki archive, project history |
-| `.kimi-code/skills/` | Kimi Code skills: `seimas-pipeline` (data refresh), `seimas-mp-wikis` (forensic wiki generation) |
-| `.env` | Shared credentials file (never commit this) |
-| `.env.template` | Credential template — copy to `.env` and fill in values |
+| `Seimas.v2/backend/` | FastAPI API (public, meta/freshness, trust, admin routers) |
+| `Seimas.v2/pipeline/` | Consolidated data-ingestion package (`python -m pipeline.cli --list`) |
+| `Seimas.v2/migrations/` | Idempotent SQL migrations (`apply_migrations.py`) |
+| `Seimas.v2/dashboard/` | React + Vite + Tailwind frontend (Vercel) |
+| `packages/open-seimas-contracts/` | Shared TypeScript contracts |
+| `docs/` | Master plan, ADRs, archives |
 
-## Quick Start
+## Quick start
 
-1. Fill in `.env` with your real credentials.
-2. Start the backend: `cd Seimas.v2 && source .venv/bin/activate && uvicorn backend.main:app --reload`
-3. Start the React dashboard: `cd Seimas.v2/dashboard && npm run dev`
-4. Run the data pipeline: use the `seimas-pipeline` Kimi skill, or run the ingest scripts manually (see `Seimas.v2/pipeline_report.md` format).
+```bash
+# Backend (needs PostgreSQL; DB_DSN points at it)
+cd Seimas.v2
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+export DB_DSN="postgresql://user:pass@localhost:5432/seimas"
+export SYNC_SECRET="change-me"
+python3 apply_migrations.py            # schema + all migrations, idempotent
+uvicorn backend.main:app --reload      # http://localhost:8000/docs
 
-## Git / monorepo
+# Frontend
+cd ../dashboard
+npm install --legacy-peer-deps
+VITE_API_URL=http://localhost:8000 npm run dev   # http://localhost:5173
 
-- **Remote:** `https://github.com/prekyba3000-bit/OpenSeimas` (branch `main`).
-- V.4 cleanup work happens on `cleanup/create-pipeline`; V.3 is archived on `archive/v3`.
+# Data ingestion (populate the DB)
+cd ..
+python3 -m pipeline.cli --list
+python3 -m pipeline.cli ingest_seimas
+python3 -m pipeline.cli ingest_votes_v2
+python3 -m pipeline.cli tag_topics
+```
 
-## Merger Plan (historical)
+## Tests
 
-See `docs/history/merger_plan_and_cursor_prompts.md` for the V.3-era Seimas.v2 × OpenPlanter integration rationale, and `Seimas.v2/memory-bank/` for project context.
+```bash
+cd Seimas.v2 && PYTHONPATH=. python -m pytest tests -q   # backend
+npm run dashboard:test                                   # frontend (from repo root)
+```
 
-## Dashboard install note
+CI runs both against a fresh Postgres on every PR (`.github/workflows/ci.yml`).
 
-If `npm install` fails on peer dependency conflicts, use:
+## Deploy
 
-`cd Seimas.v2/dashboard && npm install --legacy-peer-deps`
+- **API**: Render blueprint at repo root (`render.yaml`, `rootDir: Seimas.v2`). ⚠️ Render *free* Postgres expires after 30 days — see the warning in `render.yaml`; nightly backups run via `.github/workflows/db_backup.yml`.
+- **Dashboard**: Vercel, root directory `Seimas.v2/dashboard`, env `VITE_API_URL`.
+
+## License
+
+AGPL-3.0 — see [LICENSE](LICENSE). Data exports are CC BY 4.0 when published.
