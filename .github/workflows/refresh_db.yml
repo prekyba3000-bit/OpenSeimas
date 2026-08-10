@@ -1,0 +1,44 @@
+# Relocated from Seimas.v2/.github/workflows/refresh_db.yml (was never registered
+# by GitHub — issue #3). V.4 note: the OpenPlanter pipeline job was dropped with the
+# V.3 retirement; pipeline refresh now runs via daily_sync.yml + pipeline/cli.py.
+# Required secret: DB_DSN
+name: Refresh DB Stats
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+jobs:
+  refresh_views:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install psycopg2-binary
+      - name: Refresh materialized views
+        env:
+          DB_DSN: ${{ secrets.DB_DSN }}
+        run: |
+          python -c "
+          import psycopg2, os
+          dsn = os.getenv('DB_DSN')
+          if not dsn:
+              print('Error: DB_DSN secret not set'); exit(1)
+          try:
+              conn = psycopg2.connect(dsn)
+              conn.autocommit = True
+              with conn.cursor() as cur:
+                  print('Refreshing mp_stats_summary...')
+                  cur.execute('REFRESH MATERIALIZED VIEW CONCURRENTLY mp_stats_summary;')
+                  cur.execute(\"SELECT to_regclass('public.mp_leaderboard_metrics') AS t\")
+                  if cur.fetchone()[0]:
+                      print('Refreshing mp_leaderboard_metrics...')
+                      cur.execute('REFRESH MATERIALIZED VIEW CONCURRENTLY mp_leaderboard_metrics;')
+                  print('Done.')
+              conn.close()
+          except Exception as e:
+              print(f'Error: {e}'); exit(1)
+          "

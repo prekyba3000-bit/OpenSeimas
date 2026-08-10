@@ -1,0 +1,68 @@
+# Relocated from Seimas.v2/.github/workflows/daily_sync.yml (was never registered —
+# issue #3). Paths adjusted for the monorepo: all scripts run inside Seimas.v2/.
+# Required secret: DB_DSN
+name: Daily Data Sync & Export
+
+on:
+  schedule:
+    - cron: '0 4 * * *'   # 06:00 Vilnius
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync_and_export:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Seimas.v2
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: sudo apt-get update && sudo apt-get install -y libpq-dev
+      - run: pip install -r requirements.txt
+      - name: Apply migrations (idempotent)
+        env:
+          DB_DSN: ${{ secrets.DB_DSN }}
+        run: python3 apply_migrations.py
+      - name: Sync MP data
+        env:
+          DB_DSN: ${{ secrets.DB_DSN }}
+        run: python3 sync_real_mps.py
+      - name: Sync votes from Seimas API
+        env:
+          DB_DSN: ${{ secrets.DB_DSN }}
+        run: python3 ingest_votes_v2.py
+      - name: Topic tagging (V.4, migration 016)
+        env:
+          DB_DSN: ${{ secrets.DB_DSN }}
+        run: python3 -m pipeline.cli tag_topics
+        continue-on-error: true   # do not fail the whole sync on tagger issues
+      - name: Export stats JSON
+        env:
+          DB_DSN: ${{ secrets.DB_DSN }}
+        run: python3 export_stats.py
+      - name: Check for changes
+        id: changes
+        working-directory: .   # run from repo root for git paths
+        run: |
+          if git diff --quiet Seimas.v2/dashboard/public/data/absenteeism.json; then
+            echo "no_changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "no_changes=false" >> $GITHUB_OUTPUT
+          fi
+      - name: Commit & push updated data
+        if: steps.changes.outputs.no_changes == 'false'
+        working-directory: .
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add Seimas.v2/dashboard/public/data/absenteeism.json
+          git commit -m "data: daily sync [skip ci]"
+          git pull --rebase origin main
+          git push

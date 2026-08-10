@@ -1,0 +1,27 @@
+# Free uptime alarm: pings /health and /api/meta/freshness; the workflow FAILS
+# (→ GitHub emails the repo owner) when the API is down or the DB is disconnected.
+# Note: scheduled workflows can be delayed a few minutes under GitHub load — good
+# enough as a zero-cost alarm; add UptimeRobot/Better Stack later for paging.
+name: Uptime Check
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Health endpoint reports ok
+        run: |
+          set -euo pipefail
+          body=$(curl -fsS -m 90 https://seimas-api.onrender.com/health)
+          echo "$body"
+          echo "$body" | grep -q '"status":"ok"' || { echo "API not ok"; exit 1; }
+      - name: Freshness endpoint answers
+        run: |
+          curl -fsS -m 90 https://seimas-api.onrender.com/api/meta/freshness | head -c 400
+          echo
