@@ -16,3 +16,4 @@ httpx==0.28.1
 uvicorn==0.49.0
 gunicorn==26.0.0
 Pillow==12.2.0
+openai==2.53.0
