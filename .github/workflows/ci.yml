@@ -54,6 +54,9 @@ jobs:
       - name: Install
         run: npm ci --legacy-peer-deps
       - name: Unit tests (vitest, single run in CI)
+        # config.ts throws without VITE_API_URL; tests execute it at import time.
+        env:
+          VITE_API_URL: http://localhost:8000
         run: npm run dashboard:test
       - name: Build
         run: npm run dashboard:build
