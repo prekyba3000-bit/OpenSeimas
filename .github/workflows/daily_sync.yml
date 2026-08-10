@@ -33,11 +33,11 @@ jobs:
       - name: Sync MP data
         env:
           DB_DSN: ${{ secrets.DB_DSN }}
-        run: python3 sync_real_mps.py
+        run: python3 -m pipeline.ingest_seimas
       - name: Sync votes from Seimas API
         env:
           DB_DSN: ${{ secrets.DB_DSN }}
-        run: python3 ingest_votes_v2.py
+        run: python3 -m pipeline.ingest_votes_v2
       - name: Topic tagging (V.4, migration 016)
         env:
           DB_DSN: ${{ secrets.DB_DSN }}

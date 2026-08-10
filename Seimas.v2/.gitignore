@@ -11,6 +11,8 @@ __pycache__/
 env/
 bin/
 lib/
+# lib/ above is a Python-venv pattern; it silently swallowed dashboard source (createQueryClient.ts)
+!dashboard/src/lib/
 develop-eggs/
 dist/
 eggs/
