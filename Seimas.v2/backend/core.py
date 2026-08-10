@@ -42,8 +42,8 @@ except ImportError:
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 try:
-    from ingest_seimas import sync_db as sync_mps
-    from ingest_votes_v2 import sync_votes
+    from pipeline.ingest_seimas import sync_db as sync_mps
+    from pipeline.ingest_votes_v2 import sync_votes
 except ImportError as e:
     print(f"Warning: Could not import ingestion scripts: {e}")
     sync_mps = None

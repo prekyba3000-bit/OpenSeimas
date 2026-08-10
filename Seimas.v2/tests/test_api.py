@@ -72,9 +72,14 @@ async def test_health_endpoint():
     assert "database" in data
 
 @pytest.mark.asyncio
-async def test_stats_endpoint_error_no_db():
-    # This test assumes DB_DSN is not set or invalid in the test environment
-    # and verifies the 500 error handling
+async def test_stats_endpoint_error_no_db(monkeypatch):
+    # Deterministic: simulate the pool being unavailable regardless of environment.
+    # (Previously assumed DB_DSN unset — broke under CI where a real Postgres exists.)
+    @contextmanager
+    def _no_conn():
+        yield None
+
+    monkeypatch.setattr("backend.core.get_db_conn", _no_conn)
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         response = await ac.get("/api/stats")
     assert response.status_code == 500
