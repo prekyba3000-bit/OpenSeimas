@@ -147,6 +147,19 @@ const ComparisonView = ({ initialSelected = [null, null] }: ComparisonViewProps)
     });
 
     const loading = isFetching && !isPlaceholderData;
+    // Previous pair's results stay visible while the new pair refetches (keepPreviousData)
+    const comparisonStale = isPlaceholderData && isFetching;
+
+    // Screen-reader announcement when a comparison finishes (cleared on new selection)
+    const [completeAnnouncement, setCompleteAnnouncement] = useState<string | null>(null);
+    useEffect(() => {
+        setCompleteAnnouncement(null);
+    }, [compareIds]);
+    useEffect(() => {
+        if (comparison && !comparisonStale) {
+            setCompleteAnnouncement(LT.comparisonView.updatedAnnouncement);
+        }
+    }, [comparison, comparisonStale]);
 
     const updateSelected = (index: number, value: string) => {
         const newSelected = [...selected];

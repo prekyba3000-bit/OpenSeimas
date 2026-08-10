@@ -50,7 +50,7 @@ export function CitationCopyButton({ className }: Props) {
         {doneCitation ? <Check className="w-4 h-4 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}
         Kopijuoti citatą
       </Button>
-      <Button type="button" variant="outline" size="sm" onClick={copyLink} title="Kopijuoti tik nuorodą">
+      <Button type="button" variant="ghost" size="sm" onClick={copyLink} title="Kopijuoti tik nuorodą">
         {doneLink ? <Check className="w-4 h-4" /> : <Link className="w-4 h-4" />}
         <span className="sr-only sm:not-sr-only sm:ml-2">Kopijuoti nuorodą</span>
       </Button>
