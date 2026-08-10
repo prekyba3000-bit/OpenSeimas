@@ -1,7 +1,33 @@
 # Active Context: Seimas v.2
 
-## Current Focus
-Stabilize the Hero Parliament platform as a transparent, auditable system with persistent agent context and operational runbooks. **Primary orchestration for data and forensic refresh is OpenPlanter** (see below).
+## WHERE WE ARE (2026-07-23, branch `cleanup/create-pipeline`) — READ FIRST
+
+**Working plan:** `docs/V4-build-plan-synthesis-kimi.md` — the V.4 direction is decided: one platform, two modes — **"Faktai"** (facts/accountability: MP profiles, ideology galaxy, money web) and **"Tau"** (voter guidance: onboarding → cards: headline + 3 DB-sourced bullets + confidence + sources + "why this matters"). Deterministic-before-generative: cards are generated from DB rows; LLM only rewrites into plain Lithuanian under citation lock. **No agent framework** (OpenPlanter was retired for this reason). Read that doc before writing any V.4 code.
+
+**Done — Week 0 (all committed, pushed):**
+1. tsc fixed in live dashboard code (dead components removed; `vite build` passes). Remaining 39 tsc errors are Storybook/shadcn/tests only — replaced by V.4 frontend.
+2. `GET /api/meta/freshness` (routes_meta.py): per-domain row counts + latest timestamps + MV refresh state. `ingest_seimas.py` now sets `last_synced_at = NOW()` on upsert.
+3. Topic tagging: `pipeline/tag_topics.py` (run via `python -m pipeline.cli tag_topics`), migration `016_vote_topics.sql` (`vote_topics`, `legislation_topics` w/ title_hash), 8 LT categories. 48.5% of votes taggable (rest mostly procedural). 20 tests green.
+
+**NEXT — Weeks 1–2: deterministic card engine.** `cards` table + generator module (headline, ≤3 DB-sourced bullets, source URLs, computed confidence from data completeness, freshness) + `GET /api/cards`, `GET /api/bills/{id}`. No LLM yet. Then Weeks 2–3: "Tau" frontend shell in the Observatory design language (dark, editorial, LT-first, mobile-first).
+
+**Known small debts:** `pipeline/cli.py --list` NameError (`__path__`); `legislation` table missing from schema.sql; `assets`/`interests` tables possibly dead (ingest writes `mp_assets`); no categories yet for agriculture/culture/business.
+
+## V.4 CLEANUP (2026-07, branch `cleanup/create-pipeline`) — historical record
+
+The V.3 → V.4 "Observatory pivot" cleanup was executed with Kimi Code. **Everything below the "V.3 era" line is historical context, not current state.**
+
+What changed:
+- **OpenPlanter retired.** Its role is replaced by Kimi Code as the agent layer. Pre-cleanup state preserved on branch `archive/v3`, tags `v3-final` / `v3-archive`.
+- **Prompts → Kimi skills:** `.openplanter/prompts/seimas_pipeline.md` → `.kimi-code/skills/seimas-pipeline/SKILL.md`; `generate_mp_wikis.md` → `.kimi-code/skills/seimas-mp-wikis/SKILL.md`.
+- **Forensic tools moved:** `.openplanter/tools/` → `Seimas.v2/tools/` (seimas_benford/chrono/phantom, validate_wiki_identity).
+- **Wiki content archived:** `docs/wiki-archive/` (openplanter-wiki + mp-wikis).
+- **Deleted (V.3 legacy):** OpenPlanter tree, `.openplanter/`, Figma/, design-system/, drizzle alternate stack, gaming-HUD prototype components (`Live_Spectator_HUD`, `KillFeed`, `DashboardMissionControl`, `*Showcase.tsx`, etc.), `orchestrator.py`, Taskade sync, `analyze_*.py`, `sync_real_mps.py`, one-off SQL/data dumps, graphiti MCP layer (moved to `~/Documents/OpenSeimas-v4-graveyard/`).
+- **Still live (deliberately kept for now):** hero engine + `/api/v2/heroes/*` (powers the current deployed dashboard — remove when the V.4 frontend/API lands), shadcn `ui/` kit, share-card renderer (re-skin planned).
+- **V.4 direction drafts** from several models live in `docs/V4-build-plan-*.md`. A voter-guidance product direction emerged during the same period (see root `AGENTS.md` draft by another agent) — reconcile with the Observatory strategy before building.
+
+## Current Focus (V.3 era — historical)
+Stabilize the Hero Parliament platform as a transparent, auditable system with persistent agent context and operational runbooks. **Primary orchestration for data and forensic refresh is OpenPlanter** (see below). *(Superseded: orchestration is now the `seimas-pipeline` Kimi skill.)*
 
 ## Recent Changes
 - **Operation OpenPlanter Integration** is complete (all four phases). Details: [Operation OpenPlanter Integration](#operation-openplanter-integration).
