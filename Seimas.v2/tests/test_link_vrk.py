@@ -5,7 +5,7 @@ import re
 # Import functions to test
 import sys
 sys.path.insert(0, '.')
-from link_vrk import normalize
+from pipeline.link_vrk import normalize
 
 
 class TestNormalizeLinkVrk:

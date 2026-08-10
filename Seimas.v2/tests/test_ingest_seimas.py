@@ -5,7 +5,7 @@ from datetime import date
 # Import functions to test
 import sys
 sys.path.insert(0, '.')
-from ingest_seimas import normalize, parse_date
+from pipeline.ingest_seimas import normalize, parse_date
 
 
 class TestNormalize:
