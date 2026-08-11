@@ -1400,9 +1400,12 @@ def calculate_all_hero_profiles_fast(
         speeches_given = float(row["speeches_given"] or 0)
         # None means "suppressed" (too few eligible sitting days) and must reach
         # the payload as None; scoring still needs a number.
-        attendance_display = _attendance_by_mp.get(
+        # float() matters: the view yields Decimal, which serialises as a JSON
+        # *string* and fails client-side schema validation for every row.
+        _raw_attendance = _attendance_by_mp.get(
             str(row["mp_id"]), row["attendance_percentage"]
         )
+        attendance_display = None if _raw_attendance is None else float(_raw_attendance)
         attendance_percentage = float(attendance_display or 0)
         amendments_proposed_count = float(row["amendments_proposed_count"] or 0)
         # amendment_profiles is empty in current schema => no direct signal,
