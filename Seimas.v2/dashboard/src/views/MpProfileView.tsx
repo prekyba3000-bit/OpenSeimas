@@ -6,6 +6,7 @@ import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import MpProfileCard from '../components/MpProfileCard';
 import { WikiPanel } from '../components/WikiPanel';
+import { MpReplies } from '../components/MpReplies';
 import { IntegrityBar } from '../components/IntegrityBar';
 import { ScoreTooltip } from '../components/ScoreTooltip';
 import { ApiError, api, type ForensicFlag, MpProfile, MpVoteRecord } from '../services/api';
@@ -184,6 +185,7 @@ export const MpProfileLayout = ({
           <div className="flex flex-col gap-6">
             <MpProfileCard profile={profile} highlightEngine={highlightEngine} />
             <ScoreTooltip profile={profile} />
+            <MpReplies mpId={profile.mp.id} />
           </div>
         )}
 
