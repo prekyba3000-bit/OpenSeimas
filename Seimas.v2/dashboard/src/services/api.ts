@@ -133,13 +133,13 @@ export type MpProfile = {
 } & MpProfilePresentationLegacy;
 
 export type MpMetrics = {
-  attendance_percentage?: number;
-  party_loyalty?: number;
-  total_votes_cast?: number;
-  speeches_given?: number;
-  bills_authored_count?: number;
-  committee_leadership?: number;
-  years_in_parliament?: number;
+  attendance_percentage?: number | null;
+  party_loyalty?: number | null;
+  total_votes_cast?: number | null;
+  speeches_given?: number | null;
+  bills_authored_count?: number | null;
+  committee_leadership?: number | null;
+  years_in_parliament?: number | null;
 };
 
 type XpCurrentLevelKey = `${"xp"}_${"current"}_${"level"}`;
@@ -286,15 +286,19 @@ export const mpProfileSchema = z
       })
       .partial()
       .optional(),
+    // Nullable, not merely optional: the backend sends null for a metric it
+    // declines to publish (e.g. attendance for a member with almost no
+    // eligible sitting days). Treating null as a schema violation took the
+    // whole profile down for exactly those members.
     metrics: z
       .object({
-        attendance_percentage: z.number().optional(),
-        party_loyalty: z.number().optional(),
-        total_votes_cast: z.number().optional(),
-        speeches_given: z.number().optional(),
-        bills_authored_count: z.number().optional(),
-        committee_leadership: z.number().optional(),
-        years_in_parliament: z.number().optional(),
+        attendance_percentage: z.number().nullable().optional(),
+        party_loyalty: z.number().nullable().optional(),
+        total_votes_cast: z.number().nullable().optional(),
+        speeches_given: z.number().nullable().optional(),
+        bills_authored_count: z.number().nullable().optional(),
+        committee_leadership: z.number().nullable().optional(),
+        years_in_parliament: z.number().nullable().optional(),
       })
       .partial()
       .optional(),

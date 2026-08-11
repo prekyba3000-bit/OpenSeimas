@@ -178,3 +178,57 @@ describe("api network resilience and contract parsing", () => {
     }
   });
 });
+
+describe("mpProfileSchema null tolerance", () => {
+  const engine = { status: "unavailable" as const, penalty: 0, explanation: "-" };
+  const forensic = {
+    base_risk_score: 0,
+    base_risk_penalty: 0,
+    benford: engine,
+    chrono: engine,
+    vote_geometry: engine,
+    phantom_network: engine,
+    loyalty_bonus: {
+      status: "clean" as const,
+      independent_voting_days_pct: 0,
+      bonus: 0,
+      explanation: "-",
+    },
+    total_forensic_adjustment: 0,
+    final_integrity_score: 100,
+  };
+
+  function profileWire(metrics: Record<string, unknown>) {
+    return {
+      mp: { id: "x", name: "Testas" },
+      level: 1,
+      xp: 0,
+      xp_current_level: 0,
+      xp_next_level: 100,
+      alignment: "neutral",
+      attributes: { STR: 0, WIS: 0, CHA: 0, INT: 100, STA: 0 },
+      artifacts: [],
+      forensic_breakdown: forensic,
+      metrics,
+    };
+  }
+
+  it("accepts a metric the backend declines to publish", async () => {
+    // Suppressed attendance arrives as null (a member with almost no eligible
+    // sitting days). Rejecting null as a schema violation previously took the
+    // whole profile page down for exactly those members.
+    const { mpProfileSchema } = await import("./api");
+    const parsed = mpProfileSchema.safeParse(
+      profileWire({ attendance_percentage: null, party_loyalty: 0 }),
+    );
+    expect(parsed.success).toBe(true);
+  });
+
+  it("still accepts a published numeric metric", async () => {
+    const { mpProfileSchema } = await import("./api");
+    const parsed = mpProfileSchema.safeParse(
+      profileWire({ attendance_percentage: 72.04, party_loyalty: 77.27 }),
+    );
+    expect(parsed.success).toBe(true);
+  });
+});
