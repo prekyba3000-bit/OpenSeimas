@@ -125,9 +125,17 @@ Meanwhile `utils.fetch_with_retry` already exists and newer modules use it — t
 and to reconcile "IDs the source lists" against "IDs we stored" after every run, persisting the
 delta.
 
-**Zero pipeline test coverage.** `tests/test_ingest_seimas.py` and `tests/test_link_vrk.py` contain
-**0 test functions** each (file present, no `def test_`). The ingest layer — the origin of every
-data bug in this project's history — is untested, while the API layer has 68 tests.
+**The ingest *logic* is untested** (correction, 2026-08-12: an earlier draft of this review claimed
+`tests/test_ingest_seimas.py` and `tests/test_link_vrk.py` contained zero tests. That was wrong — my
+grep matched only module-level `def test_`, and both files use test classes. They hold 10 and 12
+tests respectively, of a 51-test backend suite).
+
+What those 22 tests actually cover is **pure helpers**: `normalize_name` and `parse_date` — string
+and date edge cases, well written. What no test touches is the part that has produced every data bug
+in this project's history: the fetch/retry/skip path, the UPSERT and dedupe logic, and the
+reconciliation between what a source lists and what we stored. A test suite that covers the
+functions least likely to break, and none of the functions that have actually broken, gives false
+comfort.
 
 **No invariant checks anywhere.** Both historical data disasters would have been caught by one
 post-ingest assertion suite:

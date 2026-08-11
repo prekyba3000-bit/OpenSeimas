@@ -48,9 +48,18 @@ _ENTITY_TYPES = ("mp", "vote", "bill", "topic_tag", "summary", "metric", "other"
 _SUMMARY_TYPES = ("vote", "bill", "mp", "topic")
 _CORRECTION_STATUSES = ("open", "accepted", "rejected", "resolved")
 
+# Submissions are public only after a maintainer has acted on them. `open` means
+# "received, not yet reviewed" and is never served publicly: the submit endpoint
+# is anonymous and unauthenticated, so without this gate anyone could publish
+# arbitrary claims about a named MP on the platform's own corrections log.
+# Rejected reports stay public on purpose — a log of only the reports we agreed
+# with would be worth little to a skeptical reader. Abusive submissions are left
+# at `open`, where they remain invisible.
+_PUBLIC_CORRECTION_STATUSES = ("accepted", "rejected", "resolved")
+
 
 def _client_ip(request: Request) -> str:
-    return request.client.host if request.client else "unknown"
+    return core.client_ip(request)
 
 
 def _require_table(cur, table: str):
@@ -102,11 +111,19 @@ def submit_correction(payload: CorrectionIn, request: Request):
 
 @router.get("/api/trust/corrections")
 def list_corrections(request: Request, status: Optional[str] = None, limit: int = 50):
-    """Public log. reporter_email is deliberately never selected."""
+    """Public log of reviewed corrections.
+
+    Only `_PUBLIC_CORRECTION_STATUSES` are ever returned — unreviewed (`open`)
+    submissions are not public, and asking for them explicitly is refused rather
+    than quietly ignored. reporter_email is deliberately never selected.
+    """
     if not check_rate_limit(_client_ip(request)):
         raise HTTPException(status_code=429, detail="Rate limit exceeded")
-    if status and status not in _CORRECTION_STATUSES:
-        raise HTTPException(status_code=422, detail=f"status must be one of {_CORRECTION_STATUSES}")
+    if status and status not in _PUBLIC_CORRECTION_STATUSES:
+        raise HTTPException(
+            status_code=422,
+            detail=f"status must be one of {_PUBLIC_CORRECTION_STATUSES} — unreviewed submissions are not public",
+        )
     limit = max(1, min(limit, 200))
 
     with get_db_conn() as conn:
@@ -114,8 +131,12 @@ def list_corrections(request: Request, status: Optional[str] = None, limit: int 
             raise HTTPException(status_code=500, detail="Database connection failed")
         with conn.cursor() as cur:
             _require_table(cur, "corrections")
-            where = "WHERE status = %s" if status else ""
-            params = (status, limit) if status else (limit,)
+            if status:
+                where = "WHERE status = %s"
+                params = (status, limit)
+            else:
+                where = "WHERE status = ANY(%s)"
+                params = (list(_PUBLIC_CORRECTION_STATUSES), limit)
             cur.execute(
                 f"""
                 SELECT id, entity_type, entity_id, description, status,

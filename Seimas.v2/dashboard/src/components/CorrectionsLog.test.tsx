@@ -31,8 +31,10 @@ describe("CorrectionsLog", () => {
     vi.mocked(trustApi.listCorrections).mockClear();
     vi.mocked(trustApi.listCorrections).mockResolvedValue(response([]));
     renderLog();
-    expect(await screen.findByText(/Kol kas pataisymų nėra/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Kol kas peržiūrėtų pataisymų nėra/i)).toBeInTheDocument();
     expect(screen.getByText(/Užpildykite formą viršuje/i)).toBeInTheDocument();
+    // The log promises reviewed pastabos only — submissions are not published unread.
+    expect(screen.getByText(/peržiūrėta pastaba/i)).toBeInTheDocument();
   });
 
   it("renders entries with Lithuanian status badges and the resolution note", async () => {
