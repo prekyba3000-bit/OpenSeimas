@@ -127,6 +127,11 @@ export function CorrectionForm() {
         </span>
       </label>
 
+      <p className="text-xs leading-relaxed text-muted-foreground">
+        Pataisymas viešame žurnale bus matomas tik po peržiūros — skelbiame tik peržiūrėtas
+        pastabas, kad portalu nebūtų platinami nepatikrinti teiginiai apie žmones.
+      </p>
+
       {/* Honeypot: off-screen rather than type=hidden, which bots detect. Humans never fill it. */}
       <div style={{ position: 'absolute', left: '-9999px' }} aria-hidden="true">
         <label>
