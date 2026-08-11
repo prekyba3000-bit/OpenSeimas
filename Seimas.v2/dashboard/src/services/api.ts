@@ -532,6 +532,9 @@ export interface RequestOptions<T> {
   retries?: number;
   retryDelayMs?: number;
   parse?: (data: unknown) => T;
+  method?: "GET" | "POST";
+  /** JSON-serialized into the request body. Pass retries: 0 for non-idempotent calls. */
+  body?: unknown;
 }
 
 const DEFAULT_TIMEOUT_MS = 8000;
@@ -558,7 +561,7 @@ function parseOrThrow<T>(parse: ((data: unknown) => T) | undefined, data: unknow
   }
 }
 
-async function request<T>(endpoint: string, options: RequestOptions<T> = {}): Promise<T> {
+export async function request<T>(endpoint: string, options: RequestOptions<T> = {}): Promise<T> {
   const retries = options.retries ?? DEFAULT_RETRIES;
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const retryDelayMs = options.retryDelayMs ?? DEFAULT_RETRY_DELAY_MS;
@@ -570,7 +573,13 @@ async function request<T>(endpoint: string, options: RequestOptions<T> = {}): Pr
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
     try {
-      const response = await fetch(url, { signal: controller.signal });
+      const response = await fetch(url, {
+        signal: controller.signal,
+        method: options.method ?? "GET",
+        ...(options.body === undefined
+          ? {}
+          : { headers: { "Content-Type": "application/json" }, body: JSON.stringify(options.body) }),
+      });
 
       if (!response.ok) {
         const contentType = response.headers.get("content-type") || "";

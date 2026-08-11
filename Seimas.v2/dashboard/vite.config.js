@@ -12,6 +12,10 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src'),
     },
+    // Workspace deps (e.g. @tanstack/react-query) hoist to the monorepo root and
+    // would otherwise resolve React from outside the repo — two React instances,
+    // "Invalid hook call" in any test rendering a provider.
+    dedupe: ['react', 'react-dom'],
   },
   server: {
     fs: {
@@ -33,5 +37,12 @@ export default defineConfig({
     setupFiles: './src/tests/setup.js',
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
     exclude: [...configDefaults.exclude, 'tests/**'],
+    server: {
+      // react-query hoists to the monorepo root, so Node resolves its `react`
+      // import outside the repo — a second React instance and "Invalid hook
+      // call" in every test that renders a provider. Inlining routes it through
+      // Vite, where resolve.dedupe applies.
+      deps: { inline: ['@tanstack/react-query'] },
+    },
   }
 });

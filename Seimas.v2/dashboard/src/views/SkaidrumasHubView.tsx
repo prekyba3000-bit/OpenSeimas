@@ -16,6 +16,7 @@ import {
   Scale,
   Trophy,
   BookOpen,
+  Mail,
 } from 'lucide-react';
 import { CitationCopyButton } from '../components/CitationCopyButton';
 import {
@@ -259,6 +260,13 @@ export default function SkaidrumasHubView() {
           >
             <BookOpen className="w-4 h-4" />
             Metodika
+          </NavLink>
+          <NavLink
+            to="/dashboard/corrections"
+            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-2 text-sm hover:bg-muted/50"
+          >
+            <Mail className="w-4 h-4" />
+            Pataisymai
           </NavLink>
           <CitationCopyButton className="border-border" />
         </div>
