@@ -127,6 +127,8 @@ export type MpProfile = {
   evidence: string[];
   /** Source-backed metrics from the backend. Displayed values come from here. */
   metrics?: MpMetrics;
+  /** Per-attribute data quality: "direct" | "proxy" | "unavailable". */
+  metrics_provenance?: Partial<Record<"STR" | "WIS" | "CHA" | "INT" | "STA", string>>;
   // TODO(v4): add faction once backend exposes it
 } & MpProfilePresentationLegacy;
 
@@ -274,6 +276,16 @@ export const mpProfileSchema = z
     forensic_breakdown: rawForensicBreakdownSchema,
     // The real, source-backed numbers. `attributes` above are derived composites
     // and several of them read from tables that are still empty — prefer these.
+    metrics_provenance: z
+      .object({
+        STR: z.string().optional(),
+        WIS: z.string().optional(),
+        CHA: z.string().optional(),
+        INT: z.string().optional(),
+        STA: z.string().optional(),
+      })
+      .partial()
+      .optional(),
     metrics: z
       .object({
         attendance_percentage: z.number().optional(),
@@ -356,6 +368,7 @@ type _ParsedMpProfileWire = {
   attributes: MpProfile["attributes"];
   artifacts: MpProfile["artifacts"];
   metrics?: MpMetrics;
+  metrics_provenance?: MpProfile["metrics_provenance"];
 } & Record<string, unknown>;
 
 function mapRawForensicBreakdown(raw: _RawForensicBreakdown): ForensicBreakdown {
@@ -406,6 +419,7 @@ function mapRawToMpProfile(raw: z.infer<typeof mpProfileSchema>): MpProfile {
     attributes: r.attributes,
     artifacts: r.artifacts,
     metrics: r.metrics,
+    metrics_provenance: r.metrics_provenance,
   } as MpProfile;
 }
 

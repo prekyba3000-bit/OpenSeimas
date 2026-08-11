@@ -24,6 +24,7 @@ function profile(overrides: Partial<MpProfile> = {}): MpProfile {
     attributes: { STR: 0, WIS: 12.36, CHA: 0, INT: 100, STA: 56.78 },
     artifacts: [],
     metrics: { attendance_percentage: 70.97, party_loyalty: 77.27 },
+    metrics_provenance: { STR: "unavailable", WIS: "direct", CHA: "unavailable", INT: "direct", STA: "proxy" },
     ...overrides,
   } as MpProfile;
 }
@@ -79,5 +80,39 @@ describe("ScoreTooltip", () => {
 
     expect(screen.queryByText("71.0")).not.toBeInTheDocument();
     expect(screen.getAllByText(/bus rodomas, kai bus įkelti šaltinio duomenys/i).length).toBeGreaterThan(0);
+  });
+});
+
+
+describe("ScoreTooltip metric availability follows the backend", () => {
+  it("resurrects a metric once the backend reports a source for it", () => {
+    // What a backfill looks like: provenance flips off "unavailable" and the
+    // number appears with no frontend change.
+    renderTooltip(
+      profile({
+        attributes: { STR: 73.33, WIS: 22.9, CHA: 4.58, INT: 100, STA: 73.12 },
+        metrics_provenance: { STR: "direct", WIS: "direct", CHA: "direct", INT: "direct", STA: "proxy" },
+      }),
+    );
+
+    expect(valueFor("Teisėkūros aktyvumas")).toBe("73.3");
+    expect(valueFor("Viešumas")).toBe("4.6");
+  });
+
+  it("keeps a metric hidden while the backend reports it unavailable", () => {
+    renderTooltip(profile());
+    expect(valueFor("Teisėkūros aktyvumas")).toMatch(/bus rodomas/i);
+    expect(valueFor("Viešumas")).toMatch(/bus rodomas/i);
+  });
+
+  it("keeps integrity hidden even though the backend calls it direct", () => {
+    // The engine returns a baseline 100 for everyone when the forensic tables
+    // are empty, so provenance cannot tell a clean record from no data.
+    renderTooltip(
+      profile({
+        metrics_provenance: { STR: "direct", WIS: "direct", CHA: "direct", INT: "direct", STA: "proxy" },
+      }),
+    );
+    expect(valueFor("Skaidrumo indeksas")).toMatch(/bus rodomas/i);
   });
 });
