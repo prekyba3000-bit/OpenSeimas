@@ -6,6 +6,8 @@ from __future__ import annotations
 
 import logging
 import os
+import uuid
+from contextlib import contextmanager
 from typing import Dict, Optional
 
 
@@ -38,4 +40,84 @@ def get_db_url_from_env() -> Optional[str]:
     return cfg.get("DB_URL")
 
 
-__all__ = ["setup_logging", "load_env_config", "get_db_url_from_env"]
+__all__ = [
+    "setup_logging",
+    "load_env_config",
+    "get_db_url_from_env",
+    "job_id",
+    "record_fetch",
+]
+
+
+# ─── Provenance ──────────────────────────────────────────────────────────────
+# V.4 plan §2.2: "Provenance or it doesn't ship." Every ingest records what it
+# fetched, from where, when, and how many rows resulted, so a reader can check
+# our numbers instead of trusting them.
+
+_JOB_ID: Optional[str] = None
+
+
+def job_id() -> str:
+    """Stable identifier for this pipeline run, shared by every step in it."""
+    global _JOB_ID
+    if _JOB_ID is None:
+        _JOB_ID = os.environ.get("PIPELINE_JOB_ID") or uuid.uuid4().hex[:12]
+    return _JOB_ID
+
+
+def _scalar(row):
+    """First column, whether the cursor yields tuples or RealDictRow."""
+    if row is None:
+        return None
+    if isinstance(row, dict):
+        return next(iter(row.values()))
+    return row[0]
+
+
+@contextmanager
+def record_fetch(conn, source_name: str, source_url: Optional[str] = None):
+    """Record one ingest step in `source_fetches`.
+
+    Usage:
+        with record_fetch(conn, "seimas_registrations", url) as fetch:
+            ...
+            fetch["rows"] = n
+
+    Failures are recorded with their error and re-raised — a run that half
+    failed must not look identical to one that succeeded. If the table is
+    absent (migrations not yet applied) this degrades to a no-op with a
+    warning rather than breaking ingestion.
+    """
+    log = logging.getLogger("pipeline.provenance")
+    result: Dict[str, int] = {"rows": 0}
+    cur = conn.cursor()
+    cur.execute("SELECT to_regclass('public.source_fetches')")
+    if _scalar(cur.fetchone()) is None:
+        log.warning("source_fetches missing — provenance not recorded for %s", source_name)
+        yield result
+        return
+
+    cur.execute(
+        """
+        INSERT INTO source_fetches (source_name, source_url, job_id, status)
+        VALUES (%s, %s, %s, 'running') RETURNING id
+        """,
+        (source_name, source_url, job_id()),
+    )
+    fetch_id = _scalar(cur.fetchone())
+    conn.commit()
+
+    try:
+        yield result
+    except Exception as exc:
+        cur.execute(
+            "UPDATE source_fetches SET status='error', error=%s, rows_affected=%s, finished_at=NOW() WHERE id=%s",
+            (str(exc)[:2000], result.get("rows", 0), fetch_id),
+        )
+        conn.commit()
+        raise
+    cur.execute(
+        "UPDATE source_fetches SET status='ok', rows_affected=%s, finished_at=NOW() WHERE id=%s",
+        (result.get("rows", 0), fetch_id),
+    )
+    conn.commit()
