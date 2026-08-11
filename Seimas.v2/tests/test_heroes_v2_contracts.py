@@ -241,34 +241,46 @@ class TestAttendanceMethodologyGate:
     """The published methodology governs which attendance formula is in force.
 
     v2 was announced 2026-08-12 with effective_from 2026-08-26; until that date
-    passes the engine must keep serving v1, and afterwards switch without any
-    code change. That is what the 14-day advance-notice promise means in
-    practice (plan §7).
+    passes the engine keeps serving v1, and afterwards switches with no code
+    change (plan §7). Suppression of members with almost no eligible sitting
+    days is separate and applies under either version.
     """
 
-    def _cursor(self, version_row, v2_row=None):
+    def _cursor(self, v2_row, version_row):
         from unittest.mock import MagicMock
 
         cur = MagicMock()
-        cur.fetchone.side_effect = [version_row, v2_row]
+        # resolve_attendance reads mp_attendance_v2 first, then the version.
+        cur.fetchone.side_effect = [v2_row, version_row]
         return cur
 
     def test_serves_v1_while_v2_is_only_announced(self):
         from backend import hero_engine
 
-        cur = self._cursor({"v": 1})
+        cur = self._cursor({"attendance_percentage": 72.04, "eligible_days": 93}, {"v": 1})
         assert hero_engine.resolve_attendance(cur, "mp-1", 70.97) == 70.97
 
     def test_serves_v2_once_effective(self):
         from backend import hero_engine
 
-        cur = self._cursor({"v": 2}, {"attendance_percentage": 72.04})
+        cur = self._cursor({"attendance_percentage": 72.04, "eligible_days": 93}, {"v": 2})
         assert hero_engine.resolve_attendance(cur, "mp-1", 70.97) == 72.04
+
+    def test_suppresses_members_with_almost_no_eligible_days_under_v1(self):
+        """Members who took a seat and gave it up the same day must not read 0%.
+
+        This does not wait for the v2 effective date: 0% states something false
+        about a person under either formula.
+        """
+        from backend import hero_engine
+
+        cur = self._cursor({"attendance_percentage": None, "eligible_days": 1}, {"v": 1})
+        assert hero_engine.resolve_attendance(cur, "mp-1", 0.0) is None
 
     def test_falls_back_to_v1_when_the_view_has_no_row(self):
         from backend import hero_engine
 
-        cur = self._cursor({"v": 2}, None)
+        cur = self._cursor(None, {"v": 2})
         assert hero_engine.resolve_attendance(cur, "mp-1", 70.97) == 70.97
 
     def test_missing_methodology_table_means_v1(self):

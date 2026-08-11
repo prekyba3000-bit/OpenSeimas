@@ -59,7 +59,9 @@ def _award_artifacts(metrics: Dict[str, float], integrity_score: float, level: i
         artifacts.append({"name": "Gavel of Command", "rarity": "Epic"})
     if integrity_score < 30:
         artifacts.append({"name": "Chains of Scandal", "rarity": "Cursed"})
-    if metrics["attendance_percentage"] >= 95:
+    # Suppressed attendance is None (too few eligible sitting days) — a member
+    # with no publishable figure earns no attendance-based artifact.
+    if (metrics["attendance_percentage"] or 0) >= 95:
         artifacts.append({"name": "Sentinel Sigil", "rarity": "Rare"})
     if metrics["party_loyalty"] < 70 and level >= 2:
         artifacts.append({"name": "Cloak of Dissent", "rarity": "Rare"})
@@ -721,6 +723,11 @@ def score_consistency(attendance_percentage, amendments_proposed, amendments_max
     )
 
 
+# Below this many eligible sitting days a percentage says nothing; see
+# docs/adr/0006-attendance-methodology.md.
+MIN_ELIGIBLE_SITTING_DAYS = 3
+
+
 def effective_attendance_version(db_cursor) -> int:
     """Highest published attendance methodology version already in force.
 
@@ -743,42 +750,72 @@ def effective_attendance_version(db_cursor) -> int:
         return 1
 
 
-def resolve_attendance(db_cursor, mp_id: str, v1_value) -> float:
-    """Attendance under whichever methodology version is currently in force."""
-    if effective_attendance_version(db_cursor) < 2:
-        return float(v1_value or 0)
+def resolve_attendance(db_cursor, mp_id: str, v1_value):
+    """Attendance under the methodology in force, or None when unpublishable.
+
+    Returns None when the member's mandate covers fewer than three sitting
+    days. That suppression is not part of the v1→v2 formula change and does not
+    wait for its effective date: members who took a seat and gave it up the
+    same day would otherwise read as 0% attendance under *either* formula,
+    which states something false about a person rather than merely computing it
+    differently.
+    """
+    eligible_days = None
+    v2_value = None
     try:
         db_cursor.execute(
-            "SELECT attendance_percentage FROM mp_attendance_v2 WHERE mp_id = %s::uuid",
+            "SELECT attendance_percentage, eligible_days FROM mp_attendance_v2 WHERE mp_id = %s::uuid",
             (mp_id,),
         )
         row = db_cursor.fetchone()
         if row is not None:
-            value = row["attendance_percentage"] if isinstance(row, dict) else row[0]
-            return float(value or 0)
+            v2_value = row["attendance_percentage"] if isinstance(row, dict) else row[0]
+            eligible_days = row["eligible_days"] if isinstance(row, dict) else row[1]
     except Exception:  # noqa: BLE001 — view absent before migration 019
         pass
+
+    if eligible_days is not None and eligible_days < MIN_ELIGIBLE_SITTING_DAYS:
+        return None
+
+    if effective_attendance_version(db_cursor) >= 2 and v2_value is not None:
+        return float(v2_value)
     return float(v1_value or 0)
 
 
-def attendance_overrides(db_cursor) -> Dict[str, float]:
-    """{mp_id: attendance} under v2, or {} while v1 is the effective version.
+def attendance_overrides(db_cursor) -> Dict[str, Any]:
+    """{mp_id: attendance-or-None} for members whose displayed value must change.
 
-    Bulk callers apply this after fetching so the leaderboard and the single
-    profile cannot disagree about a member's attendance.
+    Two independent things live here, and they switch on at different times:
+
+    * suppression — members with fewer than MIN_ELIGIBLE_SITTING_DAYS eligible
+      sitting days map to None under *either* methodology version, because 0%
+      would state something false about them rather than merely compute it
+      differently. Applies immediately.
+    * the v1 → v2 value swap — applies only once the published methodology says
+      it is in force.
+
+    Bulk callers apply this after fetching, so the leaderboard and the single
+    profile cannot disagree about a member.
     """
-    if effective_attendance_version(db_cursor) < 2:
-        return {}
     try:
-        db_cursor.execute("SELECT mp_id, attendance_percentage FROM mp_attendance_v2")
+        db_cursor.execute(
+            "SELECT mp_id, attendance_percentage, eligible_days FROM mp_attendance_v2"
+        )
         rows = db_cursor.fetchall() or []
     except Exception:  # noqa: BLE001 — view absent before migration 019
         return {}
-    out: Dict[str, float] = {}
+
+    v2_in_force = effective_attendance_version(db_cursor) >= 2
+    out: Dict[str, Any] = {}
     for row in rows:
         mp_id = row["mp_id"] if isinstance(row, dict) else row[0]
         value = row["attendance_percentage"] if isinstance(row, dict) else row[1]
-        out[str(mp_id)] = float(value or 0)
+        eligible = row["eligible_days"] if isinstance(row, dict) else row[2]
+
+        if eligible is not None and eligible < MIN_ELIGIBLE_SITTING_DAYS:
+            out[str(mp_id)] = None
+        elif v2_in_force and value is not None:
+            out[str(mp_id)] = float(value)
     return out
 
 
@@ -996,7 +1033,9 @@ def calculate_hero_profile(mp_id: str, db_cursor) -> Dict[str, Any]:
     )
     speech_row = db_cursor.fetchone()
     speeches_given = float(speech_row["speech_count"] or 0) if speech_row else 0.0
-    attendance_percentage = resolve_attendance(db_cursor, mp_id, mp_row["attendance_percentage"])
+    # None when suppressed; the payload keeps the None, the formulas take 0.
+    attendance_display = resolve_attendance(db_cursor, mp_id, mp_row["attendance_percentage"])
+    attendance_percentage = float(attendance_display or 0)
     amendments_proposed_count = float(mp_row["amendments_proposed_count"] or 0)
     amendments_proposed = amendments_direct if has_direct_amendments else amendments_proposed_count
     bills_proposed = bills_authored
@@ -1087,7 +1126,7 @@ def calculate_hero_profile(mp_id: str, db_cursor) -> Dict[str, Any]:
             "loyalty_bonus": forensic_breakdown["loyalty_bonus"]["bonus"],
             "total_forensic_adjustment": forensic_breakdown["total_forensic_adjustment"],
         },
-        "attendance_percentage": attendance_percentage,
+        "attendance_percentage": attendance_display,
         "amendments_proposed": amendments_proposed,
         "amendments_proposed_proxy": amendments_proposed_count,
         "bills_proposed": bills_proposed,
@@ -1359,9 +1398,12 @@ def calculate_all_hero_profiles_fast(
         bills_passed = float(row["votes_for_passed"] or 0)
         total_votes_cast = float(row["total_votes_cast"] or 0)
         speeches_given = float(row["speeches_given"] or 0)
-        attendance_percentage = float(
-            _attendance_by_mp.get(str(row["mp_id"]), row["attendance_percentage"]) or 0
+        # None means "suppressed" (too few eligible sitting days) and must reach
+        # the payload as None; scoring still needs a number.
+        attendance_display = _attendance_by_mp.get(
+            str(row["mp_id"]), row["attendance_percentage"]
         )
+        attendance_percentage = float(attendance_display or 0)
         amendments_proposed_count = float(row["amendments_proposed_count"] or 0)
         # amendment_profiles is empty in current schema => no direct signal,
         # so the proxy (amendments_proposed_count) drives the STA contribution.
@@ -1428,7 +1470,7 @@ def calculate_all_hero_profiles_fast(
                 "loyalty_bonus": forensic_breakdown["loyalty_bonus"]["bonus"],
                 "total_forensic_adjustment": forensic_breakdown["total_forensic_adjustment"],
             },
-            "attendance_percentage": attendance_percentage,
+            "attendance_percentage": attendance_display,
             "amendments_proposed": amendments_proposed,
             "amendments_proposed_proxy": amendments_proposed_count,
             "bills_proposed": bills_proposed,
