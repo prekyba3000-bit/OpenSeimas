@@ -3,6 +3,7 @@ import { NavLink } from 'react-router';
 import { BookOpen, ArrowLeft } from 'lucide-react';
 import { Card } from '../components/Card';
 import { CitationCopyButton } from '../components/CitationCopyButton';
+import { MethodologyVersions } from '../components/MethodologyVersions';
 
 /**
  * Plain-language methodology for public and journalists (Lithuanian).
@@ -116,6 +117,16 @@ export function MethodologyView() {
           </p>
         </section>
       </Card>
+
+      <section className="space-y-3">
+        <div>
+          <h2 className="text-lg font-semibold">Metodikos versijos: lankomumas</h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            Paskelbti šio rodiklio skaičiavimo pakeitimai ir jų įsigaliojimo datos.
+          </p>
+        </div>
+        <MethodologyVersions metricKey="attendance" />
+      </section>
 
       <div className="flex flex-wrap items-center gap-3">
         <CitationCopyButton />
