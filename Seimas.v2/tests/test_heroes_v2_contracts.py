@@ -290,3 +290,41 @@ class TestAttendanceMethodologyGate:
         cur = MagicMock()
         cur.execute.side_effect = Exception("relation methodology_versions does not exist")
         assert hero_engine.effective_attendance_version(cur) == 1
+
+
+class TestAttendanceIsAJsonNumber:
+    """Attendance must reach the client as a number, or as null — never a string.
+
+    The materialised view yields Decimal; without an explicit float() it
+    serialises as a JSON string, every leaderboard row fails client-side schema
+    validation, and the table silently renders empty with a 200 response and no
+    console error.
+    """
+
+    def test_decimal_attendance_is_converted_to_float(self):
+        import decimal
+        from unittest.mock import MagicMock
+
+        from backend import hero_engine
+
+        cur = MagicMock()
+        cur.fetchall.return_value = [
+            {"mp_id": "mp-1", "attendance_percentage": decimal.Decimal("97.85"), "eligible_days": 93}
+        ]
+        cur.fetchone.return_value = {"v": 2}
+        overrides = hero_engine.attendance_overrides(cur)
+
+        assert isinstance(overrides["mp-1"], float)
+        assert overrides["mp-1"] == 97.85
+
+    def test_suppressed_member_maps_to_none_not_zero(self):
+        from unittest.mock import MagicMock
+
+        from backend import hero_engine
+
+        cur = MagicMock()
+        cur.fetchall.return_value = [
+            {"mp_id": "mp-2", "attendance_percentage": None, "eligible_days": 1}
+        ]
+        cur.fetchone.return_value = {"v": 1}
+        assert hero_engine.attendance_overrides(cur)["mp-2"] is None
