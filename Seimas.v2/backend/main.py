@@ -62,7 +62,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=core.ALLOWED_ORIGINS,
     allow_origin_regex=r"https://dashboard.*\.vercel\.app",
-    allow_methods=["GET", "OPTIONS"],
+    allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
     allow_credentials=True,
 )
