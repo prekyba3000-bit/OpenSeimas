@@ -170,21 +170,25 @@ def apply_tags(cur, topics_table, id_col, to_delete, to_insert):
         )
 
 
-def tag_table(cur, table, topics_table, id_col, retag_all=False):
-    """Tag one entity table; return a per-topic count dict for the summary."""
-    cur.execute(f"SELECT {id_col}, title FROM {table} WHERE title IS NOT NULL")
+def tag_table(cur, table, topics_table, entity_id_col, topics_id_col, retag_all=False):
+    """Tag one entity table; return a per-topic count dict for the summary.
+
+    entity_id_col and topics_id_col differ for votes (votes.id ↔
+    vote_topics.vote_id) and coincide for legislation (project_id).
+    """
+    cur.execute(f"SELECT {entity_id_col}, title FROM {table} WHERE title IS NOT NULL")
     records = cur.fetchall()
 
     existing_hashes = {}
     if not retag_all:
-        cur.execute(f"SELECT {id_col}, title_hash FROM {topics_table}")
+        cur.execute(f"SELECT {topics_id_col}, title_hash FROM {topics_table}")
         for ref_id, h in cur.fetchall():
             existing_hashes[ref_id] = h
     else:
         cur.execute(f"DELETE FROM {topics_table}")
 
     to_delete, to_insert = plan_tagging(records, existing_hashes)
-    apply_tags(cur, topics_table, id_col, to_delete, to_insert)
+    apply_tags(cur, topics_table, topics_id_col, to_delete, to_insert)
 
     counts = {slug: 0 for slug in TOPICS}
     for _, topic, _, _ in to_insert:
@@ -211,7 +215,7 @@ def run(retag_all=False):
         with conn:
             with conn.cursor() as cur:
                 print("Tagging votes...")
-                stats = tag_table(cur, "votes", "vote_topics", "vote_id", retag_all)
+                stats = tag_table(cur, "votes", "vote_topics", "seimas_vote_id", "vote_id", retag_all)
                 print(
                     f"  > scanned {stats['scanned']} votes, "
                     f"re-tagged {stats['retagged']}, "
@@ -224,7 +228,7 @@ def run(retag_all=False):
                 if table_exists(cur, "legislation") and table_exists(cur, "legislation_topics"):
                     print("Tagging legislation...")
                     stats = tag_table(
-                        cur, "legislation", "legislation_topics", "project_id", retag_all
+                        cur, "legislation", "legislation_topics", "project_id", "project_id", retag_all
                     )
                     print(
                         f"  > scanned {stats['scanned']} bills, "
