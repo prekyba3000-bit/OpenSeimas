@@ -142,3 +142,70 @@ def test_score_helpers_are_pure_functions_of_their_inputs():
     # attendance dominates consistency; amendments are the minor term
     assert hero_engine.score_consistency(100, 0, 0) == pytest.approx(80.0)
     assert hero_engine.score_consistency(0, 5, 5) == pytest.approx(20.0)
+
+
+# ─── authored bills: the term parameter, and the feed's self-check ───────────
+
+
+def _bills_xml(total, individually, rows):
+    projects = "".join(
+        f'<SeimoNarioPateiktasTeisėsAktoProjektas eil_nr="{i}" požymis="Grupėje"/>'
+        for i in range(1, rows + 1)
+    )
+    return (
+        '<?xml version="1.0" encoding="UTF-8"?><SeimoInformacija>'
+        f'<SeimoKadencija kadencijos_id="10">'
+        f'<SeimoNarys asmens_id="79162" kiekis_viso="{total}" kiekis_individualiai="{individually}">'
+        f"{projects}</SeimoNarys></SeimoKadencija></SeimoInformacija>"
+    ).encode()
+
+
+def test_authored_bills_request_includes_the_term_parameter():
+    """Without kadencijos_id the endpoint answers 200 with an empty envelope.
+
+    That is why bills_authored_count was 0 for all 148 members and the
+    legislative-activity metric stayed hidden.
+    """
+    from pipeline import ingest_authored_bills
+
+    response = MagicMock(content=_bills_xml(20, 0, 20))
+    with patch.object(ingest_authored_bills, "fetch_with_retry", return_value=response) as fetch:
+        ingest_authored_bills.fetch_member_initiatives(79162)
+
+    url = fetch.call_args[0][0]
+    assert "kadencijos_id=" in url
+    assert "asmens_id=79162" in url
+
+
+def test_authored_bills_keeps_group_and_individual_counts_apart():
+    """"Authored 20 bills" and "co-signed 20 bills" are different claims."""
+    from pipeline import ingest_authored_bills
+
+    response = MagicMock(content=_bills_xml(20, 0, 20))
+    with patch.object(ingest_authored_bills, "fetch_with_retry", return_value=response):
+        total, individually, rows, anomaly = ingest_authored_bills.fetch_member_initiatives(79162)
+
+    assert (total, individually, rows) == (20, 0, 20)
+    assert anomaly is None
+
+
+def test_authored_bills_flags_a_feed_that_disagrees_with_itself():
+    """The header total and the returned rows are reconciled, not averaged."""
+    from pipeline import ingest_authored_bills
+
+    response = MagicMock(content=_bills_xml(20, 0, 17))
+    with patch.object(ingest_authored_bills, "fetch_with_retry", return_value=response):
+        total, _individually, rows, anomaly = ingest_authored_bills.fetch_member_initiatives(79162)
+
+    assert (total, rows) == (20, 17)
+    assert anomaly and "20" in anomaly and "17" in anomaly
+
+
+def test_authored_bills_absent_member_is_a_real_zero():
+    from pipeline import ingest_authored_bills
+
+    empty = MagicMock(content=b'<?xml version="1.0"?><SeimoInformacija></SeimoInformacija>')
+    with patch.object(ingest_authored_bills, "fetch_with_retry", return_value=empty):
+        total, individually, rows, anomaly = ingest_authored_bills.fetch_member_initiatives(1)
+
+    assert (total, individually, rows, anomaly) == (0, 0, 0, None)

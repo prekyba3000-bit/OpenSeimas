@@ -47,6 +47,7 @@ import psycopg2
 from psycopg2.extras import execute_values
 
 from utils import fetch_with_retry
+from pipeline.common import record_fetch
 
 
 DB_DSN = os.getenv("DB_DSN")
@@ -171,7 +172,7 @@ def build_asm_id_map(cur):
     return {str(seimas_mp_id): str(uuid) for uuid, seimas_mp_id in cur.fetchall()}
 
 
-def run():
+def _ingest():
     if not DB_DSN:
         print("ERROR: DB_DSN not set", file=sys.stderr)
         sys.exit(1)
@@ -287,6 +288,25 @@ def run():
             f"  skipped {unknown_total} turn(s) for {len(skipped_unknown_mp)} "
             f"asm_id(s) not in active politicians — former members or replacements."
         )
+    return total_inserted
+
+
+def run():
+    """Ingest with a provenance row recorded around it (plan §2.2)."""
+    if not DB_DSN:
+        print("ERROR: DB_DSN not set", file=sys.stderr)
+        return 2
+    conn = psycopg2.connect(DB_DSN)
+    try:
+        with record_fetch(conn, "seimas_floor_speeches", EIGA_FULL_URL) as fetch:
+            fetch["rows"] = _ingest() or 0
+    finally:
+        conn.close()
+    return 0
+
+
+def main(args=None):
+    return run()
 
 
 if __name__ == "__main__":

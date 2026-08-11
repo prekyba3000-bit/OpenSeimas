@@ -50,6 +50,12 @@ function legacyAttribute(profile: MpProfile, key: keyof typeof WIRE): number | n
   return typeof value === "number" ? value : null;
 }
 
+/** True when the backend says real data backs this attribute for this member. */
+function hasSource(profile: MpProfile, key: keyof typeof WIRE): boolean {
+  const provenance = profile.metrics_provenance?.[WIRE[key] as "STR" | "WIS" | "CHA" | "INT" | "STA"];
+  return provenance !== undefined && provenance !== "unavailable";
+}
+
 /**
  * Value for a dimension, or null when no populated source backs it.
  *
@@ -70,9 +76,20 @@ export function readMpDimension(profile: MpProfile, dim: MpCivicDimension): numb
     case "experience":
       return legacyAttribute(profile, "experience");
     case "legislativeActivity":
+      // Resurrects on its own once the source is ingested: the backend reports
+      // "unavailable" per attribute when nothing backs it, so no code change is
+      // needed when a backfill lands.
+      return hasSource(profile, "legislativeActivity")
+        ? legacyAttribute(profile, "legislativeActivity")
+        : null;
     case "visibility":
+      return hasSource(profile, "visibility") ? legacyAttribute(profile, "visibility") : null;
     case "integrity":
-      // Sources not ingested on the current database — see module docstring.
+      // Deliberately not provenance-driven. The engine reports INT as "direct"
+      // and returns a baseline 100 for everyone even when the forensic tables
+      // (vote_geometry, benford_analyses, procurement_contracts) are empty, so
+      // provenance cannot distinguish a clean record from no data. Stays hidden
+      // until those inputs exist.
       return null;
     default:
       return null;
