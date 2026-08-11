@@ -16,11 +16,17 @@ import SkaidrumasHubView from './views/SkaidrumasHubView';
 import { MethodologyView } from './views/MethodologyView';
 import { SourcesView } from './views/SourcesView';
 import { CorrectionsView } from './views/CorrectionsView';
+import SummaryHistoryView from './views/SummaryHistoryView';
 import { AppErrorBoundary } from './components/AppErrorBoundary';
 
 const MpProfileRoute = () => {
     const { id } = useParams();
     return <MpProfileView mpId={id!} />;
+};
+
+const SummaryHistoryRoute = () => {
+    const { type, id } = useParams();
+    return <SummaryHistoryView entityType={type!} entityId={id!} />;
 };
 
 const VoteDetailRoute = () => {
@@ -95,6 +101,7 @@ function App() {
                     <Route path="methodology" element={<AppErrorBoundary><MethodologyView /></AppErrorBoundary>} />
                     <Route path="sources" element={<AppErrorBoundary><SourcesView /></AppErrorBoundary>} />
                     <Route path="corrections" element={<AppErrorBoundary><CorrectionsView /></AppErrorBoundary>} />
+                    <Route path="istorija/:type/:id" element={<AppErrorBoundary><SummaryHistoryRoute /></AppErrorBoundary>} />
                 </Route>
 
                 <Route path="*" element={<Navigate to="/" replace />} />
