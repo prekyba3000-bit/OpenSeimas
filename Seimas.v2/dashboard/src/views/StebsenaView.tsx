@@ -87,13 +87,29 @@ export default function StebsenaView() {
     }
   }, [loadError, requestError]);
 
+  // Only rank on metrics something actually backs — a column of identical 0.0s
+  // (or a baseline 100.0) invites conclusions the data cannot support.
+  const visibleDimensions = useMemo(
+    () =>
+      CIVIC_DIMENSION_ORDER.filter((dim) =>
+        rows.some((row) => readMpDimension(row, dim) !== null),
+      ),
+    [rows],
+  );
+
+  const hiddenDimensions = useMemo(
+    () => CIVIC_DIMENSION_ORDER.filter((dim) => !visibleDimensions.includes(dim)),
+    [visibleDimensions],
+  );
+
   const sorted = useMemo(() => {
     const ranked = rows.map((row, i) => ({ ...row, rank: i + 1 }));
     const getValue = (row: MpRow & { rank: number }, key: SortKey) => {
       if (key === 'rank') return row.rank;
       if (key === 'name') return row.mp.name || '';
       if (key === 'faction') return row.faction ?? '';
-      return readMpDimension(row, key);
+      // Unavailable metrics sort last rather than as a fake 0.
+      return readMpDimension(row, key) ?? Number.NEGATIVE_INFINITY;
     };
 
     return [...ranked].sort((a, b) => {
@@ -147,7 +163,8 @@ export default function StebsenaView() {
         <div>
           <h2 className="text-3xl font-bold text-[#A9B1D6]">Stebėsena</h2>
           <p className="text-sm text-[#A9B1D6]/70">
-            Lentelė pagal viešus stebėsenos rodiklius; skaidrumo stulpelis rodo modelio vientisumo išvestį (žr.{' '}
+            Lentelė pagal viešus stebėsenos rodiklius. Rodomi tik tie rodikliai, kuriuos šiandien remia įkelti
+            duomenys (žr.{' '}
             <NavLink to="/dashboard/methodology" className="text-[#7AA2F7] underline">
               metodiką
             </NavLink>
@@ -159,10 +176,18 @@ export default function StebsenaView() {
       <Card className="p-4 md:p-6 bg-[#1A1B26] border-[#4E597B] rounded-2xl space-y-3">
         <p className="text-sm text-[#A9B1D6]/90 leading-relaxed">
           Tai <strong className="text-[#A9B1D6]">ne</strong> oficialus Seimo reitingas. Rodomi laukai ateina iš
-          stebėsenos API; <strong className="text-[#A9B1D6]">skaidrumo indeksas</strong> ir kiti stulpeliai — modelio
-          išvestys iš duomenų. Tuščios arba klaidingos eilutės reiškia API triktį arba trūkstamus duomenis — žr. būseną
+          stebėsenos API. Tuščios arba klaidingos eilutės reiškia API triktį arba trūkstamus duomenis — žr. būseną
           žemiau.
         </p>
+        {hiddenDimensions.length > 0 && (
+          <p className="text-xs text-[#A9B1D6]/70 leading-relaxed">
+            Kol kas nerodoma:{' '}
+            <span className="text-[#A9B1D6]">
+              {hiddenDimensions.map((dim) => CIVIC_DIMENSION_LABELS_LT[dim]).join(', ')}
+            </span>
+            . Šių rodiklių šaltinio duomenys dar neįkelti, todėl jų reikšmės būtų klaidinančios.
+          </p>
+        )}
         {loadError && (
           <ProblemDetailsNotice error={requestError} className="text-sm border border-amber-500/30 rounded-lg px-3 py-2 bg-amber-500/5 text-amber-400" />
         )}
@@ -197,9 +222,9 @@ export default function StebsenaView() {
                   <th className="text-left p-4">
                     <SortHeader label="Frakcija" keyName="faction" />
                   </th>
-                  {CIVIC_DIMENSION_ORDER.map((dim) => (
+                  {visibleDimensions.map((dim) => (
                     <th key={dim} className="text-right p-4">
-                      {dim === 'transparency' ? (
+                      {dim === 'integrity' ? (
                         <div className="inline-flex items-center justify-end gap-1">
                           <SortHeader label={CIVIC_DIMENSION_LABELS_LT[dim]} keyName={dim} />
                           <Popover>
@@ -258,9 +283,9 @@ export default function StebsenaView() {
                         </span>
                       )}
                     </td>
-                    {CIVIC_DIMENSION_ORDER.map((dim) => (
+                    {visibleDimensions.map((dim) => (
                       <td key={dim} className="p-4 text-right">
-                        {dim === 'transparency' ? (
+                        {dim === 'integrity' ? (
                           <div
                             className="inline-flex items-center justify-end gap-2"
                             title={getIntegrityTooltip(row)}
@@ -270,10 +295,10 @@ export default function StebsenaView() {
                                 row.forensicBreakdown?.totalForensicAdjustment ?? 0,
                               )}`}
                             />
-                            {readMpDimension(row, dim).toFixed(1)}
+                            {(readMpDimension(row, dim) ?? 0).toFixed(1)}
                           </div>
                         ) : (
-                          readMpDimension(row, dim).toFixed(1)
+                          (readMpDimension(row, dim) ?? 0).toFixed(1)
                         )}
                       </td>
                     ))}

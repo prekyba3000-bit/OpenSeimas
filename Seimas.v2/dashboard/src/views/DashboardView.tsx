@@ -1,6 +1,6 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Users, Activity, Shield, AlertTriangle, FileText, Vote, TrendingUp, Calendar } from 'lucide-react';
+import { Users, Activity, Shield, AlertTriangle, FileText, Vote, Calendar } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router';
 import { api, DashboardStats, ActivityItem as ActivityItemType, MpSummary, VoteSummary } from '../services/api';
@@ -60,10 +60,10 @@ export const DashboardView = () => {
     }
 
     const tickerItems = [
-        { icon: Users, label: 'Seimo nariai', value: String(stats?.total_mps ?? 141), trend: 'neutral' as const, trendValue: 'aktyvūs' },
+        { icon: Users, label: 'Seimo nariai', value: stats ? String(stats.total_mps) : '—', trend: 'neutral' as const, trendValue: 'aktyvūs' },
         { icon: Vote, label: 'Balsavimai', value: stats?.historical_votes ?? '—', trend: 'up' as const, trendValue: 'viso' },
         { icon: FileText, label: 'Individualūs balsai', value: stats?.individual_votes ?? '—', trend: 'up' as const, trendValue: 'įrašai' },
-        { icon: TrendingUp, label: 'Tikslumas', value: stats?.accuracy ?? '—', trend: 'neutral' as const, trendValue: 'duomenų' },
+        { icon: Calendar, label: 'Posėdžių dienos', value: stats ? String(stats.sitting_days) : '—', trend: 'neutral' as const, trendValue: 'su balsavimais' },
     ];
 
     const voteEvents = votes.map(v => ({
@@ -182,10 +182,8 @@ export const DashboardView = () => {
                     </div>
                     <div className="mt-auto pt-4 border-t border-border">
                         <div className="grid grid-cols-2 gap-3">
-                            <MiniStat label="Sesijos" value="5" />
-                            <MiniStat label="Posėdžiai" value="127" />
-                            <MiniStat label="Frakcijos" value="7" />
-                            <MiniStat label="Kadencija" value="X" />
+                            <MiniStat label="Seimo nariai" value={stats ? String(stats.total_mps) : '—'} />
+                            <MiniStat label="Posėdžių dienos" value={stats ? String(stats.sitting_days) : '—'} />
                         </div>
                     </div>
                 </Card>

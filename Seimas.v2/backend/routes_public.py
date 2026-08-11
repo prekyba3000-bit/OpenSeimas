@@ -57,11 +57,16 @@ def get_stats(request: Request):
             cur.execute("SELECT count(*) as count FROM mp_votes")
             mp_vote_count = cur.fetchone()["count"]
 
+            cur.execute("SELECT count(DISTINCT sitting_date) as count FROM votes")
+            sitting_days = cur.fetchone()["count"]
+
             return {
                 "total_mps": mp_count,
                 "historical_votes": f"{vote_count:,}",
                 "individual_votes": f"{mp_vote_count:,}",
-                "accuracy": "99.9%",
+                # No "accuracy" field: nothing computes one. It was a hard-coded
+                # "99.9%" the dashboard presented as a measured figure.
+                "sitting_days": sitting_days,
             }
 
 
