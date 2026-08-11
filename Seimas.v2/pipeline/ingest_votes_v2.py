@@ -1,4 +1,4 @@
-import requests
+import sys
 import defusedxml.ElementTree as ET
 import psycopg2
 from psycopg2 import pool, extras
@@ -7,6 +7,15 @@ import time
 import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from contextlib import contextmanager
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from utils import fetch_with_retry  # noqa: E402
+from pipeline.common import record_fetch  # noqa: E402
+
+# Vote ids whose result fetch failed this run. A gap nobody knows about is
+# worse than a gap on the record: these are reported and re-attempted next run
+# (ingest is idempotent, so a recovered vote simply UPSERTs into place).
+_FAILED_VOTE_IDS: list = []
 
 # --- Configuration ---
 # Use the verified working credentials
@@ -47,9 +56,17 @@ def cache_mp_ids():
 
 # --- Fetching ---
 def fetch_xml(url):
+    """Parsed XML, or None once retries are exhausted.
+
+    Previously a single attempt with no retry: two vote-result fetches timed
+    out during the 2026-08-10 backfill and those votes were silently missing
+    from production with nothing recording their absence.
+    """
     try:
-        r = requests.get(url, timeout=20)
-        if r.status_code != 200: return None
+        r = fetch_with_retry(url, timeout=30)
+        if r.status_code != 200:
+            print(f"Error fetching {url}: HTTP {r.status_code}")
+            return None
         return ET.fromstring(r.content)
     except Exception as e:
         print(f"Error fetching {url}: {e}")
@@ -120,7 +137,9 @@ def process_sitting(sess_id, sit_id):
             
             # 4. Fetch Results
             res_xml = fetch_xml(f"{BASE_URL}.ad_sp_balsavimo_rezultatai?balsavimo_id={vid}")
-            if not res_xml: continue
+            if not res_xml:
+                _FAILED_VOTE_IDS.append(vid)
+                continue
             
             # Metadata
             title = title_base
@@ -130,9 +149,14 @@ def process_sitting(sess_id, sit_id):
                 if res_title: title = res_title
                 if not stadija: stadija = header.get('balsavimo_tipas')
             
+            # The source flags votes whose electronic per-MP results disagree
+            # with the protocol totals; keep that on the record (migration 018).
+            totals = res_xml.find('.//BendriBalsavimoRezultatai')
+            source_comment = totals.get('komentaras') if totals is not None else None
+
             # Prepare Vote Record
-            # (seimas_vote_id, sitting_date, title, project_id, vote_type, created_at)
-            votes_to_insert.append((vid, sitting_date_str, title, project_id, stadija))
+            # (seimas_vote_id, sitting_date, title, project_id, vote_type, source_comment)
+            votes_to_insert.append((vid, sitting_date_str, title, project_id, stadija, source_comment))
             
             # Prepare Decisions (MP Votes)
             rows = res_xml.findall('.//IndividualusBalsavimoRezultatas')
@@ -179,14 +203,15 @@ def process_sitting(sess_id, sit_id):
         with conn.cursor() as cur:
             # Upsert Votes
             extras.execute_values(cur, """
-                INSERT INTO votes (seimas_vote_id, sitting_date, title, project_id, vote_type)
+                INSERT INTO votes (seimas_vote_id, sitting_date, title, project_id, vote_type, source_comment)
                 VALUES %s
                 ON CONFLICT (seimas_vote_id)
                 DO UPDATE SET
                     title = EXCLUDED.title,
                     sitting_date = EXCLUDED.sitting_date,
                     project_id = EXCLUDED.project_id,
-                    vote_type = EXCLUDED.vote_type
+                    vote_type = EXCLUDED.vote_type,
+                    source_comment = EXCLUDED.source_comment
             """, votes_to_insert)
 
             # Upsert MP Votes
@@ -242,7 +267,13 @@ def ingest_term_votes():
                     print(f"Worker failed: {e}")
 
     print(f"SUCCESS: Ingested {total_votes} votes/updates.")
+    if _FAILED_VOTE_IDS:
+        # Named, not just counted, so a specific missing vote can be chased.
+        print(f"WARNING: {len(_FAILED_VOTE_IDS)} vote result(s) could not be fetched "
+              f"and are MISSING from this run: {', '.join(_FAILED_VOTE_IDS)}")
+        print("They will be retried on the next run (ingest is idempotent).")
     if _db_pool: _db_pool.closeall()
+    return {"votes": total_votes, "failed_vote_ids": list(_FAILED_VOTE_IDS)}
 
 def sync_votes():
     """Entry point for API admin sync. Runs full term vote ingestion."""

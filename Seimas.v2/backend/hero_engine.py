@@ -686,6 +686,41 @@ def _fetch_party_loyalty(mp_id: str, db_cursor) -> float:
     return float(row["party_loyalty"]) if row else 0.0
 
 
+# ─── Score formulas ──────────────────────────────────────────────────────────
+# One definition each. These were previously written out twice — once for the
+# single-profile path and once for the bulk path — with nothing keeping them
+# equal, which is how a profile and a leaderboard come to disagree about the
+# same member.
+
+
+def score_legislative(bills_authored, max_bills, committee_leadership, max_committee):
+    """Authored bills and committee leadership."""
+    return (0.6 * _normalize(bills_authored, max_bills)) + (
+        0.4 * _normalize(committee_leadership, max_committee)
+    )
+
+
+def score_experience(years, max_years, votes_cast, max_votes, amendments, max_amendments):
+    """Seniority weighted with recorded activity."""
+    return (
+        0.5 * _normalize(years, max_years)
+        + 0.3 * _normalize(votes_cast, max_votes)
+        + 0.2 * _normalize(amendments, max_amendments)
+    )
+
+
+def score_visibility(speeches_given, max_speeches, social_bonus):
+    """Floor speeches and press presence."""
+    return (0.5 * _normalize(speeches_given, max_speeches)) + (0.5 * social_bonus)
+
+
+def score_consistency(attendance_percentage, amendments_proposed, amendments_max):
+    """Attendance dominates; amendment activity is a minor term."""
+    return (0.8 * _clamp(attendance_percentage)) + (
+        0.2 * _normalize(amendments_proposed, amendments_max)
+    )
+
+
 def effective_attendance_version(db_cursor) -> int:
     """Highest published attendance methodology version already in force.
 
@@ -977,15 +1012,16 @@ def calculate_hero_profile(mp_id: str, db_cursor) -> Dict[str, Any]:
     party_row = db_cursor.fetchone()
     party_name = party_row["party_name"] if party_row else (mp_row["current_party"] or "Unknown")
 
-    str_score = (0.6 * _normalize(bills_authored, maxima["max_bills_authored"])) + (
-        0.4 * _normalize(committee_leadership, maxima["max_committee_leadership"])
+    str_score = score_legislative(
+        bills_authored, maxima["max_bills_authored"],
+        committee_leadership, maxima["max_committee_leadership"],
     )
-    wis_score = (
-        0.5 * _normalize(years_in_parliament, maxima["max_years_in_parliament"])
-        + 0.3 * _normalize(total_votes_cast, maxima["max_total_votes_cast"])
-        + 0.2 * _normalize(amendments_proposed_count, maxima["max_amendments_proposed_count"])
+    wis_score = score_experience(
+        years_in_parliament, maxima["max_years_in_parliament"],
+        total_votes_cast, maxima["max_total_votes_cast"],
+        amendments_proposed_count, maxima["max_amendments_proposed_count"],
     )
-    cha_score = (0.5 * _normalize(speeches_given, maxima["max_speeches_given"])) + (0.5 * social_bonus)
+    cha_score = score_visibility(speeches_given, maxima["max_speeches_given"], social_bonus)
     # INT remains 100 when forensic source tables are empty; this is expected baseline behavior.
     int_score = float(forensic_breakdown["final_integrity_score"])
     amendments_max = (
@@ -993,9 +1029,7 @@ def calculate_hero_profile(mp_id: str, db_cursor) -> Dict[str, Any]:
         if has_direct_amendments and maxima["amendments_direct_available"]
         else maxima["max_amendments_proposed_proxy"]
     )
-    sta_score = (0.8 * _clamp(attendance_percentage)) + (
-        0.2 * _normalize(amendments_proposed, amendments_max)
-    )
+    sta_score = score_consistency(attendance_percentage, amendments_proposed, amendments_max)
 
     if bills_authored == 0:
         metrics_provenance["STR"] = "unavailable"
@@ -1343,18 +1377,19 @@ def calculate_all_hero_profiles_fast(
         geom = forensic_breakdown["vote_geometry"]
         high_risk_alerts = 1 if geom.get("status") == "flagged" else 0
 
-        str_score = (0.6 * _normalize(bills_authored, max_bills_authored)) + (
-            0.4 * _normalize(committee_leadership, max_committee_leadership)
+        str_score = score_legislative(
+            bills_authored, max_bills_authored,
+            committee_leadership, max_committee_leadership,
         )
-        wis_score = (
-            0.5 * _normalize(years_in_parliament, max_years_in_parliament)
-            + 0.3 * _normalize(total_votes_cast, max_total_votes_cast)
-            + 0.2 * _normalize(amendments_proposed_count, max_amendments_proposed_count)
+        wis_score = score_experience(
+            years_in_parliament, max_years_in_parliament,
+            total_votes_cast, max_total_votes_cast,
+            amendments_proposed_count, max_amendments_proposed_count,
         )
-        cha_score = (0.5 * _normalize(speeches_given, max_speeches_given)) + (0.5 * social_bonus)
+        cha_score = score_visibility(speeches_given, max_speeches_given, social_bonus)
         int_score = float(forensic_breakdown["final_integrity_score"])
-        sta_score = (0.8 * _clamp(attendance_percentage)) + (
-            0.2 * _normalize(amendments_proposed, max_amendments_proposed_proxy)
+        sta_score = score_consistency(
+            attendance_percentage, amendments_proposed, max_amendments_proposed_proxy
         )
 
         metrics_provenance = {
