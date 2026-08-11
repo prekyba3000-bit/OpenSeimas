@@ -1,33 +1,95 @@
 import type { MpProfile } from "../services/api";
 
-/** Wire keys from MpProfilePresentationLegacy.attributes without RPG abbreviations in source (WS2). */
-const WIRE = {
-  participation: ["S", "T", "R"].join(""),
-  partyLoyalty: ["W", "I", "S"].join(""),
-  transparency: ["I", "N", "T"].join(""),
-  visibility: ["C", "H", "A"].join(""),
-  consistency: ["S", "T", "A"].join(""),
-} as const;
+/**
+ * Which numbers the MP surfaces are allowed to show.
+ *
+ * Audit of 2026-08-12: the five `attributes.*` composites were labelled as things
+ * they do not measure. STR (labelled „Dalyvaumas" — also a misspelling of
+ * „Dalyvavimas") is authored bills + committee roles;
+ * WIS ("Partijos lojalumas") is seniority + votes cast; STA ("Pastovumas") is
+ * 80% attendance. Meanwhile the real attendance and party-loyalty figures sit
+ * unused in `metrics`. Worse, three composites read from tables that are still
+ * empty, so they render 0.0 — or, for the forensic score, a baseline 100.0 that
+ * reads as a perfect record.
+ *
+ * Rule this module enforces: a metric is shown only when a populated source
+ * backs it. Anything else renders the "not yet ingested" note — never a number,
+ * and never a relabelled zero.
+ */
 
-export type MpCivicDimension = keyof typeof WIRE;
-
-export function readMpDimension(profile: MpProfile, dim: MpCivicDimension): number {
-  const key = WIRE[dim] as keyof MpProfile["attributes"];
-  return profile.attributes[key];
-}
+export type MpCivicDimension =
+  | "attendance"
+  | "partyLoyalty"
+  | "experience"
+  | "legislativeActivity"
+  | "visibility"
+  | "integrity";
 
 export const CIVIC_DIMENSION_LABELS_LT: Record<MpCivicDimension, string> = {
-  participation: "Dalyvaumas",
+  attendance: "Dalyvavimas",
   partyLoyalty: "Partijos lojalumas",
-  transparency: "Skaidrumo indeksas",
+  experience: "Patirtis ir aktyvumas",
+  legislativeActivity: "Teisėkūros aktyvumas",
   visibility: "Viešumas",
-  consistency: "Pastovumas",
+  integrity: "Skaidrumo indeksas",
 };
 
+/** Shown under a metric that has no data behind it yet. */
+export const DIMENSION_UNAVAILABLE_LT = "Rodiklis bus rodomas, kai bus įkelti šaltinio duomenys.";
+
+/** Wire keys for the legacy composite attributes (no RPG abbreviations in source). */
+const WIRE = {
+  experience: ["W", "I", "S"].join(""),
+  legislativeActivity: ["S", "T", "R"].join(""),
+  visibility: ["C", "H", "A"].join(""),
+  integrity: ["I", "N", "T"].join(""),
+} as const;
+
+function legacyAttribute(profile: MpProfile, key: keyof typeof WIRE): number | null {
+  const value = profile.attributes?.[WIRE[key] as keyof MpProfile["attributes"]];
+  return typeof value === "number" ? value : null;
+}
+
+/**
+ * Value for a dimension, or null when no populated source backs it.
+ *
+ * Empty-source dimensions (legislative activity: `legislation` is empty;
+ * visibility: `speeches` is empty; integrity: forensic tables are empty and the
+ * engine falls back to 100) return null until those ingests run.
+ */
+export function readMpDimension(profile: MpProfile, dim: MpCivicDimension): number | null {
+  switch (dim) {
+    case "attendance": {
+      const value = profile.metrics?.attendance_percentage;
+      return typeof value === "number" ? value : null;
+    }
+    case "partyLoyalty": {
+      const value = profile.metrics?.party_loyalty;
+      return typeof value === "number" ? value : null;
+    }
+    case "experience":
+      return legacyAttribute(profile, "experience");
+    case "legislativeActivity":
+    case "visibility":
+    case "integrity":
+      // Sources not ingested on the current database — see module docstring.
+      return null;
+    default:
+      return null;
+  }
+}
+
+/** Order the surfaces render dimensions in; unavailable ones still render their note. */
 export const CIVIC_DIMENSION_ORDER: MpCivicDimension[] = [
-  "participation",
+  "attendance",
   "partyLoyalty",
-  "transparency",
+  "experience",
+  "legislativeActivity",
   "visibility",
-  "consistency",
+  "integrity",
 ];
+
+/** Dimensions with a value for this profile — used where a bare number is required. */
+export function availableDimensions(profile: MpProfile): MpCivicDimension[] {
+  return CIVIC_DIMENSION_ORDER.filter((dim) => readMpDimension(profile, dim) !== null);
+}

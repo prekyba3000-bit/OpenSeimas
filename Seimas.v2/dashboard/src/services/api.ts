@@ -125,8 +125,20 @@ export type MpProfile = {
   };
   forensicBreakdown: ForensicBreakdown;
   evidence: string[];
-  // TODO(v4): add faction, votingAttendance, partyLoyalty once backend exposes them
+  /** Source-backed metrics from the backend. Displayed values come from here. */
+  metrics?: MpMetrics;
+  // TODO(v4): add faction once backend exposes it
 } & MpProfilePresentationLegacy;
+
+export type MpMetrics = {
+  attendance_percentage?: number;
+  party_loyalty?: number;
+  total_votes_cast?: number;
+  speeches_given?: number;
+  bills_authored_count?: number;
+  committee_leadership?: number;
+  years_in_parliament?: number;
+};
 
 type XpCurrentLevelKey = `${"xp"}_${"current"}_${"level"}`;
 type XpNextLevelKey = `${"xp"}_${"next"}_${"level"}`;
@@ -260,6 +272,20 @@ export const mpProfileSchema = z
       }),
     ),
     forensic_breakdown: rawForensicBreakdownSchema,
+    // The real, source-backed numbers. `attributes` above are derived composites
+    // and several of them read from tables that are still empty — prefer these.
+    metrics: z
+      .object({
+        attendance_percentage: z.number().optional(),
+        party_loyalty: z.number().optional(),
+        total_votes_cast: z.number().optional(),
+        speeches_given: z.number().optional(),
+        bills_authored_count: z.number().optional(),
+        committee_leadership: z.number().optional(),
+        years_in_parliament: z.number().optional(),
+      })
+      .partial()
+      .optional(),
   })
   .extend({
     [WIRE_MP_HIGHLIGHT_EVIDENCE]: z.array(z.string()).optional().default([]),
@@ -329,6 +355,7 @@ type _ParsedMpProfileWire = {
   alignment: string;
   attributes: MpProfile["attributes"];
   artifacts: MpProfile["artifacts"];
+  metrics?: MpMetrics;
 } & Record<string, unknown>;
 
 function mapRawForensicBreakdown(raw: _RawForensicBreakdown): ForensicBreakdown {
@@ -378,6 +405,7 @@ function mapRawToMpProfile(raw: z.infer<typeof mpProfileSchema>): MpProfile {
     alignment: r.alignment,
     attributes: r.attributes,
     artifacts: r.artifacts,
+    metrics: r.metrics,
   } as MpProfile;
 }
 
