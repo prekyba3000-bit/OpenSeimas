@@ -4,17 +4,11 @@
 #
 # ⚠️  OPERATIONS WARNING (learned the hard way, outage of 2026-07→08):
 # Render's FREE PostgreSQL EXPIRES 30 days after creation — that is what took the
-# API down. Either upgrade seimas-db to a paid plan, or move the DB to a provider
-# with a persistent free tier (Neon, Supabase) and set DB_DSN manually instead of
-# fromDatabase. Whichever you choose: schedule nightly pg_dump backups (e.g. a
-# GitHub Actions cron uploading to Backblaze) — the DB is currently the only copy
-# of months of ingested data.
-
-databases:
-  - name: seimas-db
-    plan: free          # ← see warning above; free tier EXPIRES
-    databaseName: seimas
-    user: seimas
+# API down and lost all ingested data. The DB now lives on Neon (persistent free
+# tier, us-west-2 to match the service region); DB_DSN is set manually in the
+# Render console (sync: false below). Do NOT re-add a `databases:` block on the
+# free plan. Still pending: nightly pg_dump backups (db_backup.yml needs the
+# DB_DSN repo secret) — until those run, the DB is the only copy of the data.
 
 services:
   - type: web
@@ -29,9 +23,7 @@ services:
     healthCheckPath: /health
     envVars:
       - key: DB_DSN
-        fromDatabase:
-          name: seimas-db
-          property: connectionString
+        sync: false     # set manually in the console (Neon DSN); never in git
       - key: SYNC_SECRET
         generateValue: true
       - key: PYTHON_VERSION
