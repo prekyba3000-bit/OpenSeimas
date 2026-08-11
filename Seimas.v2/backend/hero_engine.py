@@ -686,6 +686,67 @@ def _fetch_party_loyalty(mp_id: str, db_cursor) -> float:
     return float(row["party_loyalty"]) if row else 0.0
 
 
+def effective_attendance_version(db_cursor) -> int:
+    """Highest published attendance methodology version already in force.
+
+    The published methodology governs the computation, rather than the two
+    merely being kept in sync by hand: v2 starts applying the moment its
+    announced `effective_from` passes, which is what the 14-day advance-notice
+    promise (plan §7) is supposed to mean.
+    """
+    try:
+        db_cursor.execute(
+            """
+            SELECT COALESCE(MAX(version), 1) AS v
+            FROM methodology_versions
+            WHERE metric_key = 'attendance' AND effective_from <= NOW()
+            """
+        )
+        row = db_cursor.fetchone()
+        return int((row["v"] if isinstance(row, dict) else row[0]) or 1)
+    except Exception:  # noqa: BLE001 — table absent on un-migrated databases
+        return 1
+
+
+def resolve_attendance(db_cursor, mp_id: str, v1_value) -> float:
+    """Attendance under whichever methodology version is currently in force."""
+    if effective_attendance_version(db_cursor) < 2:
+        return float(v1_value or 0)
+    try:
+        db_cursor.execute(
+            "SELECT attendance_percentage FROM mp_attendance_v2 WHERE mp_id = %s::uuid",
+            (mp_id,),
+        )
+        row = db_cursor.fetchone()
+        if row is not None:
+            value = row["attendance_percentage"] if isinstance(row, dict) else row[0]
+            return float(value or 0)
+    except Exception:  # noqa: BLE001 — view absent before migration 019
+        pass
+    return float(v1_value or 0)
+
+
+def attendance_overrides(db_cursor) -> Dict[str, float]:
+    """{mp_id: attendance} under v2, or {} while v1 is the effective version.
+
+    Bulk callers apply this after fetching so the leaderboard and the single
+    profile cannot disagree about a member's attendance.
+    """
+    if effective_attendance_version(db_cursor) < 2:
+        return {}
+    try:
+        db_cursor.execute("SELECT mp_id, attendance_percentage FROM mp_attendance_v2")
+        rows = db_cursor.fetchall() or []
+    except Exception:  # noqa: BLE001 — view absent before migration 019
+        return {}
+    out: Dict[str, float] = {}
+    for row in rows:
+        mp_id = row["mp_id"] if isinstance(row, dict) else row[0]
+        value = row["attendance_percentage"] if isinstance(row, dict) else row[1]
+        out[str(mp_id)] = float(value or 0)
+    return out
+
+
 def _fetch_mp_metrics(mp_id: str, db_cursor) -> Dict[str, Any] | None:
     db_cursor.execute(
         """
@@ -900,7 +961,7 @@ def calculate_hero_profile(mp_id: str, db_cursor) -> Dict[str, Any]:
     )
     speech_row = db_cursor.fetchone()
     speeches_given = float(speech_row["speech_count"] or 0) if speech_row else 0.0
-    attendance_percentage = float(mp_row["attendance_percentage"] or 0)
+    attendance_percentage = resolve_attendance(db_cursor, mp_id, mp_row["attendance_percentage"])
     amendments_proposed_count = float(mp_row["amendments_proposed_count"] or 0)
     amendments_proposed = amendments_direct if has_direct_amendments else amendments_proposed_count
     bills_proposed = bills_authored
@@ -1052,6 +1113,7 @@ def fetch_graph_mp_summaries(db_cursor, active_only: bool = True) -> List[Dict[s
         """
     )
     rows = db_cursor.fetchall()
+    _attendance_by_mp = attendance_overrides(db_cursor)
 
     summaries: List[Dict[str, Any]] = []
     for row in rows:
@@ -1067,7 +1129,9 @@ def fetch_graph_mp_summaries(db_cursor, active_only: bool = True) -> List[Dict[s
             level = max(0, int(math.floor(math.log(xp / 100))))
         alignment = _derive_alignment(
             party_loyalty=float(row["party_loyalty"] or 0),
-            attendance_percentage=float(row["attendance_percentage"] or 0),
+            attendance_percentage=float(
+                _attendance_by_mp.get(str(row["mp_id"]), row["attendance_percentage"]) or 0
+            ),
         )
         summaries.append(
             {
@@ -1254,13 +1318,16 @@ def calculate_all_hero_profiles_fast(
     )
 
     profiles: List[Dict[str, Any]] = []
+    _attendance_by_mp = attendance_overrides(db_cursor)
     for row in rows:
         bills_authored = float(row["bills_authored_count"] or 0)
         committee_leadership = float(row["committee_leadership_roles"] or 0)
         bills_passed = float(row["votes_for_passed"] or 0)
         total_votes_cast = float(row["total_votes_cast"] or 0)
         speeches_given = float(row["speeches_given"] or 0)
-        attendance_percentage = float(row["attendance_percentage"] or 0)
+        attendance_percentage = float(
+            _attendance_by_mp.get(str(row["mp_id"]), row["attendance_percentage"]) or 0
+        )
         amendments_proposed_count = float(row["amendments_proposed_count"] or 0)
         # amendment_profiles is empty in current schema => no direct signal,
         # so the proxy (amendments_proposed_count) drives the STA contribution.

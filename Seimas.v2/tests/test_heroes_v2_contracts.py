@@ -235,3 +235,46 @@ async def test_heroes_search_returns_empty_results(monkeypatch):
     body = response.json()
     assert body["total"] == 0
     assert body["results"] == []
+
+
+class TestAttendanceMethodologyGate:
+    """The published methodology governs which attendance formula is in force.
+
+    v2 was announced 2026-08-12 with effective_from 2026-08-26; until that date
+    passes the engine must keep serving v1, and afterwards switch without any
+    code change. That is what the 14-day advance-notice promise means in
+    practice (plan §7).
+    """
+
+    def _cursor(self, version_row, v2_row=None):
+        from unittest.mock import MagicMock
+
+        cur = MagicMock()
+        cur.fetchone.side_effect = [version_row, v2_row]
+        return cur
+
+    def test_serves_v1_while_v2_is_only_announced(self):
+        from backend import hero_engine
+
+        cur = self._cursor({"v": 1})
+        assert hero_engine.resolve_attendance(cur, "mp-1", 70.97) == 70.97
+
+    def test_serves_v2_once_effective(self):
+        from backend import hero_engine
+
+        cur = self._cursor({"v": 2}, {"attendance_percentage": 72.04})
+        assert hero_engine.resolve_attendance(cur, "mp-1", 70.97) == 72.04
+
+    def test_falls_back_to_v1_when_the_view_has_no_row(self):
+        from backend import hero_engine
+
+        cur = self._cursor({"v": 2}, None)
+        assert hero_engine.resolve_attendance(cur, "mp-1", 70.97) == 70.97
+
+    def test_missing_methodology_table_means_v1(self):
+        from unittest.mock import MagicMock
+        from backend import hero_engine
+
+        cur = MagicMock()
+        cur.execute.side_effect = Exception("relation methodology_versions does not exist")
+        assert hero_engine.effective_attendance_version(cur) == 1
