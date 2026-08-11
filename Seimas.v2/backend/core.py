@@ -123,12 +123,39 @@ RATE_WINDOW = 60
 _rate_tracker: dict = defaultdict(list)
 
 
+def client_ip(request) -> str:
+    """Caller's IP as seen past the platform proxy.
+
+    Render terminates TLS at its own proxy, so request.client.host is that
+    proxy for every visitor — keying the limiter on it puts all users in one
+    bucket, which throttles everyone at once and throttles an abuser not at
+    all. The left-most X-Forwarded-For entry is the originating client.
+
+    That entry is caller-supplied and therefore spoofable, so this is
+    best-effort throttling, not an access control. Abuse prevention that must
+    hold belongs behind the moderation gate, not here.
+    """
+    forwarded = request.headers.get("x-forwarded-for") if request.headers else None
+    if forwarded:
+        first = forwarded.split(",")[0].strip()
+        if first:
+            return first
+    return request.client.host if request.client else "unknown"
+
+
 def check_rate_limit(ip: str) -> bool:
     now = time.time()
-    _rate_tracker[ip] = [t for t in _rate_tracker[ip] if now - t < RATE_WINDOW]
-    if len(_rate_tracker[ip]) >= RATE_LIMIT:
+    recent = [t for t in _rate_tracker[ip] if now - t < RATE_WINDOW]
+    if len(recent) >= RATE_LIMIT:
+        _rate_tracker[ip] = recent
         return False
-    _rate_tracker[ip].append(now)
+    recent.append(now)
+    _rate_tracker[ip] = recent
+    # Evict IPs whose window has fully expired; without this the tracker grows
+    # unbounded for the life of the process.
+    if len(_rate_tracker) > 1024:
+        for stale in [k for k, v in _rate_tracker.items() if not v or now - v[-1] >= RATE_WINDOW]:
+            del _rate_tracker[stale]
     return True
 
 
