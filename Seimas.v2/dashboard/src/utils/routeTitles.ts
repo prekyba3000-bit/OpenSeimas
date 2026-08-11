@@ -14,6 +14,7 @@ const ROUTE_TITLES: Array<{ pattern: string; title: string }> = [
   { pattern: '/dashboard/methodology', title: 'Metodika' },
   { pattern: '/dashboard/sources', title: 'Šaltiniai' },
   { pattern: '/dashboard/corrections', title: 'Pataisymai' },
+  { pattern: '/dashboard/istorija', title: 'Santraukos istorija' },
   { pattern: '/dashboard', title: 'Apžvalga' },
   { pattern: '/', title: '' },
 ];

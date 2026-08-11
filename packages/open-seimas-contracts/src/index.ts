@@ -7,7 +7,8 @@ export interface DashboardStats {
   total_mps: number;
   historical_votes: string;
   individual_votes: string;
-  accuracy: string;
+  /** Distinct sitting days covered by the ingested votes. */
+  sitting_days: number;
 }
 
 export interface ActivityItem {
