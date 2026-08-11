@@ -105,6 +105,10 @@ def sync_db():
         data_iki = node.get('data_iki')
         term_end = parse_date(data_iki)
         is_active = term_end is None
+        # Mandate window — attendance is measured only over sitting days a
+        # member could actually attend (migration 019).
+        mandate_start = parse_date(node.get('data_nuo'))
+        mandate_end = term_end
         
         if is_active: active_count += 1
         
@@ -152,7 +156,9 @@ def sync_db():
             is_active,
             term_end,
             photo_url,
-            bio
+            bio,
+            mandate_start,
+            mandate_end
         ))
         
     print(f"Found {active_count} active MPs out of {len(mps)} total records.")
@@ -162,13 +168,16 @@ def sync_db():
     
     sql = """
         INSERT INTO politicians (
-            full_name_normalized, display_name, seimas_mp_id, current_party, is_active, term_end_date, photo_url, bio
+            full_name_normalized, display_name, seimas_mp_id, current_party, is_active, term_end_date, photo_url, bio,
+            mandate_start_date, mandate_end_date
         ) VALUES %s
         ON CONFLICT (seimas_mp_id) DO UPDATE SET
             current_party = EXCLUDED.current_party,
             is_active = EXCLUDED.is_active,
             term_end_date = EXCLUDED.term_end_date,
             photo_url = EXCLUDED.photo_url,
+            mandate_start_date = EXCLUDED.mandate_start_date,
+            mandate_end_date = EXCLUDED.mandate_end_date,
             last_synced_at = NOW();
     """
     

@@ -43,8 +43,16 @@ export function ScoreTooltip({ profile, className = "" }: ScoreTooltipProps) {
           );
         })}
       </dl>
-      <p className="mt-3 text-xs text-muted-foreground">
-        Kaip skaičiuojamas dalyvavimas —{" "}
+      {/* The live figure counts only days a member voted, over days they appear
+          in the voting data — so a short tenure can read as 100%. Methodology v2
+          (announced 2026-08-12, effective 2026-08-26) fixes it. Saying so now
+          rather than after the notice period: the 14-day rule exists to prevent
+          silent methodology changes, not to justify leaving a known-weak number
+          unlabelled. */}
+      <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+        Dalyvavimas kol kas skaičiuojamas tik pagal balsavimus, todėl trumpai dirbę nariai gali
+        rodyti 100 %. Nuo 2026-08-26 buvimą patvirtins registracija <em>arba</em> balsavimas per
+        mandato laikotarpį —{" "}
         <NavLink to="/dashboard/methodology" className="text-primary underline">
           metodika
         </NavLink>
