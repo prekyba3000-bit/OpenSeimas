@@ -132,3 +132,43 @@ def test_admin_requires_auth():
         "metric_key": "attendance", "title_lt": "t", "body_lt": "b",
     })
     assert resp.status_code in (401, 503)
+
+
+def test_public_log_only_returns_reviewed_corrections():
+    """Unreviewed (`open`) submissions must never reach the public log.
+
+    Submission is anonymous and unauthenticated, so without this gate anyone
+    could publish arbitrary claims about a named MP on the corrections log.
+    """
+    conn = _fake_conn(rows=[])
+    with patch("backend.core.get_db_conn", side_effect=lambda: _ctx(conn)), \
+         patch("backend.core._table_exists", return_value=True):
+        resp = client.get("/api/trust/corrections")
+    assert resp.status_code == 200
+
+    sql, params = conn.cursor.return_value.execute.call_args[0]
+    assert "status = ANY(" in sql
+    statuses = params[0]
+    assert "open" not in statuses
+    assert set(statuses) == {"accepted", "rejected", "resolved"}
+
+
+def test_public_log_refuses_explicit_open_filter():
+    """Asking for unreviewed rows is refused, not silently ignored."""
+    conn = _fake_conn(rows=[])
+    with patch("backend.core.get_db_conn", side_effect=lambda: _ctx(conn)), \
+         patch("backend.core._table_exists", return_value=True):
+        resp = client.get("/api/trust/corrections?status=open")
+    assert resp.status_code == 422
+    assert "not public" in resp.json()["detail"]
+
+
+def test_public_log_still_allows_filtering_to_a_reviewed_status():
+    conn = _fake_conn(rows=[])
+    with patch("backend.core.get_db_conn", side_effect=lambda: _ctx(conn)), \
+         patch("backend.core._table_exists", return_value=True):
+        resp = client.get("/api/trust/corrections?status=rejected")
+    assert resp.status_code == 200
+    sql, params = conn.cursor.return_value.execute.call_args[0]
+    assert "status = %s" in sql
+    assert params[0] == "rejected"
