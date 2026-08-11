@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# Local CI stand-in while GitHub Actions is locked: backend pytest against a
+# fresh throwaway DB + dashboard production build, on every push.
+# Install: cp scripts/local-ops/pre-push .git/hooks/pre-push && chmod +x .git/hooks/pre-push
+# Data-only cron pushes bypass this via `git push --no-verify` (see daily_sync.sh).
+set -euo pipefail
+REPO="$(git rev-parse --show-toplevel)"
+cd "$REPO/Seimas.v2"
+
+SCRATCH_DB="seimas_prepush"
+SCRATCH_DSN="postgresql://julio:jou@localhost:5432/$SCRATCH_DB"
+export PGPASSWORD=jou
+
+echo "pre-push: backend tests against fresh DB..."
+psql -U julio -h localhost -d postgres -q \
+  -c "DROP DATABASE IF EXISTS $SCRATCH_DB;" -c "CREATE DATABASE $SCRATCH_DB;"
+DB_DSN="$SCRATCH_DSN" .venv/bin/python apply_migrations.py > /dev/null
+DB_DSN="$SCRATCH_DSN" PYTHONPATH=. .venv/bin/python -m pytest tests -q
+psql -U julio -h localhost -d postgres -q -c "DROP DATABASE $SCRATCH_DB;"
+
+echo "pre-push: dashboard build..."
+cd dashboard
+VITE_API_URL="${VITE_API_URL:-https://seimas-api.onrender.com}" npx vite build > /dev/null
+
+echo "pre-push: all green"
