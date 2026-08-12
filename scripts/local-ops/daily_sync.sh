@@ -41,10 +41,17 @@ echo "[$(date -Is)] daily sync start"
 
 # Mirror the workflow's data commit; --no-verify skips the pre-push quality gate
 # because this push is data-only (the gate is for code pushes).
+#
+# The commit MUST be path-scoped. `git add <file>` followed by a bare
+# `git commit` commits the whole index, so an unrelated `git add` that happened
+# to be sitting staged gets swept into a "data: daily sync" commit and pushed
+# with --no-verify — i.e. code reaching origin under a data message, with the
+# quality gate bypassed. That happened once. Passing the pathspec to commit
+# makes it ignore the rest of the index entirely.
 cd "$REPO"
-if ! git diff --quiet Seimas.v2/dashboard/public/data/absenteeism.json; then
-  git add Seimas.v2/dashboard/public/data/absenteeism.json
-  git commit -m "data: daily sync (local cron) [skip ci]"
+DATA_FILE="Seimas.v2/dashboard/public/data/absenteeism.json"
+if ! git diff --quiet "$DATA_FILE"; then
+  git commit -m "data: daily sync (local cron) [skip ci]" -- "$DATA_FILE"
   git pull --rebase origin main && git push --no-verify origin main \
     || echo "[$(date -Is)] push failed — data commit left local"
 fi
