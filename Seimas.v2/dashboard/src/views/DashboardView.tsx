@@ -1,10 +1,10 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Users, Activity, Shield, AlertTriangle, FileText, Vote, Calendar } from 'lucide-react';
+import { Users, Activity, Shield, FileText, Vote, Calendar } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router';
 import { api, DashboardStats, ActivityItem as ActivityItemType, MpSummary, VoteSummary } from '../services/api';
-import { ProblemDetailsNotice } from '../components/ProblemDetailsNotice';
+import { ConnectingNotice, ConnectionError, isConnectionProblem } from '../components/ConnectionState';
 import { StatCard } from '../components/StatCard';
 import { Card } from '../components/Card';
 import { AbsenteeismCard } from '../components/AbsenteeismCard';
@@ -34,29 +34,30 @@ export const DashboardView = () => {
     });
 
     const loading = statsQ.isLoading || activityQ.isLoading || mpsQ.isLoading || votesQ.isLoading;
-    const error = statsQ.error ?? activityQ.error ?? mpsQ.error ?? votesQ.error;
+    // A failed or offline-paused query with no data means the page can't render;
+    // show the connection screen rather than a half-empty dashboard.
+    const connectionProblem = [statsQ, activityQ, mpsQ, votesQ].some(isConnectionProblem);
 
     const stats: DashboardStats | null = statsQ.data ?? null;
     const activity: ActivityItemType[] = activityQ.data ?? [];
     const mps: MpSummary[] = mpsQ.data ?? [];
     const votes: VoteSummary[] = votesQ.data ?? [];
 
-    if (loading) {
+    if (connectionProblem) {
         return (
-            <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4 text-muted-foreground">
-                <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" />
-                Kraunama...
-            </div>
+            <ConnectionError
+                onRetry={() => {
+                    statsQ.refetch();
+                    activityQ.refetch();
+                    mpsQ.refetch();
+                    votesQ.refetch();
+                }}
+            />
         );
     }
 
-    if (error) {
-        return (
-            <div className="p-6 border rounded-xl flex items-center gap-3 border-destructive bg-destructive/10 text-destructive">
-                <AlertTriangle className="w-5 h-5 shrink-0" />
-                <ProblemDetailsNotice error={error} className="text-sm border-0 bg-transparent p-0 text-destructive" />
-            </div>
-        );
+    if (loading) {
+        return <ConnectingNotice />;
     }
 
     const tickerItems = [

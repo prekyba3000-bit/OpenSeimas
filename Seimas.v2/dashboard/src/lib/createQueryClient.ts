@@ -23,6 +23,11 @@ export function createQueryClient(): QueryClient {
         staleTime: 5 * 60 * 1000,
         gcTime: 30 * 60 * 1000,
         retry: shouldRetryQuery,
+        // networkMode stays the default "online": offline, a query pauses
+        // (fetchStatus "paused") instead of erroring. The views read that paused
+        // state as the offline signal and show the connection screen — see
+        // isConnectionProblem in ConnectionState. This tracks real device
+        // connectivity rather than firing a request we know will fail.
       },
     },
   });

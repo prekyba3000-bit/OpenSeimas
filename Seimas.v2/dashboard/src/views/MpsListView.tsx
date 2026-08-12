@@ -9,17 +9,22 @@ import { Button } from '../components/Button';
 import { MpCard } from '../components/MpCard';
 import { sortMps, SORT_OPTIONS, SortOption } from '../utils/sorting';
 import { ProblemDetailsNotice } from '../components/ProblemDetailsNotice';
+import { ConnectingNotice, ConnectionError, isConnectionProblem } from '../components/ConnectionState';
 import { LT } from '../i18n/lt';
 
 const MpsListView = () => {
-    const {
-        data: mps = [],
-        isLoading: loading,
-        error: rosterError,
-    } = useQuery({
+    const rosterQuery = useQuery({
         queryKey: ['mps', 'roster'],
         queryFn: () => api.getMps(),
     });
+    const {
+        data: mps = [],
+        isLoading: loading,
+        refetch: refetchRoster,
+    } = rosterQuery;
+    // Failed, or offline-paused with no data: nothing to browse, show the
+    // connection screen with a retry.
+    const rosterUnavailable = isConnectionProblem(rosterQuery);
 
     const [searchResults, setSearchResults] = useState<MpSummary[] | null>(null);
     const [search, setSearch] = useState('');
@@ -29,7 +34,6 @@ const MpsListView = () => {
     const [slowSearch, setSlowSearch] = useState(false);
     const [searchError, setSearchError] = useState<unknown>(null);
 
-    const displayError = rosterError ?? searchError;
 
     const mapMpProfileToSummary = (mpProfile: MpProfile): MpSummary => ({
         id: mpProfile.mp.id,
@@ -199,44 +203,38 @@ const MpsListView = () => {
                 )}
             </Card>
 
-            {/* Error State */}
-            {displayError && (
-                <ProblemDetailsNotice
-                    error={displayError}
-                    className="p-4 border rounded-xl flex items-center gap-3"
-                />
-            )}
-
-            {/* Loading State */}
-            {loading ? (
-                <div
-                    className="p-20 text-center flex flex-col items-center"
-                    style={{ color: 'var(--text-secondary)' }}
-                >
-                    <div
-                        className="animate-spin w-8 h-8 border-2 border-t-transparent rounded-full mb-4"
-                        style={{
-                            borderColor: 'var(--primary-500)',
-                            borderTopColor: 'transparent',
-                        }}
-                    />
-                    Loading MP roster...
-                </div>
-            ) : !displayError && (
+            {/* The roster is the primary load. When it fails or the device is
+                offline, show the connection screen with a retry — not a small
+                inline notice — because there is nothing else to show. */}
+            {rosterUnavailable ? (
+                <ConnectionError onRetry={() => refetchRoster()} />
+            ) : (
                 <>
-                    {/* MPs Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {processedMps.map(mp => (
-                            <MpCard
-                                key={mp.id}
-                                mp={mp}
-                                onClick={() => handleMpClick(mp.id)}
-                            />
-                        ))}
-                    </div>
+                    {/* Search errors are secondary: the full roster still renders below. */}
+                    {searchError && (
+                        <ProblemDetailsNotice
+                            error={searchError}
+                            className="p-4 border rounded-xl flex items-center gap-3"
+                        />
+                    )}
 
-                    {/* Empty State */}
-                    {processedMps.length === 0 && !displayError && (
+                    {loading ? (
+                        <ConnectingNotice />
+                    ) : (
+                        <>
+                            {/* MPs Grid */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {processedMps.map(mp => (
+                                    <MpCard
+                                        key={mp.id}
+                                        mp={mp}
+                                        onClick={() => handleMpClick(mp.id)}
+                                    />
+                                ))}
+                            </div>
+
+                            {/* Empty State */}
+                            {processedMps.length === 0 && (
                         <div
                             className="text-center py-20 flex flex-col items-center gap-4"
                             style={{ color: 'var(--text-secondary)' }}
@@ -247,6 +245,8 @@ const MpsListView = () => {
                                 Clear Filters
                             </Button>
                         </div>
+                            )}
+                        </>
                     )}
                 </>
             )}
