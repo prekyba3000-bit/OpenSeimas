@@ -109,6 +109,11 @@ ALLOWED_ORIGINS = [
     "https://seimas-v2.vercel.app",
     "https://open-seimas-dashboard.vercel.app",
     "tauri://localhost",
+    # Capacitor Android WebView. With server.androidScheme "https" the app is
+    # served from https://localhost, so that — not a localhost dev port — is the
+    # Origin the packaged app sends. iOS would additionally need
+    # "capacitor://localhost"; there is no iOS build, so it is not listed.
+    "https://localhost",
 ]
 
 DB_DSN = os.getenv("DB_DSN")
