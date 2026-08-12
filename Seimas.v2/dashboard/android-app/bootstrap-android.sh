@@ -34,6 +34,8 @@ cp patches/version.properties            android/version.properties
 cp patches/app-build.gradle              android/app/build.gradle
 cp patches/ic_launcher.xml               android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
 cp patches/ic_launcher_round.xml         android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml
+cp patches/styles.xml                    android/app/src/main/res/values/styles.xml
+cp patches/colors.xml                    android/app/src/main/res/values/colors.xml
 
 echo "bootstrap: cap sync (copy web assets + link plugins)"
 npx cap sync android

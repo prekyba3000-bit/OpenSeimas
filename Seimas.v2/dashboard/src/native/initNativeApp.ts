@@ -11,8 +11,11 @@ export async function initNativeApp(): Promise<void> {
   if (!Capacitor.isNativePlatform()) return;
 
   try {
-    // Match the dashboard's dark chrome: light icons on the near-black
-    // (--background #020817) header. The app is dark-only (index.html forces it).
+    // Don't draw the WebView under the status bar — otherwise the app header
+    // (hamburger, page title) sits behind it. A solid dark bar above the content
+    // instead, matching the dashboard's near-black chrome (--background #020817)
+    // with light icons. The app is dark-only (index.html forces it).
+    await StatusBar.setOverlaysWebView({ overlay: false });
     await StatusBar.setStyle({ style: Style.Dark });
     await StatusBar.setBackgroundColor({ color: '#020817' });
   } catch {
