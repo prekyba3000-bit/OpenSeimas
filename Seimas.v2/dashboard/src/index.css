@@ -1,4 +1,5 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap");
+/* Inter is self-hosted via @fontsource, imported in main.jsx — no external font
+   request. */
 @import "./figma-tokens.css";
 @import "tailwindcss";
 

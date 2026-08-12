@@ -54,9 +54,11 @@ function pageTitle(pathname: string): string {
 function NavButton({
   item,
   pathname,
+  onNavigate,
 }: {
   item: (typeof dataNavItems)[0];
   pathname: string;
+  onNavigate: () => void;
 }) {
   const isActive =
     pathname === item.path ||
@@ -66,8 +68,9 @@ function NavButton({
   return (
     <NavLink
       to={item.path}
+      onClick={onNavigate}
       className={cn(
-        'flex items-center gap-3 px-3 py-2 rounded-md transition-colors text-sm font-medium',
+        'flex items-center gap-3 px-3 min-h-11 py-2 rounded-md transition-colors text-sm font-medium',
         isActive
           ? 'bg-sidebar-accent text-sidebar-accent-foreground'
           : 'text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-white',
@@ -81,7 +84,12 @@ function NavButton({
 
 export function MainLayout() {
   useDocumentTitle();
-  const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
+  // Closed by default. Below `lg` this is a drawer over the content, so opening
+  // it on mount meant every route — web and app — booted onto the navigation
+  // instead of the page. At `lg` and up `lg:translate-x-0 lg:static` pins the
+  // sidebar visible regardless, so this flag is purely the mobile drawer.
+  const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
+  const closeSidebar = React.useCallback(() => setIsSidebarOpen(false), []);
   const [cmdOpen, setCmdOpen] = React.useState(false);
   const location = useLocation();
   const pathname = location.pathname;
@@ -107,7 +115,7 @@ export function MainLayout() {
             <p className="px-3 mb-1 text-[10px] uppercase tracking-wider text-sidebar-foreground/50">Duomenys</p>
             <div className="space-y-1">
               {dataNavItems.map((item) => (
-                <NavButton key={item.path} item={item} pathname={pathname} />
+                <NavButton key={item.path} item={item} pathname={pathname} onNavigate={closeSidebar} />
               ))}
             </div>
           </div>
@@ -115,7 +123,7 @@ export function MainLayout() {
             <p className="px-3 mb-1 text-[10px] uppercase tracking-wider text-sidebar-foreground/50">Skaidrumas</p>
             <div className="space-y-1">
               {transparencyNavItems.map((item) => (
-                <NavButton key={item.path} item={item} pathname={pathname} />
+                <NavButton key={item.path} item={item} pathname={pathname} onNavigate={closeSidebar} />
               ))}
             </div>
           </div>
@@ -138,8 +146,9 @@ export function MainLayout() {
             <button
               type="button"
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="lg:hidden print:hidden p-1 text-foreground hover:bg-muted rounded shrink-0"
+              className="lg:hidden print:hidden -ml-2 flex h-11 w-11 shrink-0 items-center justify-center text-foreground hover:bg-muted rounded"
               aria-label="Meniu"
+              aria-expanded={isSidebarOpen}
             >
               <Menu size={20} />
             </button>

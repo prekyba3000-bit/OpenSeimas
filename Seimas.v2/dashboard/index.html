@@ -31,12 +31,13 @@
       name="twitter:description"
       content="Atviras ir nepriklausomas Seimo narių skaidrumo stebėjimo įrankis."
     />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;700;900&family=JetBrains+Mono:wght@300;400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
+    <!--
+      Fonts are self-hosted (Inter, via @fontsource in main.jsx) so the packaged
+      app makes no request to Google. Cinzel and JetBrains Mono were declared
+      here but never applied — the CSS vars that would use them
+      (--font-terminal / --font-decree) are undefined, so only Inter ever
+      rendered. Removed rather than self-hosted: no point bundling unused fonts.
+    -->
   </head>
   <body>
     <div id="root"></div>

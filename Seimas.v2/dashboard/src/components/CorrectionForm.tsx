@@ -72,7 +72,7 @@ export function CorrectionForm() {
           <select
             value={entityType}
             onChange={(e) => setEntityType(e.target.value as EntityType)}
-            className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
+            className="mt-1 min-h-11 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
           >
             {ENTITY_TYPES.map((type) => (
               <option key={type} value={type}>
@@ -88,7 +88,7 @@ export function CorrectionForm() {
             value={entityId}
             onChange={(e) => setEntityId(e.target.value)}
             placeholder="pvz. seimo nario vardas arba puslapio nuoroda"
-            className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
+            className="mt-1 min-h-11 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
           />
           {touched && !idValid && (
             <span className="mt-1 block text-xs text-destructive">Nurodykite, ką tikslinate.</span>
@@ -120,7 +120,7 @@ export function CorrectionForm() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="jei norite atsakymo"
-          className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
+          className="mt-1 min-h-11 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
         />
         <span className="mt-1 block text-xs text-muted-foreground">
           El. paštas viešame žurnale nerodomas — jis matomas tik prižiūrėtojui.
@@ -151,7 +151,7 @@ export function CorrectionForm() {
         <button
           type="submit"
           disabled={!canSubmit}
-          className="inline-flex items-center gap-2 rounded-md border border-border bg-primary/10 px-4 py-2 text-sm text-foreground hover:bg-primary/20 disabled:opacity-50"
+          className="inline-flex min-h-11 items-center gap-2 rounded-md border border-border bg-primary/10 px-4 py-2 text-sm text-foreground hover:bg-primary/20 disabled:opacity-50"
         >
           <Send className="h-4 w-4" />
           {mutation.isPending ? 'Siunčiama…' : 'Pateikti pataisymą'}
