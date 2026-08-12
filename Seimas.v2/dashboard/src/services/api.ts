@@ -584,9 +584,26 @@ export interface RequestOptions<T> {
 }
 
 const DEFAULT_TIMEOUT_MS = 8000;
+// Render's free tier sleeps and cold-starts in 15–50s. The first request of an
+// app session bears that wait, so it gets a much larger budget; every request
+// after the first success reverts to DEFAULT_TIMEOUT_MS.
+const COLD_START_TIMEOUT_MS = 70000;
 const DEFAULT_RETRIES = 2;
 const DEFAULT_RETRY_DELAY_MS = 250;
 const RETRYABLE_HTTP_STATUSES = new Set([408, 429, 500, 502, 503, 504]);
+
+// Session-global: has any request succeeded yet? Governs the cold-start budget.
+let apiWarm = false;
+
+/** True once any request has succeeded — i.e. the backend is awake. */
+export function isApiWarm(): boolean {
+  return apiWarm;
+}
+
+/** Reset the warm flag. Exported for tests; no production caller. */
+export function resetApiWarmth(): void {
+  apiWarm = false;
+}
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -608,8 +625,14 @@ function parseOrThrow<T>(parse: ((data: unknown) => T) | undefined, data: unknow
 }
 
 export async function request<T>(endpoint: string, options: RequestOptions<T> = {}): Promise<T> {
-  const retries = options.retries ?? DEFAULT_RETRIES;
-  const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  // While cold, one long attempt rather than several: the 70s budget already
+  // spans Render's boot, and stacking retries only multiplies the worst case the
+  // "connecting" state is covering. If it still fails the user gets the error
+  // screen with a retry button — their tap, not a silent 140s wait. An explicit
+  // caller override (e.g. POST with retries: 0) still wins in both fields.
+  const warm = apiWarm;
+  const retries = options.retries ?? (warm ? DEFAULT_RETRIES : 0);
+  const timeoutMs = options.timeoutMs ?? (warm ? DEFAULT_TIMEOUT_MS : COLD_START_TIMEOUT_MS);
   const retryDelayMs = options.retryDelayMs ?? DEFAULT_RETRY_DELAY_MS;
   const url = `${API_BASE}${endpoint}`;
 
@@ -650,6 +673,8 @@ export async function request<T>(endpoint: string, options: RequestOptions<T> = 
       }
 
       const payload = await response.json();
+      // The backend answered — it is awake. Later requests use the short budget.
+      apiWarm = true;
       return parseOrThrow(options.parse, payload);
     } catch (error) {
       if (error instanceof ApiError) {

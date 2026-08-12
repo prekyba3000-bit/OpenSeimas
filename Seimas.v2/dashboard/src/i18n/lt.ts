@@ -20,6 +20,18 @@ export const LT = {
     boundaryRetry: "Bandyti iš naujo",
     wikiUnavailable: "Wiki šiuo metu nepasiekiama. Rodoma paskutinė talpyklos versija, jei ji yra.",
   },
+  connection: {
+    // Shown while the first request waits on a sleeping Render service.
+    connecting: "Jungiama prie serverio…",
+    connectingHint: "Pirmas atidarymas gali užtrukti iki minutės, kol serveris pabunda.",
+    // Device is offline — the citizen can fix this.
+    offlineTitle: "Nėra interneto ryšio",
+    offlineBody: "Patikrinkite ryšį ir bandykite dar kartą.",
+    // Device is online but our API did not answer — our fault, not theirs.
+    unreachableTitle: "Nepavyko pasiekti serverio",
+    unreachableBody: "Nepavyko pasiekti serverio. Patikrinkite ryšį ir bandykite dar kartą.",
+    retry: "Bandyti dar kartą",
+  },
   wiki: {
     loading: "Wiki kraunama",
     missingTitle: "Paskelbto wiki rinkinio nėra",
