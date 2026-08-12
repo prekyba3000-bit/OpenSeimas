@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Dashboard background colour (#020817). Used for the Android 12+ splash so
+         it matches the dark app instead of the default light window background. -->
+    <color name="splash_background">#020817</color>
+</resources>
