@@ -1,0 +1,8 @@
+node_modules/
+
+# Signing material must never live in the repo. The real files are in
+# ~/.config/openseimas/ (see README.md); these are a backstop.
+*.keystore
+*.jks
+android-signing.env
+signing.properties

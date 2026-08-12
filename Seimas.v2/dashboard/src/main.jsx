@@ -18,6 +18,7 @@ import './index.css'
 import App from './App.tsx'
 import { AppErrorBoundary } from './components/AppErrorBoundary'
 import { createQueryClient } from './lib/createQueryClient'
+import { initNativeApp } from './native/initNativeApp'
 
 const queryClient = createQueryClient()
 
@@ -30,3 +31,6 @@ createRoot(document.getElementById('root')).render(
     </QueryClientProvider>
   </StrictMode>,
 )
+
+// Native app-shell setup (status bar, splash). No-op on the web.
+void initNativeApp()
