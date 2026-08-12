@@ -1,0 +1,7 @@
+[Unit]
+Description=OpenSeimas production DB backup
+[Service]
+Type=oneshot
+ExecStart=/home/julio/Documents/OpenSeimas/scripts/local-ops/db_backup.sh --if-due
+StandardOutput=append:%h/Documents/OpenSeimas/logs/ops-backup.log
+StandardError=inherit

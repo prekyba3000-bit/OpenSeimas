@@ -1,0 +1,10 @@
+[Unit]
+Description=OpenSeimas materialized view refresh every 30 minutes
+[Timer]
+OnCalendar=*:0/30
+# Persistent=false: the refresh recomputes from current state, so the next
+# ordinary tick repairs a missed window. Replaying would redo identical work.
+Persistent=false
+AccuracySec=1min
+[Install]
+WantedBy=timers.target

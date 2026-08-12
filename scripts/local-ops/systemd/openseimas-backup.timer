@@ -1,0 +1,10 @@
+[Unit]
+Description=OpenSeimas DB backup daily at 03:30
+[Timer]
+OnCalendar=*-*-* 03:30:00
+# The laptop is usually off at 03:30. Persistent=true makes systemd fire this
+# once after the next boot/resume — one catch-up run, not one per missed day.
+Persistent=true
+RandomizedDelaySec=2min
+[Install]
+WantedBy=timers.target

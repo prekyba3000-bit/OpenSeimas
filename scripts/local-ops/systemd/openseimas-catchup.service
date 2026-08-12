@@ -1,0 +1,5 @@
+[Unit]
+Description=OpenSeimas boot/resume catch-up for missed jobs
+[Service]
+Type=oneshot
+ExecStart=/home/julio/Documents/OpenSeimas/scripts/local-ops/catchup.sh
