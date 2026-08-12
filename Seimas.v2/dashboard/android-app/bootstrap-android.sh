@@ -36,6 +36,9 @@ cp patches/ic_launcher.xml               android/app/src/main/res/mipmap-anydpi-
 cp patches/ic_launcher_round.xml         android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml
 cp patches/styles.xml                    android/app/src/main/res/values/styles.xml
 cp patches/colors.xml                    android/app/src/main/res/values/colors.xml
+# Capacitor's template ships the keystore-ignore lines commented out; without
+# this a regenerated tree would silently stop ignoring *.keystore / *.jks.
+cp patches/android-gitignore             android/.gitignore
 
 echo "bootstrap: cap sync (copy web assets + link plugins)"
 npx cap sync android
