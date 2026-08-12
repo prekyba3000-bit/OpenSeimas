@@ -15,6 +15,7 @@
     "sync:mps": "tsx scripts/sync-mps.ts"
   },
   "dependencies": {
+    "@fontsource/inter": "5.3.0",
     "@open-seimas/contracts": "file:../../packages/open-seimas-contracts",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-alert-dialog": "^1.1.15",

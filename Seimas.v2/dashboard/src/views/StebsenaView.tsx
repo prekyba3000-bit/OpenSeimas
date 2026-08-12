@@ -136,13 +136,21 @@ export default function StebsenaView() {
   const SortHeader = ({ label, keyName }: { label: string; keyName: SortKey }) => (
     <button
       type="button"
-      className="inline-flex items-center gap-1 text-xs uppercase tracking-wider text-[#A9B1D6]/70 hover:text-[#A9B1D6]"
+      className="inline-flex min-h-11 items-center gap-1 py-2 text-xs uppercase tracking-wider text-[#A9B1D6]/70 hover:text-[#A9B1D6]"
       onClick={() => toggleSort(keyName)}
     >
       {label}
       <ArrowUpDown className="w-3 h-3" />
     </button>
   );
+
+  /** Sort keys offered on the phone layout, where there are no column headers to tap. */
+  const sortOptions: Array<{ key: SortKey; label: string }> = [
+    { key: 'rank', label: 'Vieta' },
+    { key: 'name', label: 'Seimo narys' },
+    { key: 'faction', label: 'Frakcija' },
+    ...visibleDimensions.map((dim) => ({ key: dim as SortKey, label: CIVIC_DIMENSION_LABELS_LT[dim] })),
+  ];
 
   const loadSourceLabel = `${API_URL}/api${MONITORING_API_URL}`;
 
@@ -209,7 +217,80 @@ export default function StebsenaView() {
       {sorted.length > 0 && (
         <>
           {/* TODO(v4): add faction filter chip once faction data is reliable */}
-          <Card className="overflow-x-auto p-0 bg-[#1A1B26] border-[#4E597B] rounded-2xl shadow-[0_0_35px_rgba(122,162,247,0.16)]">
+
+          {/* Phone layout. The table below needs ~900px to stay readable, which
+              on a 360px screen is a sideways scroll across the one screen most
+              citizens open. Same rows, same rule about which metrics exist. */}
+          <div className="space-y-3 md:hidden">
+            <div className="flex flex-wrap items-center gap-2">
+              <label className="sr-only" htmlFor="stebesena-sort">
+                Rikiuoti pagal
+              </label>
+              <select
+                id="stebesena-sort"
+                value={sortKey}
+                onChange={(e) => setSortKey(e.target.value as SortKey)}
+                className="min-h-11 flex-1 rounded-lg border border-[#4E597B] bg-[#2D2E3A] px-3 text-sm text-[#A9B1D6]"
+              >
+                {sortOptions.map((opt) => (
+                  <option key={opt.key} value={opt.key}>
+                    Rikiuoti: {opt.label}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() => setSortDirection((d) => (d === 'asc' ? 'desc' : 'asc'))}
+                className="inline-flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-lg border border-[#4E597B] bg-[#2D2E3A] px-3 text-sm text-[#A9B1D6]"
+                aria-label={sortDirection === 'asc' ? 'Rikiuoti mažėjančiai' : 'Rikiuoti didėjančiai'}
+              >
+                <ArrowUpDown className="h-4 w-4" />
+                {sortDirection === 'asc' ? 'A→Z' : 'Z→A'}
+              </button>
+            </div>
+
+            <ul className="space-y-3">
+              {sorted.map((row) => (
+                <li key={row.mp.id}>
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/dashboard/mps/${row.mp.id}`)}
+                    className="w-full rounded-2xl border border-[#4E597B] bg-[#2D2E3A] p-4 text-left"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="font-bold text-[#7AA2F7]">#{row.rank}</span>
+                      <img
+                        src={row.mp.photo || DEFAULT_PHOTO}
+                        alt=""
+                        className="h-10 w-10 rounded-xl object-cover bg-[#1A1B26] ring-1 ring-[#4E597B]"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = DEFAULT_PHOTO;
+                        }}
+                      />
+                      <span className="min-w-0 flex-1">
+                        <span className="block font-semibold text-[#A9B1D6]">{row.mp.name}</span>
+                        <span className="block text-xs text-[#A9B1D6]/70">
+                          {row.faction?.trim() || '—'}
+                        </span>
+                      </span>
+                    </div>
+                    <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 border-t border-[#4E597B]/40 pt-3">
+                      {visibleDimensions.map((dim) => (
+                        <div key={dim} className="flex items-baseline justify-between gap-2">
+                          <dt className="text-xs text-[#A9B1D6]/70">{CIVIC_DIMENSION_LABELS_LT[dim]}</dt>
+                          <dd className="font-mono tabular-nums text-sm text-[#A9B1D6]">
+                            {(readMpDimension(row, dim) ?? 0).toFixed(1)}
+                          </dd>
+                        </div>
+                      ))}
+                    </dl>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <Card className="hidden overflow-x-auto p-0 bg-[#1A1B26] border-[#4E597B] rounded-2xl shadow-[0_0_35px_rgba(122,162,247,0.16)] md:block">
             <table className="w-full min-w-[900px]">
               <thead>
                 <tr className="border-b border-[#4E597B] bg-[#2D2E3A]">

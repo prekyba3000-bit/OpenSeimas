@@ -5,6 +5,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/t
 import { cn } from './ui/utils';
 import { MpSummary } from '../services/api';
 import { getPartyColor, getPartyShort, getPartyMeta } from '../utils/partyColors';
+import { useTapReveal } from '../hooks/useTapReveal';
 
 export interface Seat {
   id: string;
@@ -43,6 +44,7 @@ export function SeimasMap({ mps = [], compact = false }: SeimasMapProps) {
   const [hoveredSeat, setHoveredSeat] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedParty, setSelectedParty] = useState<string | null>(null);
+  const { isTouch, revealedId, activate, dismiss } = useTapReveal();
 
   const activeMps = useMemo(
     () => mps.filter(m => m.is_active !== false),
@@ -79,6 +81,13 @@ export function SeimasMap({ mps = [], compact = false }: SeimasMapProps) {
   }, [layout, activeMps, searchTerm, selectedParty]);
 
   const mapHeight = compact ? 'aspect-[16/8]' : 'aspect-[16/10]';
+
+  const revealedMp = useMemo(
+    () => (revealedId ? seats.find(s => s.mp?.id === revealedId)?.mp ?? null : null),
+    [seats, revealedId],
+  );
+
+  const openProfile = (mp: MpSummary) => navigate(`/dashboard/mps/${mp.id}`);
 
   return (
     <div className="flex flex-col gap-3">
@@ -141,23 +150,43 @@ export function SeimasMap({ mps = [], compact = false }: SeimasMapProps) {
                 <Tooltip key={seat.id}>
                   <TooltipTrigger asChild>
                     <div
+                      role={seat.mp ? 'button' : undefined}
+                      tabIndex={seat.mp ? 0 : undefined}
+                      aria-label={seat.mp?.name}
                       className={cn(
                         'absolute w-[14px] h-[14px] rounded-full cursor-pointer shadow-sm border border-black/10 dark:border-white/10',
                         'transition-all duration-300 ease-out',
+                        // Invisible padding widens the tap target from 14px to
+                        // 28px in map coordinates. Seats sit 34–51px apart, so
+                        // this cannot overlap a neighbour. It is still under
+                        // 44px once the map is scaled down on a phone — 141
+                        // seats cannot each be 44px in this area — which is why
+                        // a tap reveals rather than navigates.
+                        "before:absolute before:-inset-[7px] before:content-['']",
                         seat.isDimmed ? 'opacity-10 scale-75' : '',
-                        hoveredSeat === i && 'z-50 ring-2 ring-foreground scale-[2]',
+                        (hoveredSeat === i || (!!seat.mp && revealedId === seat.mp.id)) &&
+                          'z-50 ring-2 ring-foreground scale-[2]',
                       )}
                       style={{
                         left: seat.x,
                         top: seat.y,
                         backgroundColor: seat.mp ? getPartyColor(seat.mp.party) : '#374151',
                       }}
-                      onClick={() => seat.mp && navigate(`/dashboard/mps/${seat.mp.id}`)}
+                      onClick={() => {
+                        if (!seat.mp) return;
+                        // On touch the first tap only reveals who this is.
+                        if (activate(seat.mp.id)) openProfile(seat.mp);
+                      }}
+                      onKeyDown={e => {
+                        if (!seat.mp || (e.key !== 'Enter' && e.key !== ' ')) return;
+                        e.preventDefault();
+                        openProfile(seat.mp);
+                      }}
                       onMouseEnter={() => setHoveredSeat(i)}
                       onMouseLeave={() => setHoveredSeat(null)}
                     />
                   </TooltipTrigger>
-                  {seat.mp && (
+                  {seat.mp && !isTouch && (
                     <TooltipContent side="top" className="p-0 overflow-hidden bg-popover border-border rounded-lg shadow-xl">
                       <div className="flex flex-col w-[220px]">
                         <div className="h-10 relative" style={{ backgroundColor: getPartyColor(seat.mp.party) + '33' }}>
@@ -200,6 +229,51 @@ export function SeimasMap({ mps = [], compact = false }: SeimasMapProps) {
             </div>
           </div>
         </div>
+
+        {/* Touch has no hover, so the seat's detail card cannot be a tooltip.
+            It sits here instead, where it always fits on screen and can carry a
+            full-size control to actually open the profile. */}
+        {isTouch && revealedMp && (
+          <div className="absolute inset-x-2 bottom-2 z-30 rounded-xl border border-border bg-background/95 p-3 shadow-xl backdrop-blur">
+            <div className="flex items-start gap-3">
+              <img
+                src={revealedMp.photo_url}
+                alt=""
+                className="h-12 w-12 shrink-0 rounded-lg border border-border bg-muted object-cover"
+                onError={e => {
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
+              />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-bold text-foreground">{revealedMp.name}</p>
+                <p className="truncate text-xs text-muted-foreground">
+                  {revealedMp.party || 'Nepriklausomas (-a)'}
+                </p>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">
+                  {revealedMp.vote_count} balsų
+                  {typeof revealedMp.attendance === 'number'
+                    ? ` · ${revealedMp.attendance.toFixed(0)}% dalyvavimas`
+                    : ''}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={dismiss}
+                aria-label="Uždaryti"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={() => openProfile(revealedMp)}
+              className="mt-2 flex min-h-11 w-full items-center justify-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground"
+            >
+              Atidaryti profilį
+            </button>
+          </div>
+        )}
 
         {!compact && (
           <div className="absolute bottom-3 left-3 z-20 flex flex-wrap gap-2 max-w-[90%]">
