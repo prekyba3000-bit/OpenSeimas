@@ -1,0 +1,7 @@
+[Unit]
+Description=OpenSeimas materialized view refresh
+[Service]
+Type=oneshot
+ExecStart=/home/julio/Documents/OpenSeimas/scripts/local-ops/refresh_stats.sh
+StandardOutput=append:%h/Documents/OpenSeimas/logs/ops-refresh.log
+StandardError=inherit

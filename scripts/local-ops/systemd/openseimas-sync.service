@@ -1,0 +1,7 @@
+[Unit]
+Description=OpenSeimas daily ingest + stats export
+[Service]
+Type=oneshot
+ExecStart=/home/julio/Documents/OpenSeimas/scripts/local-ops/daily_sync.sh --if-due
+StandardOutput=append:%h/Documents/OpenSeimas/logs/ops-sync.log
+StandardError=inherit

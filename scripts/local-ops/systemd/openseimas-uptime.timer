@@ -1,0 +1,10 @@
+[Unit]
+Description=OpenSeimas health ping every 15 minutes
+[Timer]
+OnCalendar=*:0/15
+# Persistent=false on purpose: a health check for a moment that has passed
+# tells you nothing about now, and a burst of stale pings after a wake is noise.
+Persistent=false
+AccuracySec=1min
+[Install]
+WantedBy=timers.target

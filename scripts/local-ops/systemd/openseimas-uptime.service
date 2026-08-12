@@ -1,0 +1,7 @@
+[Unit]
+Description=OpenSeimas production health ping
+[Service]
+Type=oneshot
+ExecStart=/home/julio/Documents/OpenSeimas/scripts/local-ops/uptime_check.sh
+StandardOutput=append:%h/Documents/OpenSeimas/logs/ops-uptime.log
+StandardError=inherit

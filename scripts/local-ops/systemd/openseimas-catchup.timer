@@ -1,0 +1,11 @@
+[Unit]
+Description=OpenSeimas catch-up sweep after boot
+[Timer]
+OnBootSec=2min
+# Also sweep once an hour so a resume-from-suspend (which does not re-trigger
+# OnBootSec) still gets a bounded-latency catch-up. The sweep is cheap: every
+# job re-checks its own due state and returns immediately when current.
+OnUnitActiveSec=1h
+Persistent=false
+[Install]
+WantedBy=timers.target

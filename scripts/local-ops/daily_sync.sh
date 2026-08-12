@@ -1,10 +1,33 @@
 #!/usr/bin/env bash
 # Local stand-in for .github/workflows/daily_sync.yml while GitHub Actions is
-# unavailable. Cron: 0 6 * * * (Europe/Vilnius, same 06:00 slot as the workflow).
+# unavailable. Scheduled by openseimas-sync.timer (06:00 Europe/Vilnius,
+# Persistent=true so a missed day is caught up once after boot/resume).
+#
+# Idempotent by construction, so a catch-up run is safe: apply_migrations is
+# guarded, ingest_seimas upserts (its only DELETE is a scoped replace of the
+# committee rows it is about to re-insert), ingest_votes_v2 is all ON CONFLICT,
+# and export_stats overwrites one JSON file.
+#
 # Reads DB_DSN from ~/.config/openseimas/prod.env — never store the DSN in-repo.
+#
+#   ./daily_sync.sh            run now
+#   ./daily_sync.sh --if-due   run only if >=24h since last success (timer path)
 set -euo pipefail
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+. "$HERE/lib/due.sh"
+. "$HERE/lib/notify.sh"
+
+JOB=sync
+INTERVAL=86400
+
+if [ "${1:-}" = "--if-due" ] && ! is_due "$JOB" "$INTERVAL"; then
+  echo "[$(date -Is)] daily sync skipped — last success $(human_age "$(last_success "$JOB")") ago"
+  exit 0
+fi
+trap 'ops_trap_fail '"$JOB" ERR
+
 ENV_FILE="$HOME/.config/openseimas/prod.env"
-[ -f "$ENV_FILE" ] || { echo "missing $ENV_FILE" >&2; exit 1; }
+[ -f "$ENV_FILE" ] || { ops_fail "$JOB" "missing $ENV_FILE"; exit 1; }
 set -a; . "$ENV_FILE"; set +a
 REPO="$HOME/Documents/OpenSeimas"
 cd "$REPO/Seimas.v2"
@@ -26,3 +49,5 @@ if ! git diff --quiet Seimas.v2/dashboard/public/data/absenteeism.json; then
     || echo "[$(date -Is)] push failed — data commit left local"
 fi
 echo "[$(date -Is)] daily sync done"
+
+mark_success "$JOB"

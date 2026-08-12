@@ -1,0 +1,7 @@
+[Unit]
+Description=OpenSeimas encrypted off-machine backup
+[Service]
+Type=oneshot
+ExecStart=/home/julio/Documents/OpenSeimas/scripts/local-ops/offsite_backup.sh --if-due
+StandardOutput=append:%h/Documents/OpenSeimas/logs/ops-offsite.log
+StandardError=inherit
