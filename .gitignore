@@ -55,3 +55,6 @@ Thumbs.db
 Seimas.v2/tmp_xml/
 Seimas.v2/*.png
 Seimas.v2/leaderboard.json
+
+# Local env backups (may contain credentials)
+.env.bak*

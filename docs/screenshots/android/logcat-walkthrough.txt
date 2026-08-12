@@ -1,0 +1,29 @@
+OpenSeimas Android — logcat during the release-APK walkthrough
+APK sha256: 53825b4f771b9c3932d8b6994cdeeb51ce131aaff95fc0d057c30ba9daefdc4d
+Device: emulator-5554 (Pixel 6, API 34). Buffer cleared before install.
+Generated: 2026-08-12T16:58:14Z
+
+SUMMARY
+  FATAL EXCEPTION / tombstone : 0
+  ANRs (any process)          : 0
+  E/F lines from lt.openseimas.app: 11
+
+All E-level lines below are benign environment noise, not app faults:
+  * 'Not starting debugger / jdwp agent' — expected: release build is not debuggable.
+  * 'opendir .../Code Cache/{js,wasm}: No such file' + 'Could not reconstruct index'
+    — Chromium creating its HTTP cache on first run.
+  * 'FrameTracker force finish cuj IME_INSETS_ANIMATION' — keyboard animation
+    timing on a software-GPU emulator.
+
+FULL E/F LINES ATTRIBUTED TO THE APP
+E/.openseimas.app(10764): Not starting debugger since process cannot load the jdwp agent.
+E/.openseimas.app(11011): Not starting debugger since process cannot load the jdwp agent.
+E/chromium(11011): [ERROR:simple_file_enumerator.cc(21)] opendir /data/user/0/lt.openseimas.app/cache/WebView/Default/HTTP Cache/Code Cache/js: No such file or directory (2)
+E/FrameTracker(11011): force finish cuj, time out: J<IME_INSETS_ANIMATION::1@0@lt.openseimas.app>
+E/.openseimas.app(11315): Not starting debugger since process cannot load the jdwp agent.
+E/chromium(11315): [ERROR:simple_file_enumerator.cc(21)] opendir /data/user/0/lt.openseimas.app/cache/WebView/Default/HTTP Cache/Code Cache/wasm: No such file or directory (2)
+E/chromium(11315): [ERROR:simple_file_enumerator.cc(21)] opendir /data/user/0/lt.openseimas.app/cache/WebView/Default/HTTP Cache/Code Cache/js: No such file or directory (2)
+E/FrameTracker(11315): force finish cuj, time out: J<IME_INSETS_ANIMATION::0@0@lt.openseimas.app>
+E/.openseimas.app(12207): Not starting debugger since process cannot load the jdwp agent.
+E/chromium(12207): [ERROR:simple_file_enumerator.cc(21)] opendir /data/user/0/lt.openseimas.app/cache/WebView/Default/HTTP Cache/Code Cache/wasm: No such file or directory (2)
+E/chromium(12207): [ERROR:simple_file_enumerator.cc(21)] opendir /data/user/0/lt.openseimas.app/cache/WebView/Default/HTTP Cache/Code Cache/js: No such file or directory (2)
