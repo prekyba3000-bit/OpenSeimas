@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Atviras Seimas</string>
+    <string name="title_activity_main">Atviras Seimas</string>
+    <string name="package_name">lt.openseimas.app</string>
+    <string name="custom_url_scheme">lt.openseimas.app</string>
+</resources>

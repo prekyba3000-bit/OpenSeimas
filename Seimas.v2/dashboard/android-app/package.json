@@ -1,0 +1,23 @@
+{
+  "name": "openseimas-android",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Capacitor Android wrapper for the Atviras Seimas dashboard. Not published to npm.",
+  "type": "module",
+  "scripts": {
+    "sync": "cap sync android",
+    "open": "cap open android",
+    "assets": "capacitor-assets generate --android"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.5.0",
+    "@capacitor/core": "8.5.0",
+    "@capacitor/network": "8.0.1",
+    "@capacitor/splash-screen": "8.0.2",
+    "@capacitor/status-bar": "8.0.3"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "3.0.5",
+    "@capacitor/cli": "8.5.0"
+  }
+}
