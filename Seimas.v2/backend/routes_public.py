@@ -48,8 +48,21 @@ def get_stats(request: Request):
             raise HTTPException(status_code=500, detail="Database connection failed")
 
         with conn.cursor() as cur:
-            cur.execute("SELECT count(*) as count FROM politicians WHERE is_active = TRUE")
-            mp_count = cur.fetchone()["count"]
+            # Active = the mandate covers today. Derived from the mandate dates
+            # rather than the is_active flag so the two can never drift apart:
+            # a member whose mandate ended yesterday stops counting today
+            # without waiting for a sync to flip a boolean.
+            cur.execute(
+                """
+                SELECT count(*) as count FROM politicians
+                WHERE mandate_start_date <= CURRENT_DATE
+                  AND (mandate_end_date IS NULL OR mandate_end_date >= CURRENT_DATE)
+                """
+            )
+            mps_active = cur.fetchone()["count"]
+
+            cur.execute("SELECT count(*) as count FROM politicians")
+            mps_all_time = cur.fetchone()["count"]
 
             cur.execute("SELECT count(*) as count FROM votes")
             vote_count = cur.fetchone()["count"]
@@ -61,7 +74,20 @@ def get_stats(request: Request):
             sitting_days = cur.fetchone()["count"]
 
             return {
-                "total_mps": mp_count,
+                # Three different true numbers that were previously conflated:
+                #   seats_total  — the constitutional size of the Seimas (141)
+                #   mps_active   — how many hold a mandate today (~140)
+                #   mps_all_time — everyone who held one this term (148, incl.
+                #                  replaced members and same-day resignations)
+                # A surface must show the one its label implies.
+                "seats_total": core.SEIMAS_SEATS_TOTAL,
+                "mps_active": mps_active,
+                "mps_all_time": mps_all_time,
+                "seats_vacant": max(core.SEIMAS_SEATS_TOTAL - mps_active, 0),
+                # DEPRECATED: the name says total, the value is the active
+                # count. Kept so existing consumers keep working; use
+                # mps_active. Remove once no client reads it.
+                "total_mps": mps_active,
                 "historical_votes": f"{vote_count:,}",
                 "individual_votes": f"{mp_vote_count:,}",
                 # No "accuracy" field: nothing computes one. It was a hard-coded
@@ -99,8 +125,23 @@ def get_activity():
 
 
 @router.get("/api/mps")
-def get_mps():
-    """List all active MPs."""
+def get_mps(status: str = "active"):
+    """List MPs.
+
+    status=active (default) — mandate covers today (~140)
+    status=former           — mandate has ended (replaced members, and the four
+                              who resigned the day they were sworn in)
+    status=all              — every mandate-holder this term (148)
+
+    The default is active because that is what "the Seimo nariai" means to a
+    reader. Former members are never deleted — votes and attendance
+    denominators depend on their records — but they must not be silently mixed
+    into a list labelled as the current membership. Ask for them explicitly.
+    """
+    if status not in ("active", "former", "all"):
+        raise HTTPException(
+            status_code=422, detail="status must be one of: active, former, all"
+        )
     with get_db_conn() as conn:
         if not conn:
             raise HTTPException(status_code=500, detail="Database connection failed")
@@ -127,6 +168,18 @@ def get_mps():
                     NULL AS most_frequent_vote
             """
 
+            # Mandate-date derived, matching /api/stats — never the is_active
+            # flag, so the list and the counts cannot disagree.
+            mandate_active = """
+                p.mandate_start_date <= CURRENT_DATE
+                AND (p.mandate_end_date IS NULL OR p.mandate_end_date >= CURRENT_DATE)
+            """
+            where = {
+                "active": f"WHERE {mandate_active}",
+                "former": f"WHERE NOT ({mandate_active})",
+                "all": "",
+            }[status]
+
             cur.execute(f"""
                 SELECT
                     p.id,
@@ -135,10 +188,13 @@ def get_mps():
                     p.current_party,
                     p.is_active,
                     p.photo_url,
+                    p.mandate_start_date,
+                    p.mandate_end_date,
                     {social_col}
                     {stats_cols}
                 FROM politicians p
                 {stats_join}
+                {where}
                 ORDER BY p.full_name_normalized;
             """)
             rows = cur.fetchall()
@@ -153,7 +209,13 @@ def get_mps():
                     "social_links": row.get("social_links") or {},
                     "vote_count": row["vote_count"],
                     "attendance": float(row["attendance"]),
-                    "vote_mode": row["most_frequent_vote"]
+                    "vote_mode": row["most_frequent_vote"],
+                    # Let the client say *when* a former member served instead
+                    # of only that they are "inactive".
+                    "mandate_start_date": row["mandate_start_date"].isoformat()
+                    if row["mandate_start_date"] else None,
+                    "mandate_end_date": row["mandate_end_date"].isoformat()
+                    if row["mandate_end_date"] else None,
                 }
                 for row in rows
             ]
@@ -284,6 +346,7 @@ def get_mp(mp_id: str):
             cur.execute(f"""
                 SELECT p.id, p.display_name, p.current_party, p.photo_url, {social_col}
                        p.is_active, p.seimas_mp_id,
+                       p.mandate_start_date, p.mandate_end_date,
                        COUNT(DISTINCT mv.vote_id) as vote_count
                 FROM politicians p
                 LEFT JOIN mp_votes mv ON p.id = mv.politician_id
@@ -304,6 +367,10 @@ def get_mp(mp_id: str):
                 "active": row["is_active"],
                 "seimas_id": row["seimas_mp_id"],
                 "vote_count": row["vote_count"],
+                "mandate_start_date": row["mandate_start_date"].isoformat()
+                if row["mandate_start_date"] else None,
+                "mandate_end_date": row["mandate_end_date"].isoformat()
+                if row["mandate_end_date"] else None,
             }
 
 
