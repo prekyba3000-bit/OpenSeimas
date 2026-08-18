@@ -155,7 +155,7 @@ const MpsListView = () => {
                         />
                         <input
                             type="text"
-                            placeholder="Search by name or party..."
+                            placeholder="Ieškoti pagal vardą ar frakciją..."
                             value={search}
                             onChange={e => setSearch(e.target.value)}
                             className="w-full pl-11 pr-4 py-3 border rounded-xl text-sm focus:outline-none focus:ring-1 transition-all"
@@ -250,9 +250,9 @@ const MpsListView = () => {
                             style={{ color: 'var(--text-secondary)' }}
                         >
                             <Users className="w-12 h-12 opacity-20" />
-                            <p>No MPs found matching criteria</p>
+                            <p>Pagal šiuos kriterijus Seimo narių nerasta</p>
                             <Button variant="ghost" onClick={() => { setSearch(''); setPartyFilter(null); }}>
-                                Clear Filters
+                                Išvalyti filtrus
                             </Button>
                         </div>
                             )}
