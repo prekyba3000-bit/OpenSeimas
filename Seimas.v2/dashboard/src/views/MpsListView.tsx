@@ -8,6 +8,7 @@ import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import { MpCard } from '../components/MpCard';
 import { sortMps, SORT_OPTIONS, SortOption } from '../utils/sorting';
+import { SEIMAS_SEATS_TOTAL } from '../utils/mpCounts';
 import { ProblemDetailsNotice } from '../components/ProblemDetailsNotice';
 import { ConnectingNotice, ConnectionError, isConnectionProblem } from '../components/ConnectionState';
 import { LT } from '../i18n/lt';
@@ -92,11 +93,13 @@ const MpsListView = () => {
 
     const processedMps = useMemo(() => {
         const source = searchResults ?? mps;
+        // No active-filter here: the roster query asks the API for
+        // ?status=active, so membership is decided once, server-side, from the
+        // mandate dates. Search results come from the same source.
         const filtered = source.filter(mp => {
             const matchesSearch = (mp.name || '').toLowerCase().includes(search.toLowerCase());
             const matchesParty = !partyFilter || mp.party === partyFilter;
-            const isActive = mp.is_active !== false;
-            return matchesSearch && matchesParty && isActive;
+            return matchesSearch && matchesParty;
         });
         return sortMps(filtered, sortBy);
     }, [mps, searchResults, search, partyFilter, sortBy]);
@@ -119,9 +122,11 @@ const MpsListView = () => {
                         style={{ color: 'var(--text-primary)' }}
                     >
                         <Users className="w-8 h-8" style={{ color: 'var(--primary-500)' }} />
-                        Seimas Members
+                        Seimo nariai
                     </h2>
-                    <p style={{ color: 'var(--text-secondary)' }}>Current term representatives</p>
+                    <p style={{ color: 'var(--text-secondary)' }}>
+                        Šiuo metu mandatą turintys nariai
+                    </p>
                 </div>
                 <div
                     className="px-4 py-2 rounded-lg text-sm font-medium border"
@@ -130,8 +135,13 @@ const MpsListView = () => {
                         borderColor: 'var(--glass-border)',
                     }}
                 >
+                    {/* "N iš 141 vietų", not a bare count: the list holds the
+                        members with a mandate today, and the Seimas is a
+                        141-seat body whether or not every seat is filled. */}
                     <span style={{ color: 'var(--text-primary)' }}>{processedMps.length}</span>
-                    <span className="ml-1" style={{ color: 'var(--text-secondary)' }}>members</span>
+                    <span className="ml-1" style={{ color: 'var(--text-secondary)' }}>
+                        iš {SEIMAS_SEATS_TOTAL} vietų
+                    </span>
                 </div>
             </div>
 

@@ -38,6 +38,7 @@ import {
 } from '../services/api';
 import { ProblemDetailsNotice } from '../components/ProblemDetailsNotice';
 import { Button } from '../components/Button';
+import { occupancyLabel } from '../utils/mpCounts';
 
 const EMPTY_CHRONO: ChronoResponse = { items: [], clusters: [] };
 const EMPTY_BENFORD: BenfordResponse = { items: [] };
@@ -172,7 +173,9 @@ export default function SkaidrumasHubView() {
     const lowAttendanceCount = mps.filter((m) => (m.attendance ?? 0) < 60).length;
     const newestVote = votes[0]?.title ?? 'Nėra naujausių įrašų';
     return [
-      `Seimo nariai: ${stats?.total_mps ?? '—'}`,
+      // A citation must not be ambiguous about which number it quotes: this is
+      // the count holding a mandate today, against the constitutional 141.
+      `Seimo nariai (mandatą turi): ${occupancyLabel(stats ?? {})}`,
       `Balsavimai: ${stats?.historical_votes ?? '—'}`,
       `Žemas lankomumas (<60%): ${lowAttendanceCount}`,
       `Naujausias balsavimas: ${newestVote}`,
