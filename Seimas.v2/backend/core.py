@@ -116,6 +116,12 @@ ALLOWED_ORIGINS = [
     "https://localhost",
 ]
 
+# Article 55 of the Constitution: the Seimas consists of 141 members. This is a
+# constitutional fact, not a row count — it must never be derived from the
+# database, or a term with an unfilled seat would silently redefine the size of
+# parliament. Seats can be vacant; the chamber is still 141.
+SEIMAS_SEATS_TOTAL = 141
+
 DB_DSN = os.getenv("DB_DSN")
 SYNC_SECRET = os.getenv("SYNC_SECRET")
 

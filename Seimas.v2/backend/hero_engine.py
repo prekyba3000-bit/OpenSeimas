@@ -870,6 +870,8 @@ def _fetch_mp_metrics(mp_id: str, db_cursor) -> Dict[str, Any] | None:
             p.is_active,
             p.seimas_mp_id,
             p.last_synced_at,
+            p.mandate_start_date,
+            p.mandate_end_date,
             COALESCE(p.bills_authored_count, 0) AS bills_authored_count,
             COALESCE(s.total_votes_cast, 0) AS total_votes_cast,
             COALESCE(s.attendance_percentage, 0) AS attendance_percentage,
@@ -1143,6 +1145,12 @@ def calculate_hero_profile(mp_id: str, db_cursor) -> Dict[str, Any]:
             "active": mp_row["is_active"],
             "seimas_id": mp_row["seimas_mp_id"],
             "last_synced_at": str(mp_row["last_synced_at"]) if mp_row.get("last_synced_at") else None,
+            # So a former member's profile can say when they served, rather
+            # than only that they are not active.
+            "mandate_start_date": mp_row["mandate_start_date"].isoformat()
+            if mp_row.get("mandate_start_date") else None,
+            "mandate_end_date": mp_row["mandate_end_date"].isoformat()
+            if mp_row.get("mandate_end_date") else None,
         },
         "level": level,
         "xp": xp,
