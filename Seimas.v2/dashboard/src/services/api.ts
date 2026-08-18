@@ -122,6 +122,10 @@ export type MpProfile = {
     photo?: string;
     active?: boolean;
     seimas_id?: string | number | null;
+    /** ISO date the mandate began. */
+    mandate_start_date?: string | null;
+    /** ISO date the mandate ended; null while still serving. */
+    mandate_end_date?: string | null;
   };
   forensicBreakdown: ForensicBreakdown;
   evidence: string[];
@@ -254,6 +258,8 @@ export const mpProfileSchema = z
       photo: z.string().optional(),
       active: z.boolean().optional(),
       seimas_id: z.union([z.string(), z.number(), z.null()]).optional(),
+      mandate_start_date: z.string().nullable().optional(),
+      mandate_end_date: z.string().nullable().optional(),
     }),
     level: z.number(),
     xp: z.number(),
@@ -708,7 +714,14 @@ export const api = {
 
   getActivity: () => request<ActivityItem[]>("/activity"),
 
-  getMps: () => request<MpSummary[]>("/mps"),
+  /**
+   * MPs by mandate status. Defaults to `active` — members whose mandate covers
+   * today — because that is what "Seimo nariai" means to a reader. Former
+   * members are still available (`former` / `all`); they are never deleted,
+   * since votes and attendance denominators depend on their records.
+   */
+  getMps: (status: "active" | "former" | "all" = "active") =>
+    request<MpSummary[]>(`/mps?status=${status}`),
 
   getMp: (id: string) => request<MpDetail>(`/mps/${id}`),
 

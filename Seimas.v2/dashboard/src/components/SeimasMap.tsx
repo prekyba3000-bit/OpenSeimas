@@ -6,6 +6,7 @@ import { cn } from './ui/utils';
 import { MpSummary } from '../services/api';
 import { getPartyColor, getPartyShort, getPartyMeta } from '../utils/partyColors';
 import { useTapReveal } from '../hooks/useTapReveal';
+import { SEIMAS_SEATS_TOTAL, vacancyLabel } from '../utils/mpCounts';
 
 export interface Seat {
   id: string;
@@ -51,7 +52,10 @@ export function SeimasMap({ mps = [], compact = false }: SeimasMapProps) {
     [mps],
   );
 
-  const layout = useMemo(() => generateHemicycle(activeMps.length || 141), [activeMps.length]);
+  // Always draw the full chamber. Sizing the hemicycle to the number of sitting
+  // members would silently redraw parliament smaller whenever a seat is vacant —
+  // a reader counting dots would get 140 and never learn there are 141 seats.
+  const layout = useMemo(() => generateHemicycle(SEIMAS_SEATS_TOTAL), []);
 
   const parties = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -112,7 +116,9 @@ export function SeimasMap({ mps = [], compact = false }: SeimasMapProps) {
           <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 hide-scrollbar">
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium border border-transparent bg-muted text-muted-foreground whitespace-nowrap">
               <Users className="w-3.5 h-3.5" />
-              {activeMps.length} nariai
+              {activeMps.length} iš {SEIMAS_SEATS_TOTAL} vietų
+              {vacancyLabel(SEIMAS_SEATS_TOTAL - activeMps.length)
+                ? ` · ${vacancyLabel(SEIMAS_SEATS_TOTAL - activeMps.length)}` : ''}
             </div>
             <div className="h-4 w-px bg-border mx-1" />
             {parties.slice(0, 5).map(p => (
@@ -154,8 +160,12 @@ export function SeimasMap({ mps = [], compact = false }: SeimasMapProps) {
                       tabIndex={seat.mp ? 0 : undefined}
                       aria-label={seat.mp?.name}
                       className={cn(
-                        'absolute w-[14px] h-[14px] rounded-full cursor-pointer shadow-sm border border-black/10 dark:border-white/10',
-                        'transition-all duration-300 ease-out',
+                        'absolute w-[14px] h-[14px] rounded-full shadow-sm transition-all duration-300 ease-out',
+                        seat.mp
+                          ? 'cursor-pointer border border-black/10 dark:border-white/10'
+                          // Vacant seat: hollow, so it reads as an empty seat
+                          // rather than an unnamed member.
+                          : 'border-2 border-dashed border-muted-foreground/40 bg-transparent cursor-default',
                         // Invisible padding widens the tap target from 14px to
                         // 28px in map coordinates. Seats sit 34–51px apart, so
                         // this cannot overlap a neighbour. It is still under
@@ -170,7 +180,7 @@ export function SeimasMap({ mps = [], compact = false }: SeimasMapProps) {
                       style={{
                         left: seat.x,
                         top: seat.y,
-                        backgroundColor: seat.mp ? getPartyColor(seat.mp.party) : '#374151',
+                        backgroundColor: seat.mp ? getPartyColor(seat.mp.party) : 'transparent',
                       }}
                       onClick={() => {
                         if (!seat.mp) return;

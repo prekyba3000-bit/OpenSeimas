@@ -5,6 +5,7 @@ import { motion } from 'motion/react';
 import { useNavigate } from 'react-router';
 import { api, DashboardStats, ActivityItem as ActivityItemType, MpSummary, VoteSummary } from '../services/api';
 import { ConnectingNotice, ConnectionError, isConnectionProblem } from '../components/ConnectionState';
+import { occupancyLabel, activeCount, seatTotal } from '../utils/mpCounts';
 import { StatCard } from '../components/StatCard';
 import { Card } from '../components/Card';
 import { AbsenteeismCard } from '../components/AbsenteeismCard';
@@ -61,7 +62,9 @@ export const DashboardView = () => {
     }
 
     const tickerItems = [
-        { icon: Users, label: 'Seimo nariai', value: stats ? String(stats.total_mps) : '—', trend: 'neutral' as const, trendValue: 'aktyvūs' },
+        // The Seimas is a 141-seat body; the headline states that, and the
+        // sub-label says how many of those seats are filled today.
+        { icon: Users, label: 'Seimo vietos', value: String(seatTotal(stats)), trend: 'neutral' as const, trendValue: activeCount(stats) !== null ? `${activeCount(stats)} užimtos` : '—' },
         { icon: Vote, label: 'Balsavimai', value: stats?.historical_votes ?? '—', trend: 'up' as const, trendValue: 'viso' },
         { icon: FileText, label: 'Individualūs balsai', value: stats?.individual_votes ?? '—', trend: 'up' as const, trendValue: 'įrašai' },
         { icon: Calendar, label: 'Posėdžių dienos', value: stats ? String(stats.sitting_days) : '—', trend: 'neutral' as const, trendValue: 'su balsavimais' },
@@ -98,7 +101,7 @@ export const DashboardView = () => {
                                 Posėdžių salė
                             </h2>
                             <span className="text-[10px] text-muted-foreground font-mono">
-                                {mps.filter(m => m.is_active).length} aktyvūs nariai
+                                {stats ? occupancyLabel(stats) : `${mps.length} nariai`}
                             </span>
                         </div>
                         <SeimasMap mps={mps} compact />
@@ -183,7 +186,7 @@ export const DashboardView = () => {
                     </div>
                     <div className="mt-auto pt-4 border-t border-border">
                         <div className="grid grid-cols-2 gap-3">
-                            <MiniStat label="Seimo nariai" value={stats ? String(stats.total_mps) : '—'} />
+                            <MiniStat label="Mandatą turi" value={activeCount(stats) !== null ? String(activeCount(stats)) : '—'} />
                             <MiniStat label="Posėdžių dienos" value={stats ? String(stats.sitting_days) : '—'} />
                         </div>
                     </div>

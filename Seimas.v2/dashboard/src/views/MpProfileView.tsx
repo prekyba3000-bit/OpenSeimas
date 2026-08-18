@@ -10,6 +10,7 @@ import { MpReplies } from '../components/MpReplies';
 import { IntegrityBar } from '../components/IntegrityBar';
 import { ScoreTooltip } from '../components/ScoreTooltip';
 import { readMpDimension } from '../utils/mpLegacyDimensions';
+import { mandatePeriodLabel, servedNoDays } from '../utils/mpCounts';
 import { ApiError, api, type ForensicFlag, MpProfile, MpVoteRecord } from '../services/api';
 import { toastErrorDeduped } from '../utils/toastDeduped';
 import { ProblemDetailsNotice } from '../components/ProblemDetailsNotice';
@@ -150,15 +151,34 @@ export const MpProfileLayout = ({
             <span className="inline-flex items-center rounded-full border border-border bg-muted/50 px-2.5 py-0.5 text-xs font-medium text-foreground">
               {partyLabel}
             </span>
-            {/* TODO(v4): add isActive to MpSummary / wire from list when API exposes stable active flag */}
+            {/* „Neaktyvus" said nothing useful about a person who served a full
+                year and was replaced. Name the state and the period. */}
             <span
               className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
                 isActive ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400' : 'bg-muted text-muted-foreground'
               }`}
             >
-              {isActive ? 'Aktyvus' : 'Neaktyvus'}
+              {isActive ? 'Aktyvus' : 'Kadencija baigta'}
             </span>
           </div>
+
+          {!isActive && (
+            <div className="rounded-lg border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground space-y-0.5">
+              <p>
+                Šis Seimo narys šiuo metu mandato neturi. Įrašai išsaugomi —
+                balsavimai ir lankomumo skaičiavimai jais remiasi.
+              </p>
+              {mandatePeriodLabel(profile.mp) && (
+                <p className="font-mono text-foreground/80">{mandatePeriodLabel(profile.mp)}</p>
+              )}
+              {servedNoDays(profile.mp) && (
+                // The four who were elected and resigned the same day. Saying
+                // this outright is better than an empty voting record that
+                // looks like missing data.
+                <p>Mandato neperėmė — kadencija baigėsi tą pačią dieną.</p>
+              )}
+            </div>
+          )}
           <IntegrityBar score={integrityValue} riskTierSignal={riskTierSignal} className="max-w-md" />
         </div>
       </header>
