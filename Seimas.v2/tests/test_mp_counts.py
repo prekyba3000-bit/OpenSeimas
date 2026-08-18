@@ -221,3 +221,27 @@ def test_active_plus_former_equals_all_time():
     """148 = 140 + 8. If this drifts, one of the three numbers is wrong."""
     active, former, all_time = 140, len(FORMER_ROWS), 148
     assert active + former == all_time
+
+
+def test_hero_mp_response_declares_mandate_dates():
+    """The response model must name every field the engine returns.
+
+    HeroMpResponse sets extra="ignore", so a field produced by the engine but
+    absent from the model is dropped from the JSON silently — no error, no log,
+    just a missing key that looks like a frontend bug. That is exactly what
+    happened to the mandate dates: the engine returned them, the model ate
+    them, and the profile page had nothing to render.
+    """
+    from backend.models import HeroMpResponse
+
+    fields = HeroMpResponse.model_fields
+    assert "mandate_start_date" in fields
+    assert "mandate_end_date" in fields
+
+    built = HeroMpResponse(
+        id="x", name="Jevgenij Šuklin",
+        mandate_start_date="2024-11-14", mandate_end_date="2026-05-28",
+    )
+    dumped = built.model_dump()
+    assert dumped["mandate_start_date"] == "2024-11-14"
+    assert dumped["mandate_end_date"] == "2026-05-28"

@@ -12,6 +12,12 @@ class HeroMpResponse(BaseModel):
     photo: Optional[str] = None
     active: Optional[bool] = None
     seimas_id: Optional[int] = None
+    # Declared explicitly because model_config sets extra="ignore": a field the
+    # engine returns but the model does not name is dropped from the response
+    # silently, with no error anywhere. These let a former member's profile say
+    # when they served rather than only that they are inactive.
+    mandate_start_date: Optional[str] = None
+    mandate_end_date: Optional[str] = None
 
 
 class HeroAttributesResponse(BaseModel):
