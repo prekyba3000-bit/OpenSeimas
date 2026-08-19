@@ -66,4 +66,10 @@ CI runs both against a fresh Postgres on every PR (`.github/workflows/ci.yml`).
 
 ## License
 
+Copyright (c) 2026 `<FILL IN: legal name>` — see [NOTICE](NOTICE).
+
 AGPL-3.0 — see [LICENSE](LICENSE). Data exports are CC BY 4.0 when published.
+
+AGPL is deliberate for a civic platform: anyone may run and modify OpenSeimas, but a
+hosted fork must publish its changes. That keeps a derivative from carrying this
+project's data and none of its trust floor.
