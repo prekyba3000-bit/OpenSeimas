@@ -66,8 +66,13 @@ export function TickerTape({ items, autoScroll = true }: TickerTapeProps) {
         {items.map((item, i) => (
           <TickerItem key={i} {...item} />
         ))}
-        {/* Duplicate for seamless loop */}
-        {items.map((item, i) => (
+        {/* Second copy exists only to make the marquee loop seamlessly: the
+            animation translates by -50%, so the duplicate slides in as the
+            original slides out. With autoScroll off there is no animation to
+            hide it, and it renders as a visible second set of stat cards —
+            which is exactly how the landing page came to show each metric
+            twice. Render it only when it is actually doing that job. */}
+        {autoScroll && items.map((item, i) => (
           <TickerItem key={`duplicate-${i}`} {...item} />
         ))}
       </div>
