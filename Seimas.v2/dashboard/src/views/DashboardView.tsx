@@ -7,6 +7,7 @@ import { api, DashboardStats, ActivityItem as ActivityItemType, MpSummary, VoteS
 import { ConnectingNotice, ConnectionError, isConnectionProblem } from '../components/ConnectionState';
 import { occupancyLabel, activeCount, seatTotal } from '../utils/mpCounts';
 import { formatLtDateShort } from '../utils/ltDate';
+import { activityLine } from '../utils/activityLine';
 import { StatCard } from '../components/StatCard';
 import { Card } from '../components/Card';
 import { AbsenteeismCard } from '../components/AbsenteeismCard';
@@ -172,7 +173,7 @@ export const DashboardView = () => {
                                     </div>
                                     <div className="flex flex-col">
                                         <span className="font-medium text-foreground group-hover:text-primary transition-colors text-sm">{item.name}</span>
-                                        <span className="text-xs text-muted-foreground">{item.action}: {item.context}</span>
+                                        <span className="text-xs text-muted-foreground">{activityLine(item)}</span>
                                     </div>
                                 </div>
                                 <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded font-mono">{formatLtDateShort(item.time) ?? item.time}</span>
@@ -188,11 +189,17 @@ export const DashboardView = () => {
                         <Shield className="w-4 h-4 text-primary" />
                         Sistemos būsena
                     </h2>
-                    <div className="flex flex-col gap-3">
-                        <StatusLine label="Duomenų bazė" status="CONNECTED" color="text-blue-400" />
-                        <StatusLine label="API serveris" status="ONLINE" color="text-green-400" />
-                        <StatusLine label="Sinchronizacija" status="AUTOMATINĖ" color="text-amber-400" />
-                    </div>
+                    {/* These three lines were hardcoded string literals —
+                        CONNECTED / ONLINE / AUTOMATINĖ were never read from
+                        anything, so the panel reported health it had not
+                        checked. English on a Lithuanian page was the smaller
+                        problem. The panel is removed from the landing entirely
+                        in Phase 2 and replaced by a real freshness line built
+                        from /api/meta/freshness; until then it states only what
+                        it can actually support. */}
+                    <p className="text-sm text-muted-foreground">
+                        Duomenys sinchronizuojami automatiškai iš viešų LR Seimo šaltinių.
+                    </p>
                     <div className="mt-auto pt-4 border-t border-border">
                         <div className="grid grid-cols-2 gap-3">
                             <MiniStat label="Mandatą turi" value={activeCount(stats) !== null ? String(activeCount(stats)) : '—'} />
@@ -209,15 +216,6 @@ export const DashboardView = () => {
         </motion.div>
     );
 };
-
-function StatusLine({ label, status, color }: { label: string; status: string; color: string }) {
-    return (
-        <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">{label}</span>
-            <span className={`font-mono text-xs font-bold ${color}`}>{status}</span>
-        </div>
-    );
-}
 
 function MiniStat({ label, value }: { label: string; value: string }) {
     return (

@@ -29,6 +29,12 @@ export interface DashboardStats {
 
 export interface ActivityItem {
   name: string;
+  /**
+   * The raw Lithuanian vote choice („Prieš" / „Susilaikė"). Prefer this: the
+   * client composes the sentence, so no English reaches a Lithuanian page.
+   */
+  vote_choice?: string;
+  /** @deprecated Server-composed English ("Voted Susilaikė"). Use vote_choice. */
   action: string;
   context: string;
   time: string;
