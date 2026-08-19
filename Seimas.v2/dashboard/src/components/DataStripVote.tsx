@@ -1,4 +1,5 @@
 import React from 'react';
+import { formatLtDateShort } from '../utils/ltDate';
 
 export type VoteOutcome = 'PASSED' | 'FAILED' | 'DEFERRED';
 
@@ -64,7 +65,7 @@ export function DataStripVote({ title, outcome, votesFor, votesAgainst, timestam
           className="text-[11px] text-gray-500"
           style={{ fontFamily: 'Geist Mono, monospace' }}
         >
-          {timestamp}
+          {formatLtDateShort(timestamp) ?? timestamp}
         </span>
       </div>
 

@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router';
 import { api, DashboardStats, ActivityItem as ActivityItemType, MpSummary, VoteSummary } from '../services/api';
 import { ConnectingNotice, ConnectionError, isConnectionProblem } from '../components/ConnectionState';
 import { occupancyLabel, activeCount, seatTotal } from '../utils/mpCounts';
+import { formatLtDateShort } from '../utils/ltDate';
 import { StatCard } from '../components/StatCard';
 import { Card } from '../components/Card';
 import { AbsenteeismCard } from '../components/AbsenteeismCard';
@@ -174,7 +175,7 @@ export const DashboardView = () => {
                                         <span className="text-xs text-muted-foreground">{item.action}: {item.context}</span>
                                     </div>
                                 </div>
-                                <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded font-mono">{item.time}</span>
+                                <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded font-mono">{formatLtDateShort(item.time) ?? item.time}</span>
                             </motion.div>
                         )) : (
                             <p className="text-muted-foreground text-sm py-8 text-center">Nėra naujausios veiklos</p>
