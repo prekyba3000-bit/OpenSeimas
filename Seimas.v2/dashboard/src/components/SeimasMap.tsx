@@ -15,19 +15,42 @@ export interface Seat {
   mp: MpSummary | null;
 }
 
+/**
+ * Coordinate space for the hemicycle.
+ *
+ * The seats were laid out around (300, 350) inside a 600x400 box, but the
+ * outermost row used radius 390 — so the arc actually spanned x = -90..655 and
+ * the parent's overflow-hidden silently cut roughly 90px of seats off the left
+ * edge and 55px off the right. The chamber was drawn with its ends missing.
+ *
+ * Centre and box are now derived from the largest radius the layout can reach,
+ * so every seat lands inside with a margin instead of by luck.
+ */
+const HEMICYCLE = {
+  rows: 8,
+  innerRadius: 180,
+  rowGap: 35,
+  margin: 10,
+} as const;
+
+const MAX_RADIUS = HEMICYCLE.innerRadius + (HEMICYCLE.rows - 1) * HEMICYCLE.rowGap;
+const CENTER_X = MAX_RADIUS + HEMICYCLE.margin;
+const BASELINE_Y = MAX_RADIUS + HEMICYCLE.margin;
+export const MAP_WIDTH = CENTER_X * 2;
+export const MAP_HEIGHT = BASELINE_Y + HEMICYCLE.margin * 2;
+
 function generateHemicycle(count: number): { x: number; y: number }[] {
   const seats: { x: number; y: number }[] = [];
-  const rows = 8;
   let idx = 0;
-  for (let r = 0; r < rows; r++) {
-    const radius = 180 + r * 35;
+  for (let r = 0; r < HEMICYCLE.rows; r++) {
+    const radius = HEMICYCLE.innerRadius + r * HEMICYCLE.rowGap;
     const seatsInRow = 12 + r * 4;
     for (let s = 0; s < seatsInRow; s++) {
       if (idx >= count) break;
       const angle = Math.PI - (Math.PI / (seatsInRow - 1)) * s;
       seats.push({
-        x: 300 + Math.cos(angle) * radius,
-        y: 350 - Math.sin(angle) * radius,
+        x: CENTER_X + Math.cos(angle) * radius,
+        y: BASELINE_Y - Math.sin(angle) * radius,
       });
       idx++;
     }
@@ -84,7 +107,11 @@ export function SeimasMap({ mps = [], compact = false }: SeimasMapProps) {
     });
   }, [layout, activeMps, searchTerm, selectedParty]);
 
-  const mapHeight = compact ? 'aspect-[16/8]' : 'aspect-[16/10]';
+  // The panel takes the hemicycle's own aspect ratio, so the chamber always
+  // fits whatever width it is given. The previous fixed scale steps
+  // (scale-[0.5] … lg:scale-100) were tuned to one panel width and clipped the
+  // outer rows everywhere else.
+  const mapAspect = `${MAP_WIDTH} / ${MAP_HEIGHT}`;
 
   const revealedMp = useMemo(
     () => (revealedId ? seats.find(s => s.mp?.id === revealedId)?.mp ?? null : null),
@@ -145,12 +172,12 @@ export function SeimasMap({ mps = [], compact = false }: SeimasMapProps) {
         </div>
       )}
 
-      <div className={cn(
-        'relative w-full bg-gradient-to-br from-card to-muted/20 border border-border rounded-xl overflow-hidden shadow-inner select-none',
-        mapHeight,
-      )}>
-        <div className="absolute inset-0 z-10 flex items-center justify-center overflow-hidden">
-          <div className="relative w-[600px] h-[400px] scale-[0.5] sm:scale-[0.7] md:scale-[0.85] lg:scale-100 origin-center transition-transform duration-500">
+      <div
+        className="relative w-full bg-gradient-to-br from-card to-muted/20 border border-border rounded-xl overflow-hidden shadow-inner select-none"
+        style={{ aspectRatio: mapAspect }}
+      >
+        <div className="absolute inset-0 z-10">
+          <div className="relative h-full w-full">
             <TooltipProvider delayDuration={0}>
               {seats.map((seat, i) => (
                 <Tooltip key={seat.id}>
@@ -167,19 +194,30 @@ export function SeimasMap({ mps = [], compact = false }: SeimasMapProps) {
                           // rather than an unnamed member.
                           : 'border-2 border-dashed border-muted-foreground/40 bg-transparent cursor-default',
                         // Invisible padding widens the tap target from 14px to
-                        // 28px in map coordinates. Seats sit 34–51px apart, so
-                        // this cannot overlap a neighbour. It is still under
-                        // 44px once the map is scaled down on a phone — 141
-                        // seats cannot each be 44px in this area — which is why
-                        // a tap reveals rather than navigates.
-                        "before:absolute before:-inset-[7px] before:content-['']",
+                        // 34px in map coordinates — the tightest neighbour
+                        // spacing, so it is the largest slot that still cannot
+                        // overlap an adjacent seat. Scaled down on a phone it
+                        // is still under 44px: 141 seats cannot each be 44px in
+                        // this area, which is why a tap reveals who the seat
+                        // belongs to rather than navigating straight there.
+                        "before:absolute before:-inset-[10px] before:content-['']",
                         seat.isDimmed ? 'opacity-10 scale-75' : '',
                         (hoveredSeat === i || (!!seat.mp && revealedId === seat.mp.id)) &&
-                          'z-50 ring-2 ring-foreground scale-[2]',
+                          'z-50 ring-2 ring-foreground',
                       )}
                       style={{
-                        left: seat.x,
-                        top: seat.y,
+                        // Percentages, not map pixels: the seat keeps its place
+                        // in the chamber at any panel width.
+                        left: `${(seat.x / MAP_WIDTH) * 100}%`,
+                        top: `${(seat.y / MAP_HEIGHT) * 100}%`,
+                        // Centring and the hover magnification share one
+                        // transform: an inline transform overrides Tailwind's
+                        // scale utility, so composing them here keeps the
+                        // highlight working.
+                        transform:
+                          hoveredSeat === i || (!!seat.mp && revealedId === seat.mp.id)
+                            ? 'translate(-50%, -50%) scale(2)'
+                            : 'translate(-50%, -50%)',
                         backgroundColor: seat.mp ? getPartyColor(seat.mp.party) : 'transparent',
                       }}
                       onClick={() => {
@@ -231,7 +269,10 @@ export function SeimasMap({ mps = [], compact = false }: SeimasMapProps) {
               ))}
             </TooltipProvider>
 
-            <div className="absolute left-1/2 -translate-x-1/2 top-[340px] flex flex-col items-center opacity-70">
+            <div
+              className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center opacity-70"
+              style={{ top: `${((BASELINE_Y - 6) / MAP_HEIGHT) * 100}%` }}
+            >
               <div className="w-14 h-7 bg-card border border-border rounded-lg shadow-md flex items-center justify-center">
                 <Mic className="w-3 h-3 text-muted-foreground" />
               </div>
