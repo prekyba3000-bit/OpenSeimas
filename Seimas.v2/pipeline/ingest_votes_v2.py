@@ -20,6 +20,8 @@ _FAILED_VOTE_IDS: list = []
 # --- Configuration ---
 # Use the verified working credentials
 DB_DSN = os.getenv("DB_DSN")
+import datetime
+
 BASE_URL = "https://apps.lrs.lt/sip/p2b"
 TERM_ID = "10" # 2024-2028 Term
 
@@ -71,6 +73,55 @@ def fetch_xml(url):
     except Exception as e:
         print(f"Error fetching {url}: {e}")
         return None
+
+def _parse_tallies(totals):
+    """Pull the protocol totals off <BendriBalsavimoRezultatai>.
+
+    Six attributes the ingest previously fetched and discarded. Returns None for
+    each field the element does not carry, so a source that omits them stores
+    NULL rather than a fabricated zero — a vote with 0 recorded "už" and a vote
+    whose tally was never published must not look identical.
+
+    Deliberately does NOT derive an outcome: the source publishes no pass/fail
+    field, and `už > prieš` is not the rule (constitutional laws need 3/5).
+    """
+    empty = {
+        'votes_for': None, 'votes_against': None, 'votes_abstained': None,
+        'votes_participated': None, 'seats_eligible': None, 'voted_at': None,
+    }
+    if totals is None:
+        return empty
+
+    def _int(attr):
+        raw = totals.get(attr)
+        if raw is None or str(raw).strip() == '':
+            return None
+        try:
+            return int(str(raw).strip())
+        except ValueError:
+            # A non-numeric tally is a source anomaly, not a reason to crash the
+            # whole sitting; store NULL and let the provenance row carry it.
+            return None
+
+    voted_at = None
+    raw_time = totals.get('balsavimo_laikas')
+    if raw_time and raw_time.strip():
+        for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M'):
+            try:
+                voted_at = datetime.datetime.strptime(raw_time.strip(), fmt)
+                break
+            except ValueError:
+                continue
+
+    return {
+        'votes_for':          _int('už'),
+        'votes_against':      _int('prieš'),
+        'votes_abstained':    _int('susilaikė'),
+        'votes_participated': _int('balsavo'),
+        'seats_eligible':     _int('viso'),
+        'voted_at':           voted_at,
+    }
+
 
 def process_sitting(sess_id, sit_id):
     """Process a single sitting: fetch agenda, votes, and insert batch."""
@@ -149,14 +200,19 @@ def process_sitting(sess_id, sit_id):
                 if res_title: title = res_title
                 if not stadija: stadija = header.get('balsavimo_tipas')
             
-            # The source flags votes whose electronic per-MP results disagree
-            # with the protocol totals; keep that on the record (migration 018).
+            # The protocol totals element carries the whole vote summary. The
+            # source flags votes whose electronic per-MP results disagree with
+            # those totals; keep that on the record (migration 018).
             totals = res_xml.find('.//BendriBalsavimoRezultatai')
             source_comment = totals.get('komentaras') if totals is not None else None
+            tallies = _parse_tallies(totals)
 
             # Prepare Vote Record
-            # (seimas_vote_id, sitting_date, title, project_id, vote_type, source_comment)
-            votes_to_insert.append((vid, sitting_date_str, title, project_id, stadija, source_comment))
+            votes_to_insert.append((
+                vid, sitting_date_str, title, project_id, stadija, source_comment,
+                tallies['votes_for'], tallies['votes_against'], tallies['votes_abstained'],
+                tallies['votes_participated'], tallies['seats_eligible'], tallies['voted_at'],
+            ))
             
             # Prepare Decisions (MP Votes)
             rows = res_xml.findall('.//IndividualusBalsavimoRezultatas')
@@ -203,7 +259,9 @@ def process_sitting(sess_id, sit_id):
         with conn.cursor() as cur:
             # Upsert Votes
             extras.execute_values(cur, """
-                INSERT INTO votes (seimas_vote_id, sitting_date, title, project_id, vote_type, source_comment)
+                INSERT INTO votes (seimas_vote_id, sitting_date, title, project_id, vote_type, source_comment,
+                                   votes_for, votes_against, votes_abstained,
+                                   votes_participated, seats_eligible, voted_at)
                 VALUES %s
                 ON CONFLICT (seimas_vote_id)
                 DO UPDATE SET
@@ -211,7 +269,15 @@ def process_sitting(sess_id, sit_id):
                     sitting_date = EXCLUDED.sitting_date,
                     project_id = EXCLUDED.project_id,
                     vote_type = EXCLUDED.vote_type,
-                    source_comment = EXCLUDED.source_comment
+                    source_comment = EXCLUDED.source_comment,
+                    -- COALESCE so a re-run that hits a momentarily tally-less
+                    -- response cannot blank figures already stored.
+                    votes_for          = COALESCE(EXCLUDED.votes_for,          votes.votes_for),
+                    votes_against      = COALESCE(EXCLUDED.votes_against,      votes.votes_against),
+                    votes_abstained    = COALESCE(EXCLUDED.votes_abstained,    votes.votes_abstained),
+                    votes_participated = COALESCE(EXCLUDED.votes_participated, votes.votes_participated),
+                    seats_eligible     = COALESCE(EXCLUDED.seats_eligible,     votes.seats_eligible),
+                    voted_at           = COALESCE(EXCLUDED.voted_at,           votes.voted_at)
             """, votes_to_insert)
 
             # Upsert MP Votes
