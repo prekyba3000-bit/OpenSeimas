@@ -132,7 +132,7 @@ export function MainLayout() {
         <div className="p-4 border-t border-sidebar-border text-xs text-sidebar-foreground/60 space-y-2">
           <p>
             Duomenys iš viešų šaltinių ir projekto DB. Žr.{' '}
-            <NavLink to="/dashboard/sources" className="text-sidebar-primary-foreground/90 underline">
+            <NavLink to="/dashboard/sources" className="inline-flex min-h-6 items-center text-sidebar-primary-foreground/90 underline">
               šaltinių puslapį
             </NavLink>
             .

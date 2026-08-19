@@ -128,7 +128,7 @@ export const DashboardView = () => {
                             </h2>
                             <button
                                 onClick={() => navigate('/dashboard/votes')}
-                                className="text-[10px] text-primary hover:underline font-medium"
+                                className="inline-flex min-h-6 items-center px-2 -mr-2 text-xs text-primary hover:underline font-medium"
                             >
                                 Visi →
                             </button>
