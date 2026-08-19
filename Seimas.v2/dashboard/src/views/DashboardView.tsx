@@ -72,7 +72,15 @@ export const DashboardView = () => {
 
     const voteEvents = votes.map(v => ({
         title: v.title,
-        outcome: (v.result?.toLowerCase().includes('priimta') ? 'PASSED' : v.result?.toLowerCase().includes('nepriimta') ? 'FAILED' : 'DEFERRED') as 'PASSED' | 'FAILED' | 'DEFERRED',
+        // null when the source publishes no result — which is currently every
+        // vote, because the LRS XML carries tallies but no pass/fail field.
+        // The old `: 'DEFERRED'` fallback turned "we don't know" into "the
+        // Seimas deferred this", asserted 5,279 times.
+        outcome: v.result?.toLowerCase().includes('nepriimta')
+            ? ('FAILED' as const)
+            : v.result?.toLowerCase().includes('priimta')
+                ? ('PASSED' as const)
+                : null,
         votesFor: 0,
         votesAgainst: 0,
         timestamp: v.date,
