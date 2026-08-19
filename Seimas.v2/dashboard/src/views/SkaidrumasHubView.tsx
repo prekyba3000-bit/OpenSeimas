@@ -210,6 +210,32 @@ export default function SkaidrumasHubView() {
         <p className="mt-2 text-xs text-muted-foreground max-w-2xl">
           Tai ne LR Seimo oficiali svetainė — nepriklausomas civic tech projektas; šaltiniai ir metodika nurodyti atskiruose puslapiuose.
         </p>
+
+        {/* Mission — the same text as the master plan preamble, README and
+            ADR 0007. Kept in sync deliberately: a visitor, a collaborator and a
+            journalist should each meet it before anything else. */}
+        <div className="mt-8 max-w-2xl space-y-4 border-t border-border pt-6">
+          <h2 className="text-lg font-semibold text-foreground">Kodėl šis projektas egzistuoja</h2>
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            Kad kuo daugiau Lietuvos žmonių 2028 m. Seimo rinkimuose apsispręstų{' '}
+            <strong className="text-foreground">patys, remdamiesi tuo, ką išrinktieji iš tikrųjų padarė</strong>,
+            o ne tuo, ką žadėjo. Ir kad balsavimas nustotų atrodyti beprasmis ar per sudėtingas tiems,
+            kurie dar niekada nebalsavo.
+          </p>
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            <strong className="text-foreground">
+              „Nebalsuodamas tu nepasišalini — tu atiduodi savo balsą tiems, kurie balsuoja.“
+            </strong>{' '}
+            Balsas nedingsta: jis tiesiog atitenka kitiems. Sąmoningai atiduotas balsas yra
+            paprasčiausia piliečio galia.
+          </p>
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            <strong className="text-foreground">Mes niekada nesakome, už ką balsuoti.</strong>{' '}
+            Rodome, ką kiekvienas Seimo narys ir frakcija patikrinamai padarė, ir padedame
+            susidaryti savo nuomonę. Jei platforma imtų kreipti, ji taptų dar vienu politiniu
+            veikėju — ir viskas, ką ji skelbia, prarastų vertę.
+          </p>
+        </div>
         <div className="mt-6 relative max-w-xl">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <input
