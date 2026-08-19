@@ -169,7 +169,7 @@ export default function StebsenaView() {
       <div className="flex items-center gap-3">
         <Trophy className="w-7 h-7 text-[#7AA2F7]" />
         <div>
-          <h2 className="text-3xl font-bold text-[#A9B1D6]">Stebėsena</h2>
+          <h2 className="text-3xl font-bold text-[#A9B1D6]">Pasisakymai ir balsavimai</h2>
           <p className="text-sm text-[#A9B1D6]/70">
             Lentelė pagal viešus stebėsenos rodiklius. Rodomi tik tie rodikliai, kuriuos šiandien remia įkelti
             duomenys (žr.{' '}

@@ -116,6 +116,13 @@ def get_activity():
             return [
                 {
                     "name": row["display_name"],
+                    # `action` was an English sentence composed here
+                    # (f"Voted {choice}"), which put untranslatable text from the
+                    # server straight onto a Lithuanian page. The choice is now
+                    # sent as data and the client does the wording.
+                    "vote_choice": row["vote_choice"],
+                    # Retained for any client still reading the old field.
+                    # DEPRECATED: use vote_choice.
                     "action": f"Voted {row['vote_choice']}",
                     "context": (row["title"][:50] + "...") if len(row["title"]) > 50 else row["title"],
                     "time": str(row["sitting_date"]),

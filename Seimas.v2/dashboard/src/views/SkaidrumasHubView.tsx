@@ -281,7 +281,7 @@ export default function SkaidrumasHubView() {
             className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-2 text-sm hover:bg-muted/50"
           >
             <Trophy className="w-4 h-4" />
-            Stebėsena / rizika
+            Pasisakymai ir balsavimai
           </NavLink>
           <NavLink
             to="/dashboard/methodology"

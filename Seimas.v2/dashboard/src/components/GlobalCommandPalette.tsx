@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router';
 import {
-  Search,
   LayoutDashboard,
   Users,
   Vote,
@@ -89,16 +88,10 @@ export function GlobalCommandPalette({ open: controlledOpen, onOpenChange }: Glo
 
   return (
     <>
-      <div
-        onClick={() => setOpen(true)}
-        className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-2 bg-slate-900 border border-slate-800 rounded-full shadow-lg cursor-pointer hover:bg-slate-800 transition-colors group print:hidden"
-      >
-        <div className="flex items-center gap-1 text-slate-400 group-hover:text-white transition-colors">
-          <span className="text-xs font-mono">⌘</span>
-          <span className="text-xs font-mono">K</span>
-        </div>
-        <Search size={14} className="text-slate-500" />
-      </div>
+      {/* The floating ⌘K pill lived here. Removed: the header already carries
+          a search affordance, so the viewport offered two, and on a phone the
+          pill sat permanently over the content it was meant to help you find.
+          The keyboard shortcut still works — see the key handler below. */}
 
       <CommandDialog open={open} onOpenChange={setOpen} title="Paieška ir navigacija" description="Narį, puslapį ar komandą.">
         <CommandInput placeholder="Ieškoti nario arba pasirinkite skyrių..." />
@@ -165,7 +158,7 @@ export function GlobalCommandPalette({ open: controlledOpen, onOpenChange }: Glo
               onSelect={() => runCommand(() => navigate('/dashboard/stebejimas'))}
             >
               <Trophy className="mr-2 h-4 w-4" />
-              <span>Stebėsena</span>
+              <span>Pasisakymai ir balsavimai</span>
             </CommandItem>
             <CommandItem value="frakcijos" onSelect={() => runCommand(() => navigate('/dashboard/factions'))}>
               <FileText className="mr-2 h-4 w-4" />

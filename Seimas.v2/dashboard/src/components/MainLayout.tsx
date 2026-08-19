@@ -27,7 +27,7 @@ const dataNavItems = [
   { path: '/dashboard/factions', label: 'Frakcijos', icon: Shield },
   { path: '/dashboard/sessions', label: 'Sesijos', icon: Calendar },
   { path: '/dashboard/compare', label: 'Palyginimas', icon: Scale },
-  { path: '/dashboard/stebejimas', label: 'Stebėsena', icon: Trophy },
+  { path: '/dashboard/stebejimas', label: 'Pasisakymai ir balsavimai', icon: Trophy },
 ];
 
 const transparencyNavItems = [
@@ -162,7 +162,7 @@ export function MainLayout() {
               className="hidden sm:inline-flex items-center gap-2 h-9 rounded-md border border-input bg-background px-3 text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
             >
               <Search className="h-4 w-4" />
-              <span>Paieška</span>
+              <span>Ko ieškote?</span>
               <kbd className="pointer-events-none hidden md:inline-flex h-5 select-none items-center gap-0.5 rounded border border-border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
                 Ctrl+K
               </kbd>
