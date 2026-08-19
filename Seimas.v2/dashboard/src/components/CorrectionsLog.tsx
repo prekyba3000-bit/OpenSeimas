@@ -1,4 +1,5 @@
 import React from 'react';
+import { formatLtDateLong } from '../utils/ltDate';
 import { useQuery } from '@tanstack/react-query';
 import { trustApi, type CorrectionStatus } from '../services/trust';
 
@@ -17,11 +18,8 @@ const STATUS_CLASSES: Record<CorrectionStatus, string> = {
 };
 
 function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('lt-LT', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
+  // Shared civic formatter — see utils/ltDate.
+  return formatLtDateLong(iso) ?? iso;
 }
 
 export function CorrectionsLog() {
