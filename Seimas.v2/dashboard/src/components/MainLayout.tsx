@@ -19,6 +19,7 @@ import {
 import { cn } from './ui/utils';
 import { Toaster } from 'sonner';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { ThemeToggle } from './ThemeToggle';
 
 const dataNavItems = [
   { path: '/dashboard', label: 'Apžvalga', icon: LayoutDashboard },
@@ -167,6 +168,7 @@ export function MainLayout() {
                 Ctrl+K
               </kbd>
             </button>
+            <ThemeToggle />
           </div>
         </header>
 

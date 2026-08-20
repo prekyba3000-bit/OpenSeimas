@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="lt" class="dark">
+<html lang="lt">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
@@ -38,6 +38,20 @@
       (--font-terminal / --font-decree) are undefined, so only Inter ever
       rendered. Removed rather than self-hosted: no point bundling unused fonts.
     -->
+    <script>
+      // Runs before first paint so the page never flashes the wrong theme.
+      // Mirrors src/lib/theme.ts; kept deliberately tiny and dependency-free.
+      (function () {
+        try {
+          var stored = localStorage.getItem('openseimas-theme');
+          var dark = stored === 'dark' ||
+            (stored !== 'light' &&
+             window.matchMedia('(prefers-color-scheme: dark)').matches);
+          document.documentElement.classList.toggle('dark', dark);
+          document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
+        } catch (e) { /* storage blocked; the app applies the theme on mount */ }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
