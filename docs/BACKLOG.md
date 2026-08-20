@@ -66,7 +66,34 @@ should be checked for hardcoded numbers, invented statuses and English strings,
 and anything found should be grepped for in reachable code **before** the file
 goes.
 
+**Two more found during the redesign**, by walking the import graph from
+`main.jsx` instead of grepping: `components/VotesListView.tsx` (superseded by
+`views/VotesListView.tsx`, which is the routed one) and `VoteListCard.tsx`,
+which only `components/VotesListView.tsx` imports. That is eighteen, and the
+count should be re-derived from the import graph rather than trusted, because
+this list was built by grep and grep missed a whole pair.
+
 Depends on: nothing. Serves 2028 indirectly (smaller surface, faster review).
+
+### Phantom CSS variables — a second sweep is warranted
+The „Jaukumas“ skin found sixteen CSS custom properties referenced by live
+components and defined nowhere: `--text-primary`, `--text-secondary`,
+`--text-tertiary`, `--glass-border`, `--glass-background`,
+`--background-surface`, `--background-elevated`, `--status-success`,
+`--status-danger`, `--status-warning`, `--status-success-muted`,
+`--status-danger-muted`, `--color-text-ghost`, `--color-text-bright`,
+`--font-terminal`, `--font-decree`, `--ease-snap`. An undefined `var()` makes
+the whole declaration invalid at computed-value time, so ~49 colour
+declarations across `MpCard`, `Button`, `VoteBreakdown`, `MpsListView` and
+`StatCard` were doing nothing at all — and `bg-surface` in `Card.tsx` was an
+undefined *utility*, meaning every card in the app rendered with no background.
+
+All of the above are fixed. What is left is the general case: **there is no
+guard preventing the next one.** A build-time check that every `var(--x)` in
+`src/` resolves to a definition would have caught all seventeen at once. Worth
+doing before the next skin change, not after.
+
+Depends on: nothing.
 
 ### Vote outcomes — source gap
 `votes.result_type` is NULL on all 5,279 rows because **the LRS source publishes

@@ -156,7 +156,7 @@ export const MpProfileLayout = ({
                 year and was replaced. Name the state and the period. */}
             <span
               className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                isActive ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400' : 'bg-muted text-muted-foreground'
+                isActive ? 'bg-vote-for/15 text-vote-for dark:text-vote-for' : 'bg-muted text-muted-foreground'
               }`}
             >
               {isActive ? 'Aktyvus' : 'Kadencija baigta'}

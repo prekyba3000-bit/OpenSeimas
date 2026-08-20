@@ -1,5 +1,5 @@
-/* Inter is self-hosted via @fontsource, imported in main.jsx — no external font
-   request. */
+/* Literata (headings) and Source Sans 3 (body) are self-hosted via @fontsource,
+   imported in main.jsx — no external font request. */
 @import "./figma-tokens.css";
 @import "tailwindcss";
 
@@ -18,68 +18,114 @@
      class: `class="dark"` in index.html and a forced classList.add('dark') in
      App.tsx were decorative, and there was no light theme to switch to.
 
-     Now :root is light and .dark overrides it. The dark values below are the
-     previous :root verbatim, so dark mode renders exactly as it did before.
-     The Jaukumas palette replaces both sets in the next commit; this one is
-     plumbing only. */
-  --background: 0 0% 100%;
-  --foreground: 222.2 84% 4.9%;
-  --card: 0 0% 100%;
-  --card-foreground: 222.2 84% 4.9%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 222.2 84% 4.9%;
-  --primary: 221.2 83.2% 53.3%;
-  --primary-foreground: 210 40% 98%;
-  --secondary: 210 40% 96.1%;
-  --secondary-foreground: 222.2 47.4% 11.2%;
-  --muted: 210 40% 96.1%;
-  --muted-foreground: 215.4 16.3% 46.9%;
-  --accent: 210 40% 96.1%;
-  --accent-foreground: 222.2 47.4% 11.2%;
-  --destructive: 0 84.2% 60.2%;
-  --destructive-foreground: 210 40% 98%;
-  --border: 214.3 31.8% 91.4%;
-  --input: 214.3 31.8% 91.4%;
-  --ring: 221.2 83.2% 53.3%;
-  --sidebar: 0 0% 100%;
-  --sidebar-foreground: 222.2 84% 4.9%;
-  --sidebar-primary: 221.2 83.2% 53.3%;
-  --sidebar-primary-foreground: 210 40% 98%;
-  --sidebar-accent: 210 40% 96.1%;
-  --sidebar-accent-foreground: 222.2 47.4% 11.2%;
-  --sidebar-border: 214.3 31.8% 91.4%;
-  --sidebar-ring: 221.2 83.2% 53.3%;
+     Now :root is light and .dark overrides it.
+
+     Palette: „Jaukumas“ — linen, wood, lamplight. Warm neutrals rather than
+     the slate/blue-black they replace, chroma capped so no surface shouts, and
+     no pure red or green anywhere: „Prieš“ is clay, not alarm-red, because a
+     vote against something is not an error state. Honey is reserved for
+     genuine attention and is used sparsely. */
+  --background: 40 36% 95.1%;        /* linen  #F7F4EE */
+  --foreground: 30 9.5% 16.5%;       /* ink    #2E2A26 */
+  --card: 40 60% 98%;                /* paper  #FDFBF7 */
+  --card-foreground: 30 9.5% 16.5%;
+  --popover: 40 60% 98%;
+  --popover-foreground: 30 9.5% 16.5%;
+  --primary: 145 24.5% 38.4%;        /* pine   #4A7A5E — primary actions, „Už“ */
+  --primary-foreground: 40 60% 98%;
+  --secondary: 40 28.1% 91%;
+  --secondary-foreground: 30 9.5% 16.5%;
+  --muted: 40 28.1% 91%;
+  --muted-foreground: 36 7.5% 39%;   /* #6B655C */
+  --accent: 40 28.1% 91%;
+  --accent-foreground: 30 9.5% 16.5%;
+  /* Clay was #B26A50 (50.6% L), which measured 4.00:1 on the card — AA for
+     large text only. It is now used for 13px vote tallies, so it is darkened
+     to the first lightness that clears 4.5:1 against both card and page. Still
+     unmistakably clay; simply a fired one. */
+  --destructive: 15.9 38.9% 45.5%;   /* clay   #A15F47 — „Prieš“, never alarm-red */
+  --destructive-foreground: 40 60% 98%;
+  --border: 40 28.1% 87.5%;          /* #E8E2D6 */
+  --input: 40 28.1% 87.5%;
+  --ring: 145 24.5% 38.4%;
+  --sidebar: 40 60% 98%;
+  --sidebar-foreground: 30 9.5% 16.5%;
+  --sidebar-primary: 145 24.5% 38.4%;
+  --sidebar-primary-foreground: 40 60% 98%;
+  --sidebar-accent: 40 28.1% 91%;
+  --sidebar-accent-foreground: 30 9.5% 16.5%;
+  --sidebar-border: 40 28.1% 87.5%;
+  --sidebar-ring: 145 24.5% 38.4%;
+
+  /* Sparse attention only — never decoration.
+     Honey is a SURFACE, not a text colour: #C99A4B reaches only 2.48:1 on the
+     linen card, and darkening it to 4.5:1 stops it being honey. Used as a
+     background with --attention-foreground on top it measures 5.56:1. */
+  --attention: 37.6 53.8% 54.1%;     /* honey  #C99A4B */
+  --attention-foreground: 30 9.5% 16.5%;
+
+  /* Vote choices. Aliases of pine and clay, named for what they mean rather
+     than what they are, because `bg-primary` at a vote-tally call site reads
+     as "the brand colour" and hides the decision. The decision is this: a vote
+     against something is not an error and never renders in alarm red, and a
+     vote for something is not a success and never renders in signal green.
+     They were `bg-green-500` / `bg-red-500` / `bg-amber-500` — the palette of
+     a monitoring console, applied to a parliament. */
+  --vote-for: 145 24.5% 38.4%;       /* pine   #4A7A5E */
+  --vote-against: 15.9 38.9% 45.5%;  /* clay   #A15F47 */
+  --vote-abstain: 36 7.5% 39%;       /* stone  #6B655C — abstention is absence of colour */
+
+  /* Elevation. Warm, diffuse, and low-opacity — a card sits on the linen, it
+     does not hover over a void. Tinted with the ink brown rather than pure
+     black so the shadow belongs to the same room as everything else.
+     There are no glows: the outgoing skin used coloured box-shadows
+     (`0 0 15px rgba(59,130,246,.3)`) as emphasis, which reads as a screen
+     emitting light rather than paper catching it. */
+  --elevation-card: 0 1px 2px rgb(46 42 38 / 0.04), 0 4px 16px rgb(46 42 38 / 0.05);
+  --elevation-raised: 0 2px 6px rgb(46 42 38 / 0.06), 0 12px 32px rgb(46 42 38 / 0.08);
 }
 
-/* Dark mode („Sutemos“). These values are the previous :root, unchanged. */
+/* Dark mode („Sutemos“) — warm charcoal-brown, never blue-black. */
 .dark {
-  --background: 222.2 84% 4.9%;
-  --foreground: 210 40% 98%;
-  --card: 222.2 84% 4.9%;
-  --card-foreground: 210 40% 98%;
-  --popover: 222.2 84% 4.9%;
-  --popover-foreground: 210 40% 98%;
-  --primary: 217.2 91.2% 59.8%;
-  --primary-foreground: 222.2 47.4% 11.2%;
-  --secondary: 217.2 32.6% 17.5%;
-  --secondary-foreground: 210 40% 98%;
-  --muted: 217.2 32.6% 17.5%;
-  --muted-foreground: 215 20.2% 65.1%;
-  --accent: 217.2 32.6% 17.5%;
-  --accent-foreground: 210 40% 98%;
-  --destructive: 0 62.8% 30.6%;
-  --destructive-foreground: 210 40% 98%;
-  --border: 217.2 32.6% 17.5%;
-  --input: 217.2 32.6% 17.5%;
-  --ring: 224.3 76.3% 48%;
-  --sidebar: 222.2 84% 4.9%;
-  --sidebar-foreground: 210 40% 98%;
-  --sidebar-primary: 221.2 83.2% 53.3%;
-  --sidebar-primary-foreground: 210 40% 98%;
-  --sidebar-accent: 217.2 32.6% 17.5%;
-  --sidebar-accent-foreground: 210 40% 98%;
-  --sidebar-border: 217.2 32.6% 17.5%;
-  --sidebar-ring: 221.2 83.2% 53.3%;
+  --background: 34.3 11.9% 11.6%;    /* warm charcoal #211E1A, never blue-black */
+  --foreground: 36.9 26.5% 90.4%;    /* #EDE8E0 */
+  --card: 33.3 12% 14.7%;            /* #2A2621 */
+  --card-foreground: 36.9 26.5% 90.4%;
+  --popover: 33.3 12% 14.7%;
+  --popover-foreground: 36.9 26.5% 90.4%;
+  --primary: 138.6 19.6% 58%;        /* pine  #7FA98C */
+  --primary-foreground: 34.3 11.9% 11.6%;
+  --secondary: 35 11.5% 20.4%;
+  --secondary-foreground: 36.9 26.5% 90.4%;
+  --muted: 35 11.5% 20.4%;
+  --muted-foreground: 34.3 10.8% 61.8%;  /* #A89F93 */
+  --accent: 35 11.5% 20.4%;
+  --accent-foreground: 36.9 26.5% 90.4%;
+  --destructive: 17.1 51% 62.4%;     /* clay  #D08A6E */
+  --destructive-foreground: 34.3 11.9% 11.6%;
+  --border: 35 11.5% 20.4%;          /* #3A352E — matches the warmth */
+  --input: 35 11.5% 20.4%;
+  --ring: 138.6 19.6% 58%;
+  --sidebar: 33.3 12% 14.7%;
+  --sidebar-foreground: 36.9 26.5% 90.4%;
+  --sidebar-primary: 138.6 19.6% 58%;
+  --sidebar-primary-foreground: 34.3 11.9% 11.6%;
+  --sidebar-accent: 35 11.5% 20.4%;
+  --sidebar-accent-foreground: 36.9 26.5% 90.4%;
+  --sidebar-border: 35 11.5% 20.4%;
+  --sidebar-ring: 138.6 19.6% 58%;
+
+  --attention: 38.9 59.4% 63.3%;     /* honey #D9B26A */
+  --attention-foreground: 34.3 11.9% 11.6%;
+
+  --vote-for: 138.6 19.6% 58%;       /* #7FA98C */
+  --vote-against: 17.1 51% 62.4%;    /* #D08A6E */
+  --vote-abstain: 34.3 10.8% 61.8%;  /* #A89F93 */
+
+  /* In the dark the surfaces are already close in value, so a tinted shadow
+     would be invisible. Depth comes from darkness instead. */
+  --elevation-card: 0 1px 2px rgb(0 0 0 / 0.30), 0 4px 16px rgb(0 0 0 / 0.22);
+  --elevation-raised: 0 2px 6px rgb(0 0 0 / 0.35), 0 12px 32px rgb(0 0 0 / 0.30);
 }
 
 
@@ -122,8 +168,53 @@
   --color-sidebar-accent-foreground: hsl(var(--sidebar-accent-foreground));
   --color-sidebar-border: hsl(var(--sidebar-border));
   --color-sidebar-ring: hsl(var(--sidebar-ring));
+  --color-attention: hsl(var(--attention));
+  --color-attention-foreground: hsl(var(--attention-foreground));
+  --color-vote-for: hsl(var(--vote-for));
+  --color-vote-against: hsl(var(--vote-against));
+  --color-vote-abstain: hsl(var(--vote-abstain));
 
-  --font-sans: "Inter", sans-serif;
+  /* Literata carries the headings, Source Sans 3 the body. Both ship a
+     latin-ext subset, which is what puts ą č ę ė į š ų ū ž on the page. */
+  --font-sans: "Source Sans 3", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-serif: "Literata", ui-serif, Georgia, "Times New Roman", serif;
+
+  /* ── Type scale ─────────────────────────────────────────────────────────
+     A 1.25 modular scale on a 16px base, so every heading step is a fixed
+     ratio of the one below it instead of an arbitrary pixel value:
+        16 → 20 → 25 → 31 → 39 → 49 → 61
+     Overriding Tailwind's own --text-* keys means every existing `text-xl`,
+     `text-2xl` … in the app moves onto the scale without touching a single
+     component.
+
+     Below the base the scale does not apply — 12.8px and 10.2px are not sizes
+     anyone should be asked to read. `xs` is the floor at 13px, which is what
+     the 10px ALL-CAPS micro-labels became. `sm` at 14px is the one deliberate
+     off-scale step, for dense tabular data.
+
+     Line height loosens as text gets smaller: 1.6 for body, tightening to 1.2
+     at heading sizes where long leading only pulls a title apart. */
+  --text-xs: 0.8125rem;        /* 13px — the floor */
+  --text-xs--line-height: 1.5;
+  --text-sm: 0.875rem;         /* 14px — dense data, off-scale by intent */
+  --text-sm--line-height: 1.55;
+  --text-base: 1rem;           /* 16px */
+  --text-base--line-height: 1.6;
+  --text-lg: 1.25rem;          /* 20px  = 16 × 1.25 */
+  --text-lg--line-height: 1.45;
+  --text-xl: 1.5625rem;        /* 25px  = 16 × 1.25² */
+  --text-xl--line-height: 1.3;
+  --text-2xl: 1.9531rem;       /* 31px  = 16 × 1.25³ */
+  --text-2xl--line-height: 1.2;
+  --text-3xl: 2.4414rem;       /* 39px  = 16 × 1.25⁴ */
+  --text-3xl--line-height: 1.2;
+  --text-4xl: 3.0518rem;       /* 49px  = 16 × 1.25⁵ */
+  --text-4xl--line-height: 1.15;
+  --text-5xl: 3.8147rem;       /* 61px  = 16 × 1.25⁶ */
+  --text-5xl--line-height: 1.1;
+
+  --shadow-card: var(--elevation-card);
+  --shadow-raised: var(--elevation-raised);
 }
 
 @layer base {
@@ -154,28 +245,43 @@
     font-size: var(--font-size);
   }
 
+  /* Headings are set in Literata. A serif is not decoration here: it is the
+     difference between a page that reads like a dashboard and one that reads
+     like something written by people, which is the whole brief. Body stays in
+     Source Sans 3 — a serif at 16px over a full-width column is harder work
+     than it is worth.
+     `text-wrap: balance` stops a two-word orphan on the second line of a
+     Lithuanian heading, which the long compounds („dalyvavimas“, „posėdžių“)
+     make common. */
+  h1, h2, h3, h4 {
+    font-family: var(--font-serif);
+    font-weight: 600;
+    letter-spacing: -0.011em;
+    text-wrap: balance;
+  }
+
   h1 {
     font-size: var(--text-2xl);
-    font-weight: var(--font-weight-medium);
-    line-height: 1.5;
+    line-height: 1.2;
   }
 
   h2 {
     font-size: var(--text-xl);
-    font-weight: var(--font-weight-medium);
-    line-height: 1.5;
+    line-height: 1.25;
   }
 
   h3 {
     font-size: var(--text-lg);
-    font-weight: var(--font-weight-medium);
-    line-height: 1.5;
+    line-height: 1.3;
   }
 
   h4 {
     font-size: var(--text-base);
-    font-weight: var(--font-weight-medium);
-    line-height: 1.5;
+    line-height: 1.4;
+  }
+
+  p {
+    line-height: 1.6;
   }
 
   label {

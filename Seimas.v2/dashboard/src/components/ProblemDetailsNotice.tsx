@@ -11,7 +11,7 @@ export function ProblemDetailsNotice({ error, className }: ProblemDetailsNoticeP
     <div
       className={
         className ??
-        "p-4 border rounded-xl flex items-center gap-3 border-amber-500/40 bg-amber-500/10 text-amber-200"
+        "p-4 border rounded-xl flex items-center gap-3 border-attention/40 bg-attention/10 text-foreground"
       }
       role="alert"
     >

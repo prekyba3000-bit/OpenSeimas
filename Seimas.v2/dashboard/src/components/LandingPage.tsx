@@ -126,7 +126,7 @@ export function LandingPage() {
 
         <div className="flex-1 w-full max-w-xl relative">
           <div className="absolute -inset-4 bg-gradient-to-tr from-primary/20 to-secondary/20 rounded-[2rem] -z-10 blur-xl opacity-70" />
-          <div className="aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl border border-border bg-gradient-to-br from-card via-muted/30 to-primary/10 relative flex flex-col items-center justify-center p-8 text-center">
+          <div className="aspect-[4/3] rounded-2xl overflow-hidden shadow-raised border border-border bg-gradient-to-br from-card via-muted/30 to-primary/10 relative flex flex-col items-center justify-center p-8 text-center">
             <div className="rounded-xl border border-border bg-background/80 backdrop-blur-sm px-6 py-8 max-w-sm space-y-3">
               <p className="text-xs uppercase tracking-widest text-primary font-semibold">Iliustracija</p>
               <p className="text-foreground font-semibold text-lg">Portalas suvestinės ir analizės ekrane</p>
@@ -134,7 +134,7 @@ export function LandingPage() {
                 Vietoje stock nuotraukos — neutralus blokas, kad nebūtų painiavos su oficialia valstybės komunikacija.
               </p>
             </div>
-            <p className="absolute bottom-4 left-0 right-0 text-[10px] text-muted-foreground px-4">
+            <p className="absolute bottom-4 left-0 right-0 text-xs text-muted-foreground px-4">
               Tikroji sąsaja atidaroma mygtuku „Pradėti naudojimą“.
             </p>
           </div>

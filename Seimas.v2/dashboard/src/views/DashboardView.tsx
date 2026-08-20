@@ -110,7 +110,7 @@ export const DashboardView = () => {
                                 <Users className="w-4 h-4 text-primary" />
                                 Posėdžių salė
                             </h2>
-                            <span className="text-[10px] text-muted-foreground font-mono">
+                            <span className="text-xs text-muted-foreground font-mono">
                                 {stats ? occupancyLabel(stats) : `${mps.length} nariai`}
                             </span>
                         </div>
@@ -123,7 +123,7 @@ export const DashboardView = () => {
                     <Card className="p-0 h-full flex flex-col overflow-hidden">
                         <div className="px-4 py-3 border-b border-border flex items-center justify-between">
                             <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                                <Activity className="w-4 h-4 text-green-500" />
+                                <Activity className="w-4 h-4 text-vote-for" />
                                 Naujausi balsavimai
                             </h2>
                             <button
@@ -221,7 +221,7 @@ function MiniStat({ label, value }: { label: string; value: string }) {
     return (
         <div className="bg-muted/50 rounded-lg p-3 text-center">
             <div className="text-lg font-bold text-foreground">{value}</div>
-            <div className="text-[10px] text-muted-foreground uppercase tracking-wider">{label}</div>
+            <div className="text-xs text-muted-foreground">{label}</div>
         </div>
     );
 }

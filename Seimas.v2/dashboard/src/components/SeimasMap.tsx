@@ -153,9 +153,9 @@ export function SeimasMap({ mps = [], compact = false }: SeimasMapProps) {
                 key={p.name}
                 onClick={() => setSelectedParty(selectedParty === p.name ? null : p.name)}
                 className={cn(
-                  'h-6 px-2 rounded-full border-2 transition-all flex items-center gap-1.5 shrink-0 text-[10px] font-bold text-white',
+                  'h-6 px-2 rounded-full border-2 transition-all flex items-center gap-1.5 shrink-0 text-xs font-bold text-white',
                   selectedParty === p.name ? 'ring-2 ring-offset-2 ring-primary scale-105' : 'opacity-80 hover:opacity-100',
-                  'border-white/10',
+                  'border-border',
                 )}
                 style={{ backgroundColor: p.hex }}
                 title={p.name}
@@ -189,7 +189,7 @@ export function SeimasMap({ mps = [], compact = false }: SeimasMapProps) {
                       className={cn(
                         'absolute w-[14px] h-[14px] rounded-full shadow-sm transition-all duration-300 ease-out',
                         seat.mp
-                          ? 'cursor-pointer border border-black/10 dark:border-white/10'
+                          ? 'cursor-pointer border border-black/10 dark:border-border'
                           // Vacant seat: hollow, so it reads as an empty seat
                           // rather than an unnamed member.
                           : 'border-2 border-dashed border-muted-foreground/40 bg-transparent cursor-default',
@@ -256,7 +256,7 @@ export function SeimasMap({ mps = [], compact = false }: SeimasMapProps) {
                             </span>
                           </div>
                           <h4 className="font-bold text-sm leading-tight">{seat.mp.name}</h4>
-                          <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
+                          <div className="flex items-center gap-3 text-xs text-muted-foreground">
                             <span>{seat.mp.vote_count} balsų</span>
                             <span>•</span>
                             <span>{seat.mp.attendance?.toFixed(0) ?? '—'}% dalyvavimas</span>
@@ -300,7 +300,7 @@ export function SeimasMap({ mps = [], compact = false }: SeimasMapProps) {
                 <p className="truncate text-xs text-muted-foreground">
                   {revealedMp.party || 'Nepriklausomas (-a)'}
                 </p>
-                <p className="mt-0.5 text-[11px] text-muted-foreground">
+                <p className="mt-0.5 text-xs text-muted-foreground">
                   {revealedMp.vote_count} balsų
                   {typeof revealedMp.attendance === 'number'
                     ? ` · ${revealedMp.attendance.toFixed(0)}% dalyvavimas`
@@ -328,7 +328,7 @@ export function SeimasMap({ mps = [], compact = false }: SeimasMapProps) {
 
         {!compact && (
           <div className="absolute bottom-3 left-3 z-20 flex flex-wrap gap-2 max-w-[90%]">
-            <div className="flex flex-wrap gap-3 bg-background/90 backdrop-blur p-2 px-3 rounded-lg border border-border shadow-sm text-[10px] text-muted-foreground font-medium">
+            <div className="flex flex-wrap gap-3 bg-background/90 backdrop-blur p-2 px-3 rounded-lg border border-border shadow-sm text-xs text-muted-foreground font-medium">
               {parties.slice(0, 6).map(p => (
                 <div key={p.name} className="flex items-center gap-1.5">
                   <div className="w-2 h-2 rounded-full" style={{ backgroundColor: p.hex }} />

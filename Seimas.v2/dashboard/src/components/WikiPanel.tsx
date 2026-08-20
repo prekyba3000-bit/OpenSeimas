@@ -67,13 +67,13 @@ export function WikiPanel({ mpId }: WikiPanelProps) {
   if (!checked) {
     return (
       <section
-        className="mt-6 rounded-xl border border-white/10 bg-[#0d1117]/60 p-6 text-left animate-pulse"
+        className="mt-6 rounded-xl border border-border bg-card p-6 text-left animate-pulse"
         aria-busy="true"
         aria-label={LT.wiki.loading}
       >
-        <div className="h-4 w-40 bg-white/10 rounded mb-4" />
-        <div className="h-3 w-full bg-white/5 rounded mb-2" />
-        <div className="h-3 w-[92%] bg-white/5 rounded" />
+        <div className="h-4 w-40 bg-muted rounded mb-4" />
+        <div className="h-3 w-full bg-muted rounded mb-2" />
+        <div className="h-3 w-[92%] bg-muted rounded" />
       </section>
     );
   }
@@ -81,17 +81,17 @@ export function WikiPanel({ mpId }: WikiPanelProps) {
   if (identityCheck.status === 'identity_mismatch') {
     return (
       <section
-        className="mt-6 rounded-xl border border-red-500/40 bg-red-950/30 p-6 text-left"
+        className="mt-6 rounded-xl border border-destructive/40 bg-destructive/10 p-6 text-left"
         role="alert"
         aria-label={LT.wiki.identityMismatchTitle}
       >
         <div className="flex gap-3 items-start">
-          <ShieldAlert className="w-8 h-8 text-red-400 shrink-0 mt-0.5" />
+          <ShieldAlert className="w-8 h-8 text-destructive shrink-0 mt-0.5" />
           <div>
-            <h2 className="text-base font-semibold text-red-200">
+            <h2 className="text-base font-semibold text-destructive">
               {LT.wiki.identityMismatchTitle}
             </h2>
-            <p className="text-sm text-red-300/80 mt-2 leading-relaxed">
+            <p className="text-sm text-foreground/80 mt-2 leading-relaxed">
               {LT.wiki.identityMismatchBody}
             </p>
           </div>
@@ -103,19 +103,19 @@ export function WikiPanel({ mpId }: WikiPanelProps) {
   if (markdown === null) {
     return (
       <section
-        className="mt-6 rounded-xl border border-dashed border-white/20 bg-[#0d1117]/50 p-6 text-left"
+        className="mt-6 rounded-xl border border-dashed border-border bg-muted/40 p-6 text-left"
         aria-label="Wiki nėra"
       >
         <div className="flex gap-3 items-start">
-          <FileQuestion className="w-8 h-8 text-slate-500 shrink-0 mt-0.5" />
+          <FileQuestion className="w-8 h-8 text-muted-foreground shrink-0 mt-0.5" />
           <div>
-            <h2 className="text-base font-semibold text-slate-200">{LT.wiki.missingTitle}</h2>
-            <p className="text-sm text-slate-400 mt-2 leading-relaxed">
+            <h2 className="text-base font-semibold text-foreground">{LT.wiki.missingTitle}</h2>
+            <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
               {LT.wiki.missingBody}
             </p>
             <NavLink
               to="/dashboard/methodology"
-              className="inline-block mt-3 text-sm text-cyan-400 hover:underline"
+              className="inline-block mt-3 text-sm text-primary hover:underline"
             >
               {LT.wiki.methodologyLink}
             </NavLink>
@@ -127,13 +127,13 @@ export function WikiPanel({ mpId }: WikiPanelProps) {
 
   return (
     <section
-      className="mt-6 rounded-xl border border-white/10 bg-[#0d1117]/80 p-6 text-left print:border print:border-foreground/20"
+      className="mt-6 rounded-xl border border-border bg-card shadow-card p-6 text-left print:border print:border-foreground/20"
       aria-label={LT.wiki.reportTitle}
     >
-      <h2 className="mb-4 text-lg font-semibold text-white">{LT.wiki.reportTitle}</h2>
+      <h2 className="mb-4 text-lg font-semibold text-card-foreground">{LT.wiki.reportTitle}</h2>
       {identityCheck.status === 'stale' && (
         <div
-          className="mb-4 flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm text-amber-200"
+          className="mb-4 flex items-center gap-2 rounded-lg border border-attention/40 bg-attention/15 px-4 py-2.5 text-sm text-foreground"
           role="status"
         >
           <Clock className="w-4 h-4 shrink-0" />
@@ -143,7 +143,7 @@ export function WikiPanel({ mpId }: WikiPanelProps) {
       {usingCached && (
         <ProblemDetailsNotice error={requestError} className="mb-4 text-sm" />
       )}
-      <div className="max-w-none text-sm text-slate-300 [&_h2]:mt-6 [&_h2]:mb-2 [&_h2]:text-base [&_h2]:font-semibold [&_h2]:text-slate-100 [&_h2:first-child]:mt-0 [&_p]:mb-3 [&_ul]:mb-3 [&_ul]:list-disc [&_ul]:pl-5 [&_li]:mb-1 [&_a]:text-cyan-400 [&_a]:underline [&_strong]:text-slate-100 [&_table]:w-full [&_table]:border-collapse [&_th]:border [&_th]:border-white/20 [&_th]:bg-white/5 [&_th]:px-2 [&_th]:py-1.5 [&_th]:text-left [&_td]:border [&_td]:border-white/15 [&_td]:px-2 [&_td]:py-1.5">
+      <div className="max-w-none text-base text-card-foreground [&_h2]:mt-6 [&_h2]:mb-2 [&_h2]:text-lg [&_h2]:font-semibold [&_h2]:text-foreground [&_h2:first-child]:mt-0 [&_p]:mb-3 [&_ul]:mb-3 [&_ul]:list-disc [&_ul]:pl-5 [&_li]:mb-1 [&_a]:text-primary [&_a]:underline [&_strong]:text-foreground [&_table]:w-full [&_table]:border-collapse [&_th]:border [&_th]:border-border [&_th]:bg-muted [&_th]:px-2 [&_th]:py-1.5 [&_th]:text-left [&_td]:border [&_td]:border-border [&_td]:px-2 [&_td]:py-1.5">
         <ReactMarkdown>{markdown}</ReactMarkdown>
       </div>
     </section>

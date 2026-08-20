@@ -61,6 +61,13 @@ const SOURCES: SourceStatus[] = [
   { name: 'OpenSanctions / ICIJ', detail: 'Tarptautiniai ryšiai ir PEP', state: 'active' },
 ];
 
+/**
+ * Five distinguishable lines for the loyalty trend chart. Taken from the muted
+ * faction palette rather than a rainbow of saturated primaries — these are
+ * named MPs, and #ef4444 next to #22c55e reads as "bad" next to "good".
+ */
+const SERIES_COLORS = ['#6E8CAE', '#B66F3D', '#5D8A6C', '#937DAA', '#8C857A'];
+
 const BENFORD_EXPECTED: Record<string, number> = {
   '1': 0.30103, '2': 0.17609, '3': 0.12494, '4': 0.09691,
   '5': 0.07918, '6': 0.06695, '7': 0.05799, '8': 0.05115, '9': 0.04576,
@@ -384,7 +391,7 @@ export default function SkaidrumasHubView() {
         <div className="rounded-xl border border-border bg-card p-4">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <ShieldAlert className="w-4 h-4 text-emerald-400" />
+              <ShieldAlert className="w-4 h-4 text-vote-for" />
               <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Stebėsenos suvestinė (10)</h2>
             </div>
             <span className="text-xs text-muted-foreground">7 d.</span>
@@ -402,7 +409,7 @@ export default function SkaidrumasHubView() {
               >
                 <div className="flex items-center justify-between">
                   <div className="text-sm font-semibold">#{item.rank} {item.name}</div>
-                  <div className="text-xs text-emerald-400 font-mono">{item.integrity_score}</div>
+                  <div className="text-xs text-vote-for font-mono">{item.integrity_score}</div>
                 </div>
                 <div className="text-xs text-muted-foreground mt-1">{item.party || 'Nežinoma'} · {item.attendance}% lankomumas</div>
                 <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
@@ -418,7 +425,7 @@ export default function SkaidrumasHubView() {
         <div className="rounded-xl border border-border bg-card p-4">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-rose-400" />
+              <AlertTriangle className="w-4 h-4 text-destructive" />
               <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Top 10 stebėsena</h2>
             </div>
             <span className="text-xs text-muted-foreground">7 d.</span>
@@ -436,7 +443,7 @@ export default function SkaidrumasHubView() {
               >
                 <div className="flex items-center justify-between">
                   <div className="text-sm font-semibold">#{item.rank} {item.name}</div>
-                  <div className="text-xs text-rose-400 font-mono">{item.risk_score}</div>
+                  <div className="text-xs text-destructive font-mono">{item.risk_score}</div>
                 </div>
                 <div className="text-xs text-muted-foreground mt-1">{item.party || 'Nežinoma'} · {item.attendance}% lankomumas</div>
                 <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
@@ -463,7 +470,7 @@ export default function SkaidrumasHubView() {
       {/* Engine 01: Chrono-Forensics */}
       <section className="rounded-xl border border-border bg-card p-4">
         <div className="flex items-center gap-2 mb-4">
-          <Clock className="w-4 h-4 text-amber-400" />
+          <Clock className="w-4 h-4 text-vote-abstain" />
           <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
             01 · Pakeitimų greitis
           </h2>
@@ -496,7 +503,7 @@ export default function SkaidrumasHubView() {
                           <div>Laikas: {d.drafting_window_min} min</div>
                           <div>Sudėtingumas: {d.complexity?.toFixed(1)}</div>
                           <div>Z-score: {d.zscore?.toFixed(2)}</div>
-                          {d.cluster_id && <div className="text-amber-400">Klasteris #{d.cluster_id}</div>}
+                          {d.cluster_id && <div className="text-vote-abstain">Klasteris #{d.cluster_id}</div>}
                         </div>
                       );
                     }}
@@ -510,9 +517,9 @@ export default function SkaidrumasHubView() {
                         key={idx}
                         fill={
                           item.zscore !== null && item.zscore < -2
-                            ? '#ef4444'
+                            ? 'hsl(var(--destructive))'
                             : item.cluster_id
-                              ? '#f59e0b'
+                              ? 'hsl(var(--attention))'
                               : 'var(--color-primary)'
                         }
                       />
@@ -528,14 +535,14 @@ export default function SkaidrumasHubView() {
                 .filter((i) => i.zscore !== null && i.zscore < -2)
                 .slice(0, 10)
                 .map((item) => (
-                  <div key={item.amendment_id} className="rounded-md border border-rose-500/30 bg-rose-500/5 p-3">
+                  <div key={item.amendment_id} className="rounded-md border border-destructive/30 bg-destructive/5 p-3">
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-mono font-semibold">{item.amendment_id}</span>
-                      <span className="text-xs font-mono text-rose-400">z = {item.zscore?.toFixed(2)}</span>
+                      <span className="text-xs font-mono text-destructive">z = {item.zscore?.toFixed(2)}</span>
                     </div>
                     <div className="text-xs text-muted-foreground mt-1">
                       {item.drafting_window_min} min · {item.word_count} žodžiai · {item.citation_count} citatos
-                      {item.cluster_id && <span className="text-amber-400 ml-2">Klasteris #{item.cluster_id}</span>}
+                      {item.cluster_id && <span className="text-vote-abstain ml-2">Klasteris #{item.cluster_id}</span>}
                     </div>
                   </div>
                 ))}
@@ -549,7 +556,7 @@ export default function SkaidrumasHubView() {
       {/* Engine 02: Benford's Lens */}
       <section className="rounded-xl border border-border bg-card p-4">
         <div className="flex items-center gap-2 mb-4">
-          <BarChart3 className="w-4 h-4 text-violet-400" />
+          <BarChart3 className="w-4 h-4 text-primary" />
           <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
             02 · Deklaracijų patikimumas
           </h2>
@@ -585,7 +592,7 @@ export default function SkaidrumasHubView() {
                           <div className="font-semibold">{d.digit}</div>
                           <div>Tikėtina: {d.expected}%</div>
                           <div>Faktinė: {d.actual}%</div>
-                          <div className={d.deviation > 0 ? 'text-rose-400' : 'text-emerald-400'}>
+                          <div className={d.deviation > 0 ? 'text-destructive' : 'text-vote-for'}>
                             Δ {d.deviation > 0 ? '+' : ''}{d.deviation}%
                           </div>
                         </div>
@@ -598,7 +605,7 @@ export default function SkaidrumasHubView() {
                       const worst = benford!.items.find((i) => i.conformity === 'non-conforming');
                       const actual = worst?.digit_distribution?.[digit] ?? expected;
                       const diff = Math.abs(actual - expected);
-                      return <Cell key={digit} fill={diff > 0.05 ? '#ef4444' : diff > 0.02 ? '#f59e0b' : '#22c55e'} />;
+                      return <Cell key={digit} fill={diff > 0.05 ? 'hsl(var(--destructive))' : diff > 0.02 ? 'hsl(var(--attention))' : 'hsl(var(--vote-for))'} />;
                     })}
                   </Bar>
                 </BarChart>
@@ -613,18 +620,18 @@ export default function SkaidrumasHubView() {
                   onClick={() => goToMpForensicFlag(item.mp_id, 'benford')}
                   className={`w-full text-left rounded-md border p-3 cursor-pointer hover:bg-muted/50 transition-colors ${
                     item.conformity === 'non-conforming'
-                      ? 'border-rose-500/30 bg-rose-500/5'
+                      ? 'border-destructive/30 bg-destructive/5'
                       : item.conformity === 'marginal'
-                        ? 'border-amber-500/30 bg-amber-500/5'
+                        ? 'border-attention/40 bg-attention/15'
                         : 'border-border'
                   }`}
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-semibold">{item.mp_id}</span>
                     <span className={`text-xs font-mono ${
-                      item.conformity === 'non-conforming' ? 'text-rose-400'
-                        : item.conformity === 'marginal' ? 'text-amber-400'
-                          : 'text-emerald-400'
+                      item.conformity === 'non-conforming' ? 'text-destructive'
+                        : item.conformity === 'marginal' ? 'text-vote-abstain'
+                          : 'text-vote-for'
                     }`}>
                       {item.conformity} · p={item.p_value.toFixed(4)}
                     </span>
@@ -633,7 +640,7 @@ export default function SkaidrumasHubView() {
                     MAD: {item.mad.toFixed(4)} · χ²: {item.chi_squared.toFixed(2)} · Imtis: {item.sample_size}
                   </div>
                   {item.flagged_fields.length > 0 && (
-                    <div className="text-xs text-rose-400 mt-1">
+                    <div className="text-xs text-destructive mt-1">
                       Pažymėti: {item.flagged_fields.map((f) => f.field).join(', ')}
                     </div>
                   )}
@@ -682,7 +689,7 @@ export default function SkaidrumasHubView() {
                       data={mp.trend}
                       dataKey="alignment"
                       name={mp.name}
-                      stroke={['#ef4444', '#f59e0b', '#3b82f6', '#8b5cf6', '#22c55e'][idx % 5]}
+                      stroke={SERIES_COLORS[idx % SERIES_COLORS.length]}
                       dot={false}
                       strokeWidth={2}
                     />
@@ -706,9 +713,9 @@ export default function SkaidrumasHubView() {
                       <span className="text-xs text-muted-foreground ml-2">{mp.party}</span>
                     </div>
                     <span className={`text-sm font-mono ${
-                      mp.avg_alignment_30d < 70 ? 'text-rose-400'
-                        : mp.avg_alignment_30d < 85 ? 'text-amber-400'
-                          : 'text-emerald-400'
+                      mp.avg_alignment_30d < 70 ? 'text-destructive'
+                        : mp.avg_alignment_30d < 85 ? 'text-vote-abstain'
+                          : 'text-vote-for'
                     }`}>
                       {mp.avg_alignment_30d}%
                     </span>
@@ -725,7 +732,7 @@ export default function SkaidrumasHubView() {
       {/* Engine 04: Phantom Network */}
       <section className="rounded-xl border border-border bg-card p-4">
         <div className="flex items-center gap-2 mb-4">
-          <Network className="w-4 h-4 text-orange-400" />
+          <Network className="w-4 h-4 text-attention" />
           <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
             04 · Paslėpti ryšiai
           </h2>
@@ -741,9 +748,9 @@ export default function SkaidrumasHubView() {
                 onClick={() => goToMpForensicFlag(link.mp_id, 'phantom')}
                 className={`w-full text-left rounded-md border p-4 cursor-pointer hover:bg-muted/50 transition-colors ${
                   link.procurement_hit
-                    ? 'border-rose-500/40 bg-rose-500/5'
+                    ? 'border-destructive/40 bg-destructive/5'
                     : link.debtor_hit
-                      ? 'border-amber-500/40 bg-amber-500/5'
+                      ? 'border-attention/40 bg-attention/15'
                       : 'border-border'
                 }`}
               >
@@ -756,8 +763,8 @@ export default function SkaidrumasHubView() {
                           ? 'bg-primary/20 text-primary font-semibold'
                           : nodeIdx === link.path.length - 1
                             ? link.procurement_hit
-                              ? 'bg-rose-500/20 text-rose-400 font-semibold'
-                              : 'bg-amber-500/20 text-amber-400 font-semibold'
+                              ? 'bg-destructive/15 text-destructive font-semibold'
+                              : 'bg-attention/15 text-vote-abstain font-semibold'
                             : 'bg-muted text-muted-foreground'
                       }`}>
                         {node}
@@ -768,8 +775,8 @@ export default function SkaidrumasHubView() {
                 <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
                   <span>{link.hops} žingsniai</span>
                   <span>{link.target_name}</span>
-                  {link.procurement_hit && <span className="text-rose-400 font-semibold">Viešasis pirkimas</span>}
-                  {link.debtor_hit && <span className="text-amber-400 font-semibold">Mokesčių skolininkas</span>}
+                  {link.procurement_hit && <span className="text-destructive font-semibold">Viešasis pirkimas</span>}
+                  {link.debtor_hit && <span className="text-vote-abstain font-semibold">Mokesčių skolininkas</span>}
                 </div>
               </button>
             ))}
@@ -814,13 +821,13 @@ export default function SkaidrumasHubView() {
                           <div className="font-semibold">{d.label}</div>
                           <div>Tikėtina: {d['Tikėtina Už']?.toFixed(0)} Už</div>
                           <div>Faktinė: {d['Faktinė Už']} Už</div>
-                          <div className="text-rose-400">{d.sigma?.toFixed(1)}σ nuokrypis</div>
+                          <div className="text-destructive">{d.sigma?.toFixed(1)}σ nuokrypis</div>
                         </div>
                       );
                     }}
                   />
                   <Bar dataKey="Tikėtina Už" fill="var(--color-primary)" opacity={0.3} />
-                  <Bar dataKey="Faktinė Už" fill="#ef4444" />
+                  <Bar dataKey="Faktinė Už" fill="hsl(var(--destructive))" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -828,21 +835,21 @@ export default function SkaidrumasHubView() {
             {/* TODO(v4): vote geometry rows are per vote, not MP — add ?flag=vote_geometry deep link when items include mp_id or a vote→MP mapping */}
             <div className="space-y-2 max-h-64 overflow-y-auto">
               {voteGeo!.items.slice(0, 10).map((item) => (
-                <div key={item.vote_id} className="rounded-md border border-rose-500/30 bg-rose-500/5 p-3">
+                <div key={item.vote_id} className="rounded-md border border-destructive/30 bg-destructive/5 p-3">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-semibold line-clamp-1">{item.title ?? `#${item.vote_id}`}</span>
-                    <span className="text-xs font-mono text-rose-400 shrink-0 ml-2">{item.sigma.toFixed(1)}σ</span>
+                    <span className="text-xs font-mono text-destructive shrink-0 ml-2">{item.sigma.toFixed(1)}σ</span>
                   </div>
                   <div className="text-xs text-muted-foreground mt-1">
                     {item.date} · {item.anomaly_type?.replace('_', ' ')}
                   </div>
                   <div className="text-xs mt-1">
                     <span className="text-muted-foreground">Tikėtina:</span>{' '}
-                    <span className="text-emerald-400">{item.expected.for.toFixed(0)} Už</span>{' / '}
-                    <span className="text-rose-400">{item.expected.against.toFixed(0)} Prieš</span>
+                    <span className="text-vote-for">{item.expected.for.toFixed(0)} Už</span>{' / '}
+                    <span className="text-destructive">{item.expected.against.toFixed(0)} Prieš</span>
                     <span className="text-muted-foreground ml-3">Faktinė:</span>{' '}
-                    <span className="text-emerald-400">{item.actual.for} Už</span>{' / '}
-                    <span className="text-rose-400">{item.actual.against} Prieš</span>
+                    <span className="text-vote-for">{item.actual.for} Už</span>{' / '}
+                    <span className="text-destructive">{item.actual.against} Prieš</span>
                   </div>
                 </div>
               ))}
@@ -863,7 +870,7 @@ export default function SkaidrumasHubView() {
             <div key={source.name} className="rounded-md border border-border p-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">{source.name}</span>
-                <span className={source.state === 'active' ? 'text-emerald-400 text-xs' : 'text-amber-400 text-xs'}>
+                <span className={source.state === 'active' ? 'text-vote-for text-xs' : 'text-vote-abstain text-xs'}>
                   {source.state === 'active' ? 'aktyvus' : 'dalinis'}
                 </span>
               </div>
