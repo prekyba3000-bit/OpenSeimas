@@ -83,6 +83,10 @@ def get_last_sitting_day():
       * ``mps_present`` — distinct members with a recorded choice. A member who
         did not vote has either no row or a NULL ``vote_choice``, so presence
         is the count of members who actually registered one.
+      * ``mps_present_ids`` — the same members, by id, so the seat map can
+        colour the chamber by who was actually there. Absence is derived by
+        the client as "not in this list", which is the only direction that is
+        safe: the source records choices, not absences.
 
     There is deliberately no outcome breakdown. ``votes.result_type`` is NULL
     on every row because the LRS results feed publishes tallies and no
@@ -104,6 +108,7 @@ def get_last_sitting_day():
                     "sitting_date": None,
                     "vote_count": 0,
                     "mps_present": 0,
+                    "mps_present_ids": [],
                     "days_since": None,
                     "is_recess": False,
                     "outcomes": None,
@@ -117,7 +122,7 @@ def get_last_sitting_day():
 
             cur.execute(
                 """
-                SELECT COUNT(DISTINCT mv.politician_id) AS n
+                SELECT DISTINCT mv.politician_id AS id
                 FROM mp_votes mv
                 JOIN votes v ON v.seimas_vote_id = mv.vote_id
                 WHERE v.sitting_date = %s
@@ -125,7 +130,8 @@ def get_last_sitting_day():
                 """,
                 (sitting_date,),
             )
-            mps_present = cur.fetchone()["n"]
+            present_ids = [str(r["id"]) for r in cur.fetchall()]
+            mps_present = len(present_ids)
 
             # Counted rather than assumed absent: a member is only "not
             # present" if the source recorded no choice for them all day.
@@ -144,6 +150,7 @@ def get_last_sitting_day():
         "sitting_date": sitting_date.isoformat(),
         "vote_count": vote_count,
         "mps_present": mps_present,
+        "mps_present_ids": present_ids,
         "days_since": days_since,
         "is_recess": days_since > RECESS_AFTER_DAYS,
         # None, not zeroes: the source publishes no outcome field, so the

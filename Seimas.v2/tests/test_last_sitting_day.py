@@ -20,25 +20,29 @@ from backend.main import app
 
 def _fake_db(*, sitting_date, vote_count, mps_present, decided=0):
     """Cursor mock keyed on distinctive fragments of each query."""
+    present_rows = [{"id": f"mp-{i}"} for i in range(mps_present)]
 
-    def _row_for(sql):
+    def _result_for(sql):
         if "MAX(sitting_date)" in sql:
-            return {"d": sitting_date}
-        if "COUNT(DISTINCT mv.politician_id)" in sql:
-            return {"n": mps_present}
+            return {"d": sitting_date}, None
+        if "DISTINCT mv.politician_id" in sql:
+            return None, present_rows
         if "result_type IS NOT NULL" in sql:
-            return {"decided": decided}
+            return {"decided": decided}, None
         if "COUNT(*) AS n FROM votes" in sql:
-            return {"n": vote_count}
+            return {"n": vote_count}, None
         raise AssertionError(f"unexpected query: {sql}")
 
     @contextmanager
     def fake_get_db():
         cur = MagicMock()
-        cur.execute.side_effect = lambda sql, params=None: setattr(
-            cur, "_row", _row_for(sql)
-        )
+
+        def execute(sql, params=None):
+            cur._row, cur._rows = _result_for(sql)
+
+        cur.execute.side_effect = execute
         cur.fetchone.side_effect = lambda: cur._row
+        cur.fetchall.side_effect = lambda: cur._rows
         cm = MagicMock()
         cm.__enter__.return_value = cur
         cm.__exit__.return_value = None
@@ -70,6 +74,7 @@ async def test_reports_counted_facts(monkeypatch):
     body = resp.json()
     assert body["vote_count"] == 61
     assert body["mps_present"] == 127
+    assert len(body["mps_present_ids"]) == 127
     assert body["days_since"] == 3
 
 
@@ -129,3 +134,4 @@ async def test_empty_database_does_not_invent_a_sitting_day(monkeypatch):
     assert body["sitting_date"] is None
     assert body["days_since"] is None
     assert body["is_recess"] is False
+    assert body["mps_present_ids"] == []

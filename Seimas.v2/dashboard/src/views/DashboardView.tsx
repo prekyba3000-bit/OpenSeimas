@@ -53,6 +53,14 @@ export const DashboardView = () => {
         queryKey: ['dashboard', 'lastSittingDay'],
         queryFn: () => api.getLastSittingDay(),
     });
+    // The most recent vote, for the seat map's „Balsavimas" encoding. Enabled
+    // only once the list has arrived, so it never fetches /votes/undefined.
+    const latestVoteId = votesQ.data?.[0]?.id;
+    const latestVoteQ = useQuery({
+        queryKey: ['votes', 'detail', latestVoteId],
+        queryFn: () => api.getVote(latestVoteId!),
+        enabled: Boolean(latestVoteId),
+    });
     const freshnessQ = useQuery({
         queryKey: ['dashboard', 'freshness'],
         queryFn: () => api.getFreshness(),
@@ -105,7 +113,12 @@ export const DashboardView = () => {
                                 {stats ? occupancyLabel(stats) : `${mps.length} nariai`}
                             </span>
                         </div>
-                        <SeimasMap mps={mps} compact />
+                        <SeimasMap
+                            mps={mps}
+                            compact
+                            latestVote={latestVoteQ.data ?? null}
+                            lastSittingDay={sitting}
+                        />
                     </Card>
                 </div>
 

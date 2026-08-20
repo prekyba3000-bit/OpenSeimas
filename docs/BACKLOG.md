@@ -75,6 +75,23 @@ this list was built by grep and grep missed a whole pair.
 
 Depends on: nothing. Serves 2028 indirectly (smaller surface, faster review).
 
+### Apygarda (constituency) data is entirely absent
+Migration 010 added `constituency_number`, `constituency_name` and
+`election_type` to `politicians`. All three are NULL for all 148 rows —
+the columns were created and never populated.
+
+This is why „Rask savo narį" on the landing is a **name** search rather than
+the district lookup the redesign asked for. A district input needs somewhere
+to look the district up, and inventing one would be the exact failure the
+project exists to avoid.
+
+Work: source the VRK single-mandate results (which apygarda each member won,
+and the multimandate list members), populate the columns, then the landing
+affordance can become „įrašyk savo miestą → tavo apygardos narys".
+
+Serves October 2028 directly: „who is *my* MP" is the first question a
+first-time voter asks, and right now the platform cannot answer it.
+
 ### Phantom CSS variables — a second sweep is warranted
 The „Jaukumas“ skin found sixteen CSS custom properties referenced by live
 components and defined nowhere: `--text-primary`, `--text-secondary`,
@@ -94,6 +111,39 @@ guard preventing the next one.** A build-time check that every `var(--x)` in
 doing before the next skin change, not after.
 
 Depends on: nothing.
+
+### Party strings — the same faction under two spellings
+`politicians.current_party` carries variants that the seat map colours as
+separate factions, because they are separate strings:
+
+| Members | String |
+| ---: | --- |
+| 48 | `Lietuvos socialdemokratų partijos frakcija` |
+| 5 | `Lietuvos socialdemokratų partija` |
+| 26 | `Tėvynės sąjungos-Lietuvos krikščionių demokratų frakcija` |
+| 2 | `Tėvynės sąjunga-Lietuvos krikščionys demokratai` |
+| 9 | `Liberalų  sąjūdžio frakcija` (two spaces) |
+| 2 | `Liberalų sąjūdis` |
+| 19 | `„Nemuno aušros“ frakcija` |
+| 1 | `Politinė partija „Nemuno Aušra“` |
+| 1 | `Išsikėlė pats` |
+
+The pattern is a party name where a faction name belongs, which suggests the
+ingest writes two different source fields into one column.
+
+**This must be settled at the source, not in the UI.** Party membership and
+faction membership are genuinely different things in the Seimas — a member can
+belong to a party and sit with a different group, or with none — so folding
+the variants together in `partyColors.ts` would assert that 53 members sit
+with LSDP when the data says 48 do and 5 carry a string nobody has checked.
+Until someone confirms what these five rows mean, each string keeps its own
+legend entry under its own name.
+
+Work: find where `current_party` is populated in the ingest, determine whether
+the variants are the party field leaking in or genuinely unaffiliated members,
+and either normalise at ingest or add a separate faction column.
+
+Depends on: nothing. Blocks: an accurate seat count per faction, anywhere.
 
 ### Vote outcomes — source gap
 `votes.result_type` is NULL on all 5,279 rows because **the LRS source publishes
