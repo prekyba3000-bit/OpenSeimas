@@ -12,6 +12,7 @@ import {
   CIVIC_DIMENSION_LABELS_LT,
   CIVIC_DIMENSION_ORDER,
   readMpDimension,
+  DIMENSION_UNAVAILABLE_LT,
   type MpCivicDimension,
 } from '../utils/mpLegacyDimensions';
 import { toastErrorDeduped } from '../utils/toastDeduped';
@@ -30,6 +31,28 @@ const DEFAULT_PHOTO =
 
 const SKAIDRUMO_HELP_LT =
   'Skaidrumo indeksas atitinka modelio vientisumo balą (0–100), susietą su forensinių variklių korekcijomis (forensic_breakdown.*), kai jos prieinamos. Žalia / geltona / raudona žymė priklauso nuo total_forensic_adjustment.';
+
+/**
+ * A metric value, or an honest blank.
+ *
+ * These three call sites read `(readMpDimension(row, dim) ?? 0).toFixed(1)`,
+ * which printed „0.0“ for a member whose metric has no source data — the same
+ * disease as the „DEFERRED“ badge and the hardcoded status panel: a display
+ * asserting something it did not know. A column is only shown when at least
+ * one member has data for it, but within a shown column an individual member
+ * can still be missing, and 0.0 in a ranked table reads as "worst", not as
+ * "unknown".
+ */
+function DimensionValue({ value }: { value: number | null }) {
+  if (value === null) {
+    return (
+      <span className="text-muted-foreground" title={DIMENSION_UNAVAILABLE_LT}>
+        —
+      </span>
+    );
+  }
+  return <>{value.toFixed(1)}</>;
+}
 
 export default function StebsenaView() {
   const navigate = useNavigate();
@@ -281,7 +304,7 @@ export default function StebsenaView() {
                         <div key={dim} className="flex items-baseline justify-between gap-2">
                           <dt className="text-xs text-foreground/70">{CIVIC_DIMENSION_LABELS_LT[dim]}</dt>
                           <dd className="font-mono tabular-nums text-sm text-foreground">
-                            {(readMpDimension(row, dim) ?? 0).toFixed(1)}
+                            <DimensionValue value={readMpDimension(row, dim)} />
                           </dd>
                         </div>
                       ))}
@@ -378,10 +401,10 @@ export default function StebsenaView() {
                                 row.forensicBreakdown?.totalForensicAdjustment ?? 0,
                               )}`}
                             />
-                            {(readMpDimension(row, dim) ?? 0).toFixed(1)}
+                            <DimensionValue value={readMpDimension(row, dim)} />
                           </div>
                         ) : (
-                          (readMpDimension(row, dim) ?? 0).toFixed(1)
+                          <DimensionValue value={readMpDimension(row, dim)} />
                         )}
                       </td>
                     ))}

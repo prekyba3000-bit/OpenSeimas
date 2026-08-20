@@ -13,6 +13,7 @@ import {
   factionEncoding,
   voteEncoding,
   presenceEncoding,
+  hasRecordedChoices,
 } from './seatMapModes';
 import type { LastSittingDay, VoteDetail } from '../services/api';
 
@@ -117,7 +118,9 @@ export function SeimasMap({
     const list: Array<{ id: SeatMode; label: string }> = [
       { id: 'frakcijos', label: 'Frakcijos' },
     ];
-    if (latestVote) list.push({ id: 'balsavimas', label: 'Balsavimas' });
+    // Withheld when the source published no per-member results for this vote
+    // — see hasRecordedChoices. An all-absent chamber is a claim, not a gap.
+    if (hasRecordedChoices(latestVote)) list.push({ id: 'balsavimas', label: 'Balsavimas' });
     if (lastSittingDay?.mps_present_ids?.length) {
       list.push({ id: 'dalyvavimas', label: 'Dalyvavimas' });
     }
