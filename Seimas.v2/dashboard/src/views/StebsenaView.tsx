@@ -49,10 +49,12 @@ export default function StebsenaView() {
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
   const getIntDotClass = (adjustment: number) => {
-    if (adjustment === 0) return 'bg-emerald-300';
-    if (adjustment >= -20) return 'bg-yellow-300';
-    if (adjustment >= -40) return 'bg-orange-300';
-    return 'bg-red-300';
+    // A four-step severity ramp, not a traffic light: clean → attention →
+    // clay. Nothing here is a pass/fail verdict on a person.
+    if (adjustment === 0) return 'bg-vote-for';
+    if (adjustment >= -20) return 'bg-attention/60';
+    if (adjustment >= -40) return 'bg-attention';
+    return 'bg-destructive';
   };
 
   const getIntegrityTooltip = (row: MpRow) => {
@@ -136,7 +138,7 @@ export default function StebsenaView() {
   const SortHeader = ({ label, keyName }: { label: string; keyName: SortKey }) => (
     <button
       type="button"
-      className="inline-flex min-h-11 items-center gap-1 py-2 text-xs uppercase tracking-wider text-[#A9B1D6]/70 hover:text-[#A9B1D6]"
+      className="inline-flex min-h-11 items-center gap-1 py-2 text-sm text-muted-foreground hover:text-foreground"
       onClick={() => toggleSort(keyName)}
     >
       {label}
@@ -156,24 +158,24 @@ export default function StebsenaView() {
 
   if (loading) {
     return (
-      <Card className="p-12 text-center text-[#A9B1D6] flex flex-col items-center justify-center min-h-[300px] bg-[#2D2E3A] border-[#4E597B] rounded-2xl">
-        <div className="animate-spin w-8 h-8 border-2 border-[#7AA2F7] border-t-transparent rounded-full mb-4" />
+      <Card className="p-12 text-center text-foreground flex flex-col items-center justify-center min-h-[300px] bg-card border-border rounded-xl">
+        <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full mb-4" />
         Kraunamas sąrašas iš {loadSourceLabel}…
-        {slowNetwork && <p className="mt-3 text-xs text-[#A9B1D6]/70">Tinklas lėtas, bandoma dar kartą.</p>}
+        {slowNetwork && <p className="mt-3 text-xs text-foreground/70">Tinklas lėtas, bandoma dar kartą.</p>}
       </Card>
     );
   }
 
   return (
-    <div className="space-y-6 text-[#A9B1D6]">
+    <div className="space-y-6 text-foreground">
       <div className="flex items-center gap-3">
-        <Trophy className="w-7 h-7 text-[#7AA2F7]" />
+        <Trophy className="w-7 h-7 text-primary" />
         <div>
-          <h2 className="text-3xl font-bold text-[#A9B1D6]">Pasisakymai ir balsavimai</h2>
-          <p className="text-sm text-[#A9B1D6]/70">
+          <h2 className="text-3xl font-bold text-foreground">Pasisakymai ir balsavimai</h2>
+          <p className="text-sm text-foreground/70">
             Lentelė pagal viešus stebėsenos rodiklius. Rodomi tik tie rodikliai, kuriuos šiandien remia įkelti
             duomenys (žr.{' '}
-            <NavLink to="/dashboard/methodology" className="text-[#7AA2F7] underline">
+            <NavLink to="/dashboard/methodology" className="text-primary underline">
               metodiką
             </NavLink>
             ).
@@ -181,34 +183,34 @@ export default function StebsenaView() {
         </div>
       </div>
 
-      <Card className="p-4 md:p-6 bg-[#1A1B26] border-[#4E597B] rounded-2xl space-y-3">
-        <p className="text-sm text-[#A9B1D6]/90 leading-relaxed">
-          Tai <strong className="text-[#A9B1D6]">ne</strong> oficialus Seimo reitingas. Rodomi laukai ateina iš
+      <Card className="p-4 md:p-6 bg-muted border-border rounded-xl space-y-3">
+        <p className="text-sm text-foreground/90 leading-relaxed">
+          Tai <strong className="text-foreground">ne</strong> oficialus Seimo reitingas. Rodomi laukai ateina iš
           stebėsenos API. Tuščios arba klaidingos eilutės reiškia API triktį arba trūkstamus duomenis — žr. būseną
           žemiau.
         </p>
         {hiddenDimensions.length > 0 && (
-          <p className="text-xs text-[#A9B1D6]/70 leading-relaxed">
+          <p className="text-xs text-foreground/70 leading-relaxed">
             Kol kas nerodoma:{' '}
-            <span className="text-[#A9B1D6]">
+            <span className="text-foreground">
               {hiddenDimensions.map((dim) => CIVIC_DIMENSION_LABELS_LT[dim]).join(', ')}
             </span>
             . Šių rodiklių šaltinio duomenys dar neįkelti, todėl jų reikšmės būtų klaidinančios.
           </p>
         )}
         {loadError && (
-          <ProblemDetailsNotice error={requestError} className="text-sm border border-amber-500/30 rounded-lg px-3 py-2 bg-amber-500/5 text-amber-400" />
+          <ProblemDetailsNotice error={requestError} className="text-sm border border-attention/40 rounded-lg px-3 py-2 bg-attention/10 text-foreground" />
         )}
       </Card>
 
       {!loadError && sorted.length === 0 && (
-        <Card className="p-8 text-center bg-[#2D2E3A] border-[#4E597B] rounded-2xl">
-          <p className="text-[#A9B1D6] mb-2">Sąrašas tuščias</p>
-          <p className="text-sm text-[#A9B1D6]/70 max-w-lg mx-auto">
+        <Card className="p-8 text-center bg-card border-border rounded-xl">
+          <p className="text-foreground mb-2">Sąrašas tuščias</p>
+          <p className="text-sm text-foreground/70 max-w-lg mx-auto">
             API grąžino tuščią masyvą. Galimos priežastys: dar nesinchronizuoti įrašai, kita aplinka arba išjungtas
             endpoint.
           </p>
-          <NavLink to="/dashboard/methodology" className="inline-block mt-4 text-sm text-[#7AA2F7] underline">
+          <NavLink to="/dashboard/methodology" className="inline-block mt-4 text-sm text-primary underline">
             Metodika ir apribojimai
           </NavLink>
         </Card>
@@ -230,7 +232,7 @@ export default function StebsenaView() {
                 id="stebesena-sort"
                 value={sortKey}
                 onChange={(e) => setSortKey(e.target.value as SortKey)}
-                className="min-h-11 flex-1 rounded-lg border border-[#4E597B] bg-[#2D2E3A] px-3 text-sm text-[#A9B1D6]"
+                className="min-h-11 flex-1 rounded-lg border border-border bg-card px-3 text-sm text-foreground"
               >
                 {sortOptions.map((opt) => (
                   <option key={opt.key} value={opt.key}>
@@ -241,7 +243,7 @@ export default function StebsenaView() {
               <button
                 type="button"
                 onClick={() => setSortDirection((d) => (d === 'asc' ? 'desc' : 'asc'))}
-                className="inline-flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-lg border border-[#4E597B] bg-[#2D2E3A] px-3 text-sm text-[#A9B1D6]"
+                className="inline-flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-lg border border-border bg-card px-3 text-sm text-foreground"
                 aria-label={sortDirection === 'asc' ? 'Rikiuoti mažėjančiai' : 'Rikiuoti didėjančiai'}
               >
                 <ArrowUpDown className="h-4 w-4" />
@@ -255,30 +257,30 @@ export default function StebsenaView() {
                   <button
                     type="button"
                     onClick={() => navigate(`/dashboard/mps/${row.mp.id}`)}
-                    className="w-full rounded-2xl border border-[#4E597B] bg-[#2D2E3A] p-4 text-left"
+                    className="w-full rounded-xl border border-border bg-card p-4 text-left"
                   >
                     <div className="flex items-center gap-3">
-                      <span className="font-bold text-[#7AA2F7]">#{row.rank}</span>
+                      <span className="font-bold text-primary">#{row.rank}</span>
                       <img
                         src={row.mp.photo || DEFAULT_PHOTO}
                         alt=""
-                        className="h-10 w-10 rounded-xl object-cover bg-[#1A1B26] ring-1 ring-[#4E597B]"
+                        className="h-10 w-10 rounded-xl object-cover bg-muted ring-1 ring-border"
                         onError={(e) => {
                           (e.target as HTMLImageElement).src = DEFAULT_PHOTO;
                         }}
                       />
                       <span className="min-w-0 flex-1">
-                        <span className="block font-semibold text-[#A9B1D6]">{row.mp.name}</span>
-                        <span className="block text-xs text-[#A9B1D6]/70">
+                        <span className="block font-semibold text-foreground">{row.mp.name}</span>
+                        <span className="block text-xs text-foreground/70">
                           {row.faction?.trim() || '—'}
                         </span>
                       </span>
                     </div>
-                    <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 border-t border-[#4E597B]/40 pt-3">
+                    <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 border-t border-border/40 pt-3">
                       {visibleDimensions.map((dim) => (
                         <div key={dim} className="flex items-baseline justify-between gap-2">
-                          <dt className="text-xs text-[#A9B1D6]/70">{CIVIC_DIMENSION_LABELS_LT[dim]}</dt>
-                          <dd className="font-mono tabular-nums text-sm text-[#A9B1D6]">
+                          <dt className="text-xs text-foreground/70">{CIVIC_DIMENSION_LABELS_LT[dim]}</dt>
+                          <dd className="font-mono tabular-nums text-sm text-foreground">
                             {(readMpDimension(row, dim) ?? 0).toFixed(1)}
                           </dd>
                         </div>
@@ -290,10 +292,10 @@ export default function StebsenaView() {
             </ul>
           </div>
 
-          <Card className="hidden overflow-x-auto p-0 bg-[#1A1B26] border-[#4E597B] rounded-2xl shadow-[0_0_35px_rgba(122,162,247,0.16)] md:block">
+          <Card className="hidden overflow-x-auto p-0 bg-muted border-border rounded-xl shadow-card md:block">
             <table className="w-full min-w-[900px]">
               <thead>
-                <tr className="border-b border-[#4E597B] bg-[#2D2E3A]">
+                <tr className="border-b border-border bg-card">
                   <th className="text-left p-4">
                     <SortHeader label="Vieta" keyName="rank" />
                   </th>
@@ -312,7 +314,7 @@ export default function StebsenaView() {
                             <PopoverTrigger asChild>
                               <button
                                 type="button"
-                                className="p-0.5 rounded text-[#7AA2F7] hover:bg-[#4E597B]/50"
+                                className="p-0.5 rounded text-primary hover:bg-border/50"
                                 aria-label="Skaidrumo indekso paaiškinimas"
                               >
                                 <HelpCircle className="w-3.5 h-3.5" />
@@ -322,7 +324,7 @@ export default function StebsenaView() {
                               <p className="font-semibold mb-1">Skaidrumo indeksas</p>
                               <p className="text-muted-foreground leading-relaxed">{SKAIDRUMO_HELP_LT}</p>
                               <p className="mt-2 text-muted-foreground">
-                                API: <code className="text-[10px] bg-muted px-1 rounded">forensic_breakdown</code>
+                                API: <code className="text-xs bg-muted px-1 rounded">forensic_breakdown</code>
                               </p>
                             </PopoverContent>
                           </Popover>
@@ -338,28 +340,28 @@ export default function StebsenaView() {
                 {sorted.map((row) => (
                   <tr
                     key={row.mp.id}
-                    className="border-b border-[#4E597B]/40 bg-[#2D2E3A] hover:bg-[#3B3C4A] cursor-pointer transition-colors"
+                    className="border-b border-border/40 bg-card hover:bg-border cursor-pointer transition-colors"
                     onClick={() => navigate(`/dashboard/mps/${row.mp.id}`)}
                   >
-                    <td className="p-4 font-bold text-[#7AA2F7]">#{row.rank}</td>
+                    <td className="p-4 font-bold text-primary">#{row.rank}</td>
                     <td className="p-4">
                       <div className="flex items-center gap-3">
                         <img
                           src={row.mp.photo || DEFAULT_PHOTO}
                           alt={row.mp.name}
-                          className="w-9 h-9 rounded-xl object-cover bg-[#1A1B26] ring-1 ring-[#4E597B]"
+                          className="w-9 h-9 rounded-xl object-cover bg-muted ring-1 ring-border"
                           onError={(e) => {
                             (e.target as HTMLImageElement).src = DEFAULT_PHOTO;
                           }}
                         />
-                        <span className="font-semibold text-[#A9B1D6]">{row.mp.name}</span>
+                        <span className="font-semibold text-foreground">{row.mp.name}</span>
                       </div>
                     </td>
-                    <td className="p-4 text-[#A9B1D6]/85">
+                    <td className="p-4 text-foreground/85">
                       {row.faction?.trim() ? (
                         row.faction.trim()
                       ) : (
-                        <span className="text-[#A9B1D6]/45" aria-hidden>
+                        <span className="text-foreground/45" aria-hidden>
                           —
                         </span>
                       )}
@@ -372,7 +374,7 @@ export default function StebsenaView() {
                             title={getIntegrityTooltip(row)}
                           >
                             <span
-                              className={`inline-block w-3 h-3 rounded-full shadow-[0_0_10px_rgba(255,255,255,0.25)] ${getIntDotClass(
+                              className={`inline-block w-3 h-3 rounded-full ${getIntDotClass(
                                 row.forensicBreakdown?.totalForensicAdjustment ?? 0,
                               )}`}
                             />

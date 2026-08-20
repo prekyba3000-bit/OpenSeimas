@@ -74,7 +74,7 @@ function NavButton({
         'flex items-center gap-3 px-3 min-h-11 py-2 rounded-md transition-colors text-sm font-medium',
         isActive
           ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-          : 'text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-white',
+          : 'text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground',
       )}
     >
       <item.icon size={18} />
@@ -105,15 +105,15 @@ export function MainLayout() {
         )}
       >
         <div className="h-auto min-h-16 flex flex-col justify-center px-6 py-4 border-b border-sidebar-border gap-1">
-          <span className="font-bold text-white tracking-wide text-sm">Atviras Seimas</span>
-          <span className="text-xs text-sidebar-primary-foreground/70 leading-snug">
+          <span className="font-serif font-semibold text-sidebar-foreground tracking-tight text-base">Atviras Seimas</span>
+          <span className="text-xs text-muted-foreground leading-snug">
             Neoficialus skaidrumo portalas — ne LR Seimo svetainė
           </span>
         </div>
 
         <div className="flex-1 flex flex-col py-4 px-3 overflow-y-auto space-y-4">
           <div>
-            <p className="px-3 mb-1 text-[10px] uppercase tracking-wider text-sidebar-foreground/50">Duomenys</p>
+            <p className="px-3 mb-1 text-xs font-medium text-muted-foreground">Duomenys</p>
             <div className="space-y-1">
               {dataNavItems.map((item) => (
                 <NavButton key={item.path} item={item} pathname={pathname} onNavigate={closeSidebar} />
@@ -121,7 +121,7 @@ export function MainLayout() {
             </div>
           </div>
           <div>
-            <p className="px-3 mb-1 text-[10px] uppercase tracking-wider text-sidebar-foreground/50">Skaidrumas</p>
+            <p className="px-3 mb-1 text-xs font-medium text-muted-foreground">Skaidrumas</p>
             <div className="space-y-1">
               {transparencyNavItems.map((item) => (
                 <NavButton key={item.path} item={item} pathname={pathname} onNavigate={closeSidebar} />
@@ -133,7 +133,7 @@ export function MainLayout() {
         <div className="p-4 border-t border-sidebar-border text-xs text-sidebar-foreground/60 space-y-2">
           <p>
             Duomenys iš viešų šaltinių ir projekto DB. Žr.{' '}
-            <NavLink to="/dashboard/sources" className="inline-flex min-h-6 items-center text-sidebar-primary-foreground/90 underline">
+            <NavLink to="/dashboard/sources" className="inline-flex min-h-6 items-center text-primary underline">
               šaltinių puslapį
             </NavLink>
             .
@@ -153,7 +153,7 @@ export function MainLayout() {
             >
               <Menu size={20} />
             </button>
-            <h1 className="text-lg font-semibold text-foreground md:block truncate print:text-xl">{pageTitle(pathname)}</h1>
+            <h1 className="text-xl font-semibold text-foreground md:block truncate print:text-2xl">{pageTitle(pathname)}</h1>
           </div>
 
           <div className="flex items-center gap-2 shrink-0 print:hidden">
@@ -164,7 +164,7 @@ export function MainLayout() {
             >
               <Search className="h-4 w-4" />
               <span>Ko ieškote?</span>
-              <kbd className="pointer-events-none hidden md:inline-flex h-5 select-none items-center gap-0.5 rounded border border-border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
+              <kbd className="pointer-events-none hidden md:inline-flex h-5 select-none items-center gap-0.5 rounded border border-border bg-muted px-1.5 font-mono text-xs font-medium text-muted-foreground">
                 Ctrl+K
               </kbd>
             </button>

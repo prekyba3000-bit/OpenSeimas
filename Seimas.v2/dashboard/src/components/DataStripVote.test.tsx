@@ -29,7 +29,7 @@ describe("DataStripVote outcome honesty", () => {
     // The title still renders — the vote happened, only its result is unknown.
     expect(screen.getByText(baseProps.title)).toBeInTheDocument();
 
-    for (const word of ["DEFERRED", "PASSED", "FAILED", "Atidėta", "Priimta", "Atmesta"]) {
+    for (const word of ["DEFERRED", "PASSED", "FAILED", "Atidėta", "Priimta", "Nepriimta"]) {
       expect(screen.queryByText(word)).not.toBeInTheDocument();
     }
   });
@@ -39,19 +39,23 @@ describe("DataStripVote outcome honesty", () => {
     const edge = container.querySelector<HTMLElement>(".absolute.left-0.top-0.bottom-0.w-1");
     expect(edge).not.toBeNull();
     // A 4px colour bar reads as a verdict; transparent when there is none.
-    expect(edge!.style.backgroundColor).toBe("transparent");
-    expect(edge!.style.boxShadow).toBe("none");
+    // (The colour moved from an inline style to a token class in the redesign;
+    // what is being asserted — no verdict colour — is unchanged.)
+    expect(edge!.className).toContain("bg-transparent");
+    expect(edge!.className).not.toMatch(/bg-vote-/);
   });
 
   it("still renders a real outcome when the source provides one", () => {
     render(<DataStripVote {...baseProps} outcome="PASSED" />);
-    expect(screen.getByText("PASSED")).toBeInTheDocument();
+    // Rendered in Lithuanian: the badge used to print the English enum value
+    // straight onto the page.
+    expect(screen.getByText("Priimta")).toBeInTheDocument();
   });
 
   it("renders FAILED distinctly from PASSED", () => {
     render(<DataStripVote {...baseProps} outcome="FAILED" />);
-    expect(screen.getByText("FAILED")).toBeInTheDocument();
-    expect(screen.queryByText("PASSED")).not.toBeInTheDocument();
+    expect(screen.getByText("Nepriimta")).toBeInTheDocument();
+    expect(screen.queryByText("Priimta")).not.toBeInTheDocument();
   });
 });
 

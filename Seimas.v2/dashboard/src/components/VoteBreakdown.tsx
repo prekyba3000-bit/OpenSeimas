@@ -1,10 +1,12 @@
 import React from 'react';
 
-// Voting Status colors mapped to CSS variables
+// The three vote choices, on the theme's own tokens. These pointed at
+// --status-success / --status-danger / --status-warning, none of which is
+// defined anywhere — so the bars rendered with no colour at all.
 const VOTING_STATUS_COLORS = {
-  'Už': 'var(--status-success)',      // Green 500 (For)
-  'Prieš': 'var(--status-danger)',    // Red 500 (Against)
-  'Susilaikė': 'var(--status-warning)', // Yellow 500 (Abstain)
+  'Už': 'hsl(var(--vote-for))',
+  'Prieš': 'hsl(var(--vote-against))',
+  'Susilaikė': 'hsl(var(--vote-abstain))',
 };
 
 interface VoteStats {
@@ -33,7 +35,7 @@ function VoteSegment({ percentage, color, label }: VoteSegmentProps) {
       {showText && (
         <span
           className="font-semibold text-sm px-2"
-          style={{ color: 'var(--text-primary)' }}
+          style={{ color: 'hsl(var(--foreground))' }}
         >
           {percentage.toFixed(0)}%
         </span>
@@ -53,7 +55,7 @@ function LegendItem({ label, count, percentage, color }: LegendItemProps) {
   return (
     <div
       className="flex-1 min-w-[200px] flex items-center gap-3 px-4 py-3 rounded-lg"
-      style={{ backgroundColor: 'var(--background-elevated)' }}
+      style={{ backgroundColor: 'hsl(var(--muted))' }}
     >
       <div
         className="w-4 h-4 rounded-full flex-shrink-0"
@@ -61,15 +63,15 @@ function LegendItem({ label, count, percentage, color }: LegendItemProps) {
       />
       <div className="flex-1 min-w-0">
         <div className="flex items-baseline gap-2">
-          <span className="font-medium" style={{ color: 'var(--text-primary)' }}>
+          <span className="font-medium" style={{ color: 'hsl(var(--foreground))' }}>
             {label}
           </span>
-          <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+          <span className="text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>
             {count} votes
           </span>
         </div>
       </div>
-      <div className="font-bold text-lg flex-shrink-0" style={{ color: 'var(--text-primary)' }}>
+      <div className="font-bold text-lg flex-shrink-0" style={{ color: 'hsl(var(--foreground))' }}>
         {percentage.toFixed(1)}%
       </div>
     </div>
@@ -92,13 +94,13 @@ export function VoteBreakdown({ title, stats, totalVotes }: VoteBreakdownProps) 
   return (
     <div
       className="space-y-4 p-6 rounded-xl"
-      style={{ backgroundColor: 'var(--background-surface)' }}
+      style={{ backgroundColor: 'hsl(var(--card))' }}
     >
       {/* Title */}
       {title && (
         <h3
           className="text-lg font-semibold mb-4"
-          style={{ color: 'var(--text-primary)' }}
+          style={{ color: 'hsl(var(--foreground))' }}
         >
           {title}
         </h3>
@@ -107,7 +109,7 @@ export function VoteBreakdown({ title, stats, totalVotes }: VoteBreakdownProps) 
       {/* Multi-Segment Progress Bar */}
       <div
         className="h-12 rounded-xl overflow-hidden flex"
-        style={{ backgroundColor: 'var(--background-elevated)' }}
+        style={{ backgroundColor: 'hsl(var(--muted))' }}
       >
         <VoteSegment
           percentage={forPercentage}

@@ -21,11 +21,11 @@ export type IntegrityBarProps = {
 const LABEL = CIVIC_DIMENSION_LABELS_LT.integrity;
 
 function barTintClass(signal: string | undefined): string {
-  if (!signal) return "bg-[#7AA2F7]";
+  if (!signal) return "bg-primary";
   const s = signal.toLowerCase();
-  if (s.includes("evil") || s.includes("chaotic")) return "bg-rose-500/90";
-  if (s.includes("neutral")) return "bg-amber-400/90";
-  return "bg-[#7AA2F7]";
+  if (s.includes("evil") || s.includes("chaotic")) return "bg-destructive/90";
+  if (s.includes("neutral")) return "bg-attention";
+  return "bg-primary";
 }
 
 export function IntegrityBar({ score, riskTierSignal, className = "" }: IntegrityBarProps) {
