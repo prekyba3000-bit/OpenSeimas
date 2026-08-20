@@ -58,6 +58,23 @@ export function factionEncoding(mps: MpSummary[]): SeatEncoding {
   };
 }
 
+/**
+ * Whether a vote has any recorded per-member choice at all.
+ *
+ * 1,653 of 5,279 votes (31%) have none. Every one carries the LRS comment
+ * „Elektroninėmis priemonėmis gauti individualūs balsavimo rezultatai
+ * neatitinka protokole įrašytų suminių rezultatų“ — the electronic per-member
+ * results disagree with the protocol totals — and the source publishes zeros
+ * rather than figures it does not stand behind.
+ *
+ * Colouring the chamber from one of those would paint 140 hollow seats
+ * labelled „Nedalyvavo“, asserting that the entire Seimas skipped a vote. The
+ * mode is withheld instead.
+ */
+export function hasRecordedChoices(vote: VoteDetail | null): boolean {
+  return (vote?.votes ?? []).some((v) => v.choice != null && v.choice !== "");
+}
+
 export function voteEncoding(vote: VoteDetail | null, seatedIds: string[]): SeatEncoding {
   const byId = new Map<string, string | null>();
   for (const v of vote?.votes ?? []) {

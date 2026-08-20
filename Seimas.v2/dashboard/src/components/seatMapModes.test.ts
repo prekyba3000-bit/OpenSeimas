@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { factionEncoding, voteEncoding, presenceEncoding } from "./seatMapModes";
+import {
+  factionEncoding,
+  voteEncoding,
+  presenceEncoding,
+  hasRecordedChoices,
+} from "./seatMapModes";
 import type { MpSummary, VoteDetail } from "../services/api";
 
 const mp = (id: string, party: string): MpSummary =>
@@ -91,5 +96,16 @@ describe("seat map encodings", () => {
     } as unknown as VoteDetail;
     const enc = voteEncoding(legacy, seated);
     expect(enc.legend.find((e) => e.key === "nedalyvavo")?.count).toBe(3);
+  });
+
+  it("recognises a vote the source published no results for", () => {
+    // 1,653 of 5,279 votes are like this: LRS flags the electronic per-member
+    // results as disagreeing with the protocol totals and publishes zeros.
+    // Colouring the chamber from one would paint 140 seats „Nedalyvavo“ —
+    // asserting the whole Seimas skipped a vote.
+    expect(hasRecordedChoices(vote({ a: null, b: null, c: null }))).toBe(false);
+    expect(hasRecordedChoices(null)).toBe(false);
+    expect(hasRecordedChoices({ id: "1", title: "x", votes: [] } as never)).toBe(false);
+    expect(hasRecordedChoices(vote({ a: "Už", b: null }))).toBe(true);
   });
 });
