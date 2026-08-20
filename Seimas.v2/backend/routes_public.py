@@ -455,8 +455,10 @@ def get_vote(vote_id: str):
                 raise HTTPException(status_code=404, detail="Vote not found")
 
             # mp_votes.vote_id references votes.seimas_vote_id, not votes.id
+            # p.id travels with the row so a client can join a vote to a seat
+            # without matching on display_name.
             cur.execute("""
-                SELECT p.display_name, p.current_party, mv.vote_choice
+                SELECT p.id AS mp_id, p.display_name, p.current_party, mv.vote_choice
                 FROM mp_votes mv
                 JOIN politicians p ON mv.politician_id = p.id
                 WHERE mv.vote_id = %s
@@ -474,6 +476,7 @@ def get_vote(vote_id: str):
                 stats[choice] += 1
                 party_stats[party][choice] += 1
                 mp_votes.append({
+                    "mp_id": str(row["mp_id"]),
                     "name": row["display_name"],
                     "party": party,
                     "choice": choice,
