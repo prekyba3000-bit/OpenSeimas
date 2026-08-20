@@ -153,7 +153,7 @@ export function MainLayout() {
             >
               <Menu size={20} />
             </button>
-            <h1 className="text-xl font-semibold text-foreground md:block truncate print:text-2xl">{pageTitle(pathname)}</h1>
+            <h1 className="text-lg sm:text-xl font-semibold text-foreground md:block truncate print:text-2xl">{pageTitle(pathname)}</h1>
           </div>
 
           <div className="flex items-center gap-2 shrink-0 print:hidden">
