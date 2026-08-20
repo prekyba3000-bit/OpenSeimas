@@ -112,6 +112,41 @@ doing before the next skin change, not after.
 
 Depends on: nothing.
 
+### Vote titles are truncated at 200 characters — 584 of them
+Found while building the grouped votes list, which prints each vote's
+identifier („(Nr. XVP-1766)“) separately so a two-line clamp cannot eat it.
+Some rows had no identifier to print, because the stored title stops
+mid-token:
+
+```
+…nimo“ pakeitimo“ projektas (Nr. XVP-17
+```
+
+Measured: 832 of 5,279 titles do not end in `)`. **584 of them are exactly
+200 characters long**, which is a cap, not a coincidence. (The remaining ~250
+are short titles like „Klausimų grupė“ that genuinely carry no identifier, and
+a handful over 200 that the ingest composes itself for package votes.)
+
+Where it comes from: `ingest_votes_v2.py` prefers `klausimo_pavadinimas` from
+the results feed and falls back to the agenda feed's `pavadinimas`. Checked
+the live results XML for one affected vote (`balsavimo_id=-59981`) — it has no
+`BalsavimoRezultataiAntraštė` element and no `klausimo_pavadinimas` at all, so
+the value must be the agenda `pavadinimas`. **Not yet confirmed** whether LRS
+caps that field at 200 or something on our side does; confirming it needs one
+agenda fetch for a known `posedzio_id`, which the probe used here could not
+guess.
+
+Why it matters: the identifier is the only thing distinguishing several votes
+on the same day that otherwise read identically. Losing it means a citizen
+cannot tell which motion they are looking at from the list.
+
+Work: confirm the source of the cap, then either re-request the field
+untruncated or resolve titles from the agenda's `registracijos_nr` and
+re-ingest. Roughly 11% of all votes are affected.
+
+Depends on: nothing. Related to [the tally backfill](#) — both are re-reads of
+the same 5,279 votes and should run in one pass if possible.
+
 ### Party strings — the same faction under two spellings
 `politicians.current_party` carries variants that the seat map colours as
 separate factions, because they are separate strings:

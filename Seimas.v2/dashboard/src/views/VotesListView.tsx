@@ -4,14 +4,42 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { FileText, Search, Calendar, CheckCircle, XCircle, AlertCircle, ChevronRight } from 'lucide-react';
 import { motion } from 'motion/react';
 import { api, VoteSummary } from '../services/api';
+import { flattenVotes, outcomesVary, VoteListItem } from '../utils/voteGrouping';
+import { formatLtDateLong } from '../utils/ltDate';
+import { ltPlural } from '../utils/ltPlural';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import { ProblemDetailsNotice } from '../components/ProblemDetailsNotice';
 import { LT } from '../i18n/lt';
+import { cn } from '../components/ui/utils';
+import { formatLtDateShort } from '../utils/ltDate';
 
 const PAGE_SIZE = 50;
 
-export const VoteCard = ({ vote, onClick }: { vote: VoteSummary; onClick: () => void }) => {
+export const VoteCard = ({
+    vote,
+    onClick,
+    base,
+    suffix,
+    clustered = false,
+    showOutcome = true,
+    showDate = true,
+}: {
+    vote: VoteSummary;
+    onClick: () => void;
+    /** The wordy opening. Clamped to two lines. Empty on a clustered row,
+     *  where the opening is already stated once in the header above. */
+    base?: string;
+    /** The identifier. Rendered on its own line and never clamped — it is the
+     *  only thing telling two otherwise identical rows apart. */
+    suffix?: string | null;
+    clustered?: boolean;
+    /** Off when every row in the list carries the same outcome: a badge that
+     *  never differs costs a glance and discriminates nothing. */
+    showOutcome?: boolean;
+    /** Off inside a date-grouped list, where the header already said the date. */
+    showDate?: boolean;
+}) => {
     const getResultIcon = (result: string | null) => {
         if (!result) return <AlertCircle className="w-5 h-5 text-primary" />;
         const r = result.toLowerCase();
@@ -24,26 +52,56 @@ export const VoteCard = ({ vote, onClick }: { vote: VoteSummary; onClick: () => 
         <Card
             hover
             onClick={onClick}
-            className="cursor-pointer group border-l-4 border-l-transparent hover:border-l-primary p-5"
+            className={cn(
+                'cursor-pointer group border-l-4 border-l-transparent hover:border-l-primary p-5',
+                clustered && 'ml-4 sm:ml-8',
+            )}
         >
             <div className="flex items-start gap-4">
                 <div className="mt-1">{getResultIcon(vote.result)}</div>
                 <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1.5">
-                        <Calendar className="w-3 h-3" />
-                        {vote.date}
-                        {vote.result && (
-                            <>
-                                <span className="w-1 h-1 rounded-full bg-muted-foreground/50" />
-                                <span className="text-xs font-semibold text-muted-foreground">
-                                    {vote.result}
-                                </span>
-                            </>
-                        )}
-                    </div>
-                    <h3 className="text-base font-semibold text-card-foreground group-hover:text-primary transition-colors line-clamp-2 leading-relaxed">
-                        {vote.title}
-                    </h3>
+                    {(showDate || (showOutcome && vote.result)) && (
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1.5">
+                            {showDate && (
+                                <>
+                                    <Calendar className="w-3 h-3" aria-hidden />
+                                    {formatLtDateShort(vote.date) ?? vote.date}
+                                </>
+                            )}
+                            {showOutcome && vote.result && (
+                                <>
+                                    {showDate && <span className="w-1 h-1 rounded-full bg-muted-foreground/50" />}
+                                    <span className="text-xs font-semibold text-muted-foreground">
+                                        {vote.result}
+                                    </span>
+                                </>
+                            )}
+                        </div>
+                    )}
+                    {/* The clamp applies to the opening only. The identifier
+                        gets its own line and is never clamped: it was being
+                        cut mid-token („…projektas (Nr. XVP-17“), which removed
+                        the one part of the row a reader needs. */}
+                    {base ? (
+                        <h3 className="text-base font-semibold text-card-foreground group-hover:text-primary transition-colors leading-relaxed line-clamp-2">
+                            {base}
+                        </h3>
+                    ) : null}
+                    {suffix && (
+                        <p
+                            className={cn(
+                                'font-mono text-sm text-muted-foreground',
+                                base ? 'mt-1' : 'text-card-foreground',
+                            )}
+                        >
+                            {suffix}
+                        </p>
+                    )}
+                    {!base && !suffix && (
+                        <h3 className="text-base font-semibold text-card-foreground line-clamp-2">
+                            {vote.title}
+                        </h3>
+                    )}
                 </div>
                 <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors self-center shrink-0" />
             </div>
@@ -81,14 +139,20 @@ const VotesListView = () => {
         void fetchNextPage();
     };
 
-    const filtered = votes.filter(v =>
-        v.title.toLowerCase().includes(search.toLowerCase())
+    const filtered = useMemo(
+        () => votes.filter(v => v.title.toLowerCase().includes(search.toLowerCase())),
+        [votes, search],
     );
 
+    // Date headers and cluster headers are rows in the same virtual list, so
+    // they scroll with the votes they head instead of floating above them.
+    const items: VoteListItem[] = useMemo(() => flattenVotes(filtered), [filtered]);
+    const showOutcome = useMemo(() => outcomesVary(filtered), [filtered]);
+
     const virtualizer = useVirtualizer({
-        count: filtered.length,
+        count: items.length,
         getScrollElement: () => listParentRef.current,
-        estimateSize: () => VOTE_ROW_ESTIMATE_PX,
+        estimateSize: (i) => (items[i]?.kind === 'vote' ? VOTE_ROW_ESTIMATE_PX : 48),
         overscan: 8,
     });
 
@@ -164,10 +228,11 @@ const VotesListView = () => {
                                 role="presentation"
                             >
                                 {virtualizer.getVirtualItems().map((vi) => {
-                                    const vote = filtered[vi.index];
+                                    const item = items[vi.index];
+                                    if (!item) return null;
                                     return (
                                         <div
-                                            key={vote.id}
+                                            key={item.key}
                                             role="row"
                                             aria-rowindex={vi.index + 1}
                                             className="absolute top-0 left-0 w-full pb-3"
@@ -176,7 +241,35 @@ const VotesListView = () => {
                                             ref={virtualizer.measureElement}
                                         >
                                             <div role="gridcell" className="w-full">
-                                                <VoteCard vote={vote} onClick={() => handleVoteClick(vote.id)} />
+                                                {item.kind === 'date' && (
+                                                    <h2 className="pt-4 pb-1 text-base font-semibold text-foreground">
+                                                        {formatLtDateLong(item.date) ?? item.date}
+                                                        <span className="ml-2 text-sm font-normal text-muted-foreground">
+                                                            {item.count}{' '}
+                                                            {ltPlural(item.count, 'balsavimas', 'balsavimai', 'balsavimų')}
+                                                        </span>
+                                                    </h2>
+                                                )}
+                                                {item.kind === 'cluster' && (
+                                                    <p className="pt-2 pb-1 pl-4 sm:pl-8 text-sm text-muted-foreground">
+                                                        {item.base}
+                                                        <span className="ml-2">
+                                                            — {item.count}{' '}
+                                                            {ltPlural(item.count, 'balsavimas', 'balsavimai', 'balsavimų')}
+                                                        </span>
+                                                    </p>
+                                                )}
+                                                {item.kind === 'vote' && (
+                                                    <VoteCard
+                                                        vote={item.vote}
+                                                        base={item.base}
+                                                        suffix={item.suffix}
+                                                        clustered={item.clustered}
+                                                        showOutcome={showOutcome}
+                                                        showDate={false}
+                                                        onClick={() => handleVoteClick(item.vote.id)}
+                                                    />
+                                                )}
                                             </div>
                                         </div>
                                     );
