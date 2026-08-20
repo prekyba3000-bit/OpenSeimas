@@ -208,10 +208,18 @@ export function SeimasMap({
           <div className="relative w-full sm:w-72">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden />
             <input
-              type="search"
+              // `type="text"`, not `type="search"`: a search input brings its
+              // own clear button, which fought with ours.
+              type="text"
               placeholder="Rask savo narį — vardas ar pavardė"
               aria-label="Rask savo narį pagal vardą"
-              className="w-full min-h-11 bg-card border border-input rounded-lg pl-9 pr-9 py-2 text-sm text-foreground focus:ring-2 focus:ring-ring outline-none transition-all"
+              // `placeholder:text-muted-foreground` is not optional. Without it the
+              // colour falls to the user agent's default, and in the Android
+              // WebView that rendered invisible — on the phone this was a box
+              // with a magnifier in it and no indication of what to type. Every
+              // other input in the app already sets it; this one was written
+              // without it.
+              className="w-full min-h-11 bg-card border border-input rounded-lg pl-9 pr-9 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-ring outline-none transition-all"
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
             />
