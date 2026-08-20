@@ -108,7 +108,7 @@ const AlignmentScore = ({ score, label }: { score: number; label: string }) => {
                 <div className={`absolute inset-0 rounded-full border-8 ${ringColor} border-t-transparent animate-spin-slow opacity-50`} />
                 <span className={`text-5xl font-bold ${color}`}>{percentage}%</span>
             </div>
-            <span className="text-sm text-muted-foreground uppercase tracking-widest font-semibold">{label}</span>
+            <span className="text-sm text-muted-foreground font-medium">{label}</span>
         </div>
     );
 };
@@ -265,7 +265,7 @@ const ComparisonView = ({ initialSelected = [null, null] }: ComparisonViewProps)
                                         <div className="grid grid-cols-2 gap-4">
                                             {comparison.mps.map((mp: any) => (
                                                 <div key={mp.id} className="flex flex-col gap-1">
-                                                    <span className="text-xs text-muted-foreground uppercase">{mp.name.split(' ').slice(-1)[0]}</span>
+                                                    <span className="text-xs text-muted-foreground">{mp.name.split(' ').slice(-1)[0]}</span>
                                                     <span className={`text-sm font-bold ${vote.votes[mp.id] === 'Už' ? 'text-vote-for' :
                                                         vote.votes[mp.id] === 'Prieš' ? 'text-destructive' :
                                                             'text-secondary'

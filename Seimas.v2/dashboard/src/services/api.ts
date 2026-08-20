@@ -381,24 +381,30 @@ type _ParsedMpProfileWire = {
   metrics_provenance?: MpProfile["metrics_provenance"];
 } & Record<string, unknown>;
 
+/**
+ * The four engine names are composed here, client-side — they are display
+ * strings, not values from the API — and they were in English. They render as
+ * the section headings of „Kodėl toks balas?“ on every MP profile, which is
+ * one of the most-read surfaces on a Lithuanian-language site.
+ */
 function mapRawForensicBreakdown(raw: _RawForensicBreakdown): ForensicBreakdown {
   return {
     baseRiskScore: raw.base_risk_score,
     baseRiskPenalty: raw.base_risk_penalty,
     benford: {
-      ...mapRawForensicEntry("benford", "Benford's Law Analysis", raw.benford),
+      ...mapRawForensicEntry("benford", "Benfordo dėsnio analizė", raw.benford),
       pValue: raw.benford.p_value,
     },
     chrono: {
-      ...mapRawForensicEntry("chrono", "Chrono-Forensics", raw.chrono),
+      ...mapRawForensicEntry("chrono", "Pataisų laiko analizė", raw.chrono),
       worstZscore: raw.chrono.worst_zscore,
     },
     voteGeometry: {
-      ...mapRawForensicEntry("vote_geometry", "Vote Geometry", raw.vote_geometry),
+      ...mapRawForensicEntry("vote_geometry", "Balsavimo geometrija", raw.vote_geometry),
       maxDeviationSigma: raw.vote_geometry.max_deviation_sigma,
     },
     phantomNetwork: {
-      ...mapRawForensicEntry("phantom", "Phantom Network", raw.phantom_network),
+      ...mapRawForensicEntry("phantom", "Paslėptų ryšių tinklas", raw.phantom_network),
       procurementLinks: raw.phantom_network.procurement_links,
       closestHopCount: raw.phantom_network.closest_hop_count,
       debtorLinks: raw.phantom_network.debtor_links,
