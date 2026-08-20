@@ -1,15 +1,13 @@
 import React from 'react';
+import { formatLtDateLong } from '../utils/ltDate';
 import { useQuery } from '@tanstack/react-query';
 import { AlertCircle } from 'lucide-react';
 import { ApiError } from '../services/api';
 import { trustApi, type MethodologyVersion } from '../services/trust';
 
 function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('lt-LT', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
+  // Shared civic formatter — see utils/ltDate.
+  return formatLtDateLong(iso) ?? iso;
 }
 
 /** Pre-announced but not yet in force — plan §7 requires ≥14 days of notice. */

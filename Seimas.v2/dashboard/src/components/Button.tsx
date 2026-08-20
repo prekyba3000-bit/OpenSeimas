@@ -23,31 +23,30 @@ export const Button = ({
     // Inline styles for dynamic var() support using Figma tokens
     const variantStyles = {
         primary: {
-            // Use neutral surface tint and primary text for accessibility
-            backgroundColor: 'rgba(226,232,240,0.06)',
-            color: 'var(--text-primary)',
-            borderColor: 'var(--border, #E2E8F0)',
+            backgroundColor: 'hsl(var(--primary))',
+            color: 'hsl(var(--primary-foreground))',
+            borderColor: 'hsl(var(--primary))',
         },
         secondary: {
-            backgroundColor: 'var(--background-elevated)',
-            color: 'var(--text-primary)',
-            borderColor: 'var(--glass-border)',
+            backgroundColor: 'hsl(var(--muted))',
+            color: 'hsl(var(--foreground))',
+            borderColor: 'hsl(var(--border))',
         },
         ghost: {
             backgroundColor: 'transparent',
-            color: 'var(--text-secondary)',
+            color: 'hsl(var(--muted-foreground))',
         },
         danger: {
-            backgroundColor: 'var(--status-danger-muted)',
-            color: 'var(--status-danger)',
-            borderColor: 'var(--status-danger)',
+            backgroundColor: 'hsl(var(--vote-against) / 0.1)',
+            color: 'hsl(var(--vote-against))',
+            borderColor: 'hsl(var(--vote-against))',
         },
     };
 
     const sizes = {
-        sm: 'px-3 py-1.5 text-xs',
-        md: 'px-4 py-2 text-xs',
-        lg: 'px-6 py-3 text-sm',
+        sm: 'min-h-9 px-3 py-1.5 text-sm',
+        md: 'min-h-11 px-4 py-2 text-sm',
+        lg: 'min-h-12 px-6 py-3 text-base',
     };
 
     return (
@@ -56,7 +55,7 @@ export const Button = ({
             whileTap={{ scale: 0.98 }}
             disabled={loading || props.disabled}
             className={cn(
-                "inline-flex items-center justify-center gap-2 rounded-sm font-terminal uppercase tracking-wider transition-all duration-200 ease-snap disabled:opacity-50 disabled:cursor-not-allowed border",
+                "inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-all duration-200 ease-out disabled:opacity-50 disabled:cursor-not-allowed border",
                 sizes[size],
                 className
             )}

@@ -119,39 +119,39 @@ const MpsListView = () => {
                 <div>
                     <h2
                         className="text-3xl font-bold flex items-center gap-3 mb-2"
-                        style={{ color: 'var(--text-primary)' }}
+                        style={{ color: 'hsl(var(--foreground))' }}
                     >
                         <Users className="w-8 h-8" style={{ color: 'var(--primary-500)' }} />
                         Seimo nariai
                     </h2>
-                    <p style={{ color: 'var(--text-secondary)' }}>
+                    <p style={{ color: 'hsl(var(--muted-foreground))' }}>
                         Šiuo metu mandatą turintys nariai
                     </p>
                 </div>
                 <div
                     className="px-4 py-2 rounded-lg text-sm font-medium border"
                     style={{
-                        backgroundColor: 'var(--background-elevated)',
-                        borderColor: 'var(--glass-border)',
+                        backgroundColor: 'hsl(var(--muted))',
+                        borderColor: 'hsl(var(--border))',
                     }}
                 >
                     {/* "N iš 141 vietų", not a bare count: the list holds the
                         members with a mandate today, and the Seimas is a
                         141-seat body whether or not every seat is filled. */}
-                    <span style={{ color: 'var(--text-primary)' }}>{processedMps.length}</span>
-                    <span className="ml-1" style={{ color: 'var(--text-secondary)' }}>
+                    <span style={{ color: 'hsl(var(--foreground))' }}>{processedMps.length}</span>
+                    <span className="ml-1" style={{ color: 'hsl(var(--muted-foreground))' }}>
                         iš {SEIMAS_SEATS_TOTAL} vietų
                     </span>
                 </div>
             </div>
 
             {/* Smart Search & Filter Bar */}
-            <Card className="p-4" style={{ backgroundColor: 'var(--background-elevated)' }}>
+            <Card className="p-4" style={{ backgroundColor: 'hsl(var(--muted))' }}>
                 <div className="flex flex-col md:flex-row gap-4">
                     <div className="relative group flex-1">
                         <Search
                             className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors"
-                            style={{ color: 'var(--text-secondary)' }}
+                            style={{ color: 'hsl(var(--muted-foreground))' }}
                         />
                         <input
                             type="text"
@@ -160,28 +160,28 @@ const MpsListView = () => {
                             onChange={e => setSearch(e.target.value)}
                             className="w-full pl-11 pr-4 py-3 border rounded-xl text-sm focus:outline-none focus:ring-1 transition-all"
                             style={{
-                                backgroundColor: 'var(--background-surface)',
-                                borderColor: 'var(--glass-border)',
-                                color: 'var(--text-primary)',
+                                backgroundColor: 'hsl(var(--card))',
+                                borderColor: 'hsl(var(--border))',
+                                color: 'hsl(var(--foreground))',
                             }}
                             onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--primary-500)'; }}
-                            onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--glass-border)'; }}
+                            onBlur={(e) => { e.currentTarget.style.borderColor = 'hsl(var(--border))'; }}
                         />
                     </div>
 
                     <div className="relative min-w-[200px]">
                         <ArrowUpDown
                             className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4"
-                            style={{ color: 'var(--text-secondary)' }}
+                            style={{ color: 'hsl(var(--muted-foreground))' }}
                         />
                         <select
                             value={sortBy}
                             onChange={(e) => setSortBy(e.target.value as SortOption)}
                             className="w-full pl-11 pr-8 py-3 border rounded-xl text-sm appearance-none focus:outline-none focus:ring-1 transition-all cursor-pointer"
                             style={{
-                                backgroundColor: 'var(--background-surface)',
-                                borderColor: 'var(--glass-border)',
-                                color: 'var(--text-primary)',
+                                backgroundColor: 'hsl(var(--card))',
+                                borderColor: 'hsl(var(--border))',
+                                color: 'hsl(var(--foreground))',
                             }}
                         >
                             {SORT_OPTIONS.map(opt => (
@@ -192,14 +192,14 @@ const MpsListView = () => {
                         </select>
                         <ChevronRight
                             className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 rotate-90 pointer-events-none"
-                            style={{ color: 'var(--text-secondary)' }}
+                            style={{ color: 'hsl(var(--muted-foreground))' }}
                         />
                     </div>
                 </div>
 
                 {(search || partyFilter) && (
                     <div className="mt-3 flex items-center justify-between">
-                        <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                        <span className="text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>
                             {searching ? (slowSearch ? 'Tinklas lėtas, ieškoma…' : 'Ieškoma serveryje...') : 'Filtrai aktyvūs'}
                         </span>
                         <Button
@@ -247,7 +247,7 @@ const MpsListView = () => {
                             {processedMps.length === 0 && (
                         <div
                             className="text-center py-20 flex flex-col items-center gap-4"
-                            style={{ color: 'var(--text-secondary)' }}
+                            style={{ color: 'hsl(var(--muted-foreground))' }}
                         >
                             <Users className="w-12 h-12 opacity-20" />
                             <p>Pagal šiuos kriterijus Seimo narių nerasta</p>

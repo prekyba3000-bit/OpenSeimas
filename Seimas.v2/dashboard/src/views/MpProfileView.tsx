@@ -11,6 +11,7 @@ import { IntegrityBar } from '../components/IntegrityBar';
 import { ScoreTooltip } from '../components/ScoreTooltip';
 import { readMpDimension } from '../utils/mpLegacyDimensions';
 import { mandatePeriodLabel, servedNoDays } from '../utils/mpCounts';
+import { formatLtDateLong } from '../utils/ltDate';
 import { ApiError, api, type ForensicFlag, MpProfile, MpVoteRecord } from '../services/api';
 import { toastErrorDeduped } from '../utils/toastDeduped';
 import { ProblemDetailsNotice } from '../components/ProblemDetailsNotice';
@@ -155,7 +156,7 @@ export const MpProfileLayout = ({
                 year and was replaced. Name the state and the period. */}
             <span
               className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                isActive ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400' : 'bg-muted text-muted-foreground'
+                isActive ? 'bg-vote-for/15 text-vote-for dark:text-vote-for' : 'bg-muted text-muted-foreground'
               }`}
             >
               {isActive ? 'Aktyvus' : 'Kadencija baigta'}
@@ -225,7 +226,7 @@ export const MpProfileLayout = ({
                   <li key={`${v.date}-${v.title}`} className="px-4 py-3 text-sm">
                     <div className="font-medium text-foreground">{v.title}</div>
                     <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                      <span>{v.date}</span>
+                      <span>{formatLtDateLong(v.date) ?? v.date}</span>
                       <span className="text-foreground">{formatVoteChoiceLabel(v.choice)}</span>
                     </div>
                   </li>

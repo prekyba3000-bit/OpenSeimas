@@ -116,6 +116,13 @@ def get_activity():
             return [
                 {
                     "name": row["display_name"],
+                    # `action` was an English sentence composed here
+                    # (f"Voted {choice}"), which put untranslatable text from the
+                    # server straight onto a Lithuanian page. The choice is now
+                    # sent as data and the client does the wording.
+                    "vote_choice": row["vote_choice"],
+                    # Retained for any client still reading the old field.
+                    # DEPRECATED: use vote_choice.
                     "action": f"Voted {row['vote_choice']}",
                     "context": (row["title"][:50] + "...") if len(row["title"]) > 50 else row["title"],
                     "time": str(row["sitting_date"]),
@@ -448,8 +455,10 @@ def get_vote(vote_id: str):
                 raise HTTPException(status_code=404, detail="Vote not found")
 
             # mp_votes.vote_id references votes.seimas_vote_id, not votes.id
+            # p.id travels with the row so a client can join a vote to a seat
+            # without matching on display_name.
             cur.execute("""
-                SELECT p.display_name, p.current_party, mv.vote_choice
+                SELECT p.id AS mp_id, p.display_name, p.current_party, mv.vote_choice
                 FROM mp_votes mv
                 JOIN politicians p ON mv.politician_id = p.id
                 WHERE mv.vote_id = %s
@@ -467,6 +476,7 @@ def get_vote(vote_id: str):
                 stats[choice] += 1
                 party_stats[party][choice] += 1
                 mp_votes.append({
+                    "mp_id": str(row["mp_id"]),
                     "name": row["display_name"],
                     "party": party,
                     "choice": choice,

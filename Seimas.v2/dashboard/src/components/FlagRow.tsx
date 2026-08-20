@@ -19,22 +19,22 @@ const SEVERITY_BADGE: Record<
   high: {
     label: "Aukštas",
     className:
-      "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
+      "bg-destructive/15 text-destructive",
   },
   medium: {
     label: "Vidutinis",
     className:
-      "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
+      "bg-attention/20 text-attention-foreground",
   },
   low: {
     label: "Žemas",
     className:
-      "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+      "bg-primary/15 text-primary",
   },
   none: {
     label: "Gerai",
     className:
-      "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+      "bg-vote-for/15 text-vote-for",
   },
 };
 

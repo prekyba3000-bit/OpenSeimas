@@ -1,5 +1,25 @@
 # OpenSeimas V.4 — Master Plan (canonical)
 
+## Mission
+
+**That the majority of Lithuanians voting in the 2028 Seimas election make a
+*personally reasoned* decision** — based on what their representatives actually
+did, not what they promised. And that voting stops feeling pointless or
+complicated to those who never voted: young people, the disillusioned, the
+disengaged. A vote cast with understanding is the citizen's primary act of
+power. Complaining about the government without it is noise.
+
+**Non-partisanship clause.** OpenSeimas never tells anyone *whom* to vote for.
+It shows what every MP and faction verifiably did, and helps each voter reach
+*their own* conclusion. The moment the platform steers, it becomes a party actor
+and the trust floor collapses. "Personally reasonable" means informed by the
+voter's own values, never directed by ours.
+
+**Horizon: the next Seimas election, October 2028.** Every roadmap item sorts by
+"does this serve October 2028?"
+
+---
+
 > **Status:** This document is the **single canonical V.4 plan**. It supersedes all
 > draft plans in `docs/V4-build-plan-*.md` (ChatGPT, Gemini, Grok, Manus, Kimi-synthesis,
 > "entanglement", draft). Those files should be moved to `docs/archive/v4-drafts/`.

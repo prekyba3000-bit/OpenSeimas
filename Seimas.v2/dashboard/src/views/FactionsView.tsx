@@ -83,7 +83,7 @@ const FactionsView = () => {
           {factions.filter(f => f.name !== 'Unknown').map(f => (
             <div
               key={f.name}
-              className="h-full flex items-center justify-center text-[10px] font-bold text-white transition-all cursor-pointer hover:brightness-110"
+              className="h-full flex items-center justify-center text-xs font-bold text-white transition-all cursor-pointer hover:brightness-110"
               style={{
                 width: `${(f.members.length / mps.filter(m => m.is_active).length) * 100}%`,
                 backgroundColor: f.meta.hex,
@@ -139,11 +139,11 @@ const FactionsView = () => {
                   <div className="flex items-center gap-6 text-right">
                     <div>
                       <div className="text-xl font-bold text-foreground">{faction.members.length}</div>
-                      <div className="text-[10px] text-muted-foreground uppercase">nariai</div>
+                      <div className="text-xs text-muted-foreground">nariai</div>
                     </div>
                     <div>
                       <div className="text-xl font-bold text-foreground">{faction.avgAttendance.toFixed(0)}%</div>
-                      <div className="text-[10px] text-muted-foreground uppercase">dalyvavimas</div>
+                      <div className="text-xs text-muted-foreground">dalyvavimas</div>
                     </div>
                     <ChevronRight className={cn(
                       'w-5 h-5 text-muted-foreground transition-transform',
@@ -189,16 +189,16 @@ const FactionsView = () => {
                             <div className="text-sm font-medium text-foreground group-hover:text-primary transition-colors truncate">
                               {mp.name}
                             </div>
-                            <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
                               <span>{mp.vote_count} balsų</span>
                               <span>•</span>
                               <span>{mp.attendance?.toFixed(0) ?? '—'}%</span>
                             </div>
                           </div>
-                          <div className="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold"
+                          <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
                             style={{
-                              backgroundColor: (mp.attendance ?? 0) > 80 ? '#10b98133' : (mp.attendance ?? 0) > 50 ? '#f59e0b33' : '#ef444433',
-                              color: (mp.attendance ?? 0) > 80 ? '#10b981' : (mp.attendance ?? 0) > 50 ? '#f59e0b' : '#ef4444',
+                              backgroundColor: (mp.attendance ?? 0) > 80 ? 'hsl(var(--vote-for) / 0.2)' : (mp.attendance ?? 0) > 50 ? 'hsl(var(--attention) / 0.2)' : 'hsl(var(--vote-against) / 0.2)',
+                              color: (mp.attendance ?? 0) > 80 ? 'hsl(var(--vote-for))' : (mp.attendance ?? 0) > 50 ? 'hsl(var(--attention))' : 'hsl(var(--vote-against))',
                             }}
                           >
                             {mp.attendance?.toFixed(0) ?? '?'}

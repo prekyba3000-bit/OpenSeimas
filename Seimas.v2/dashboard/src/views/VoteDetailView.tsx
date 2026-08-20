@@ -12,19 +12,19 @@ import { ProblemDetailsNotice } from '../components/ProblemDetailsNotice';
 
 const getChoiceIcon = (choice: string) => {
     switch (choice.toLowerCase()) {
-        case 'už': return <ThumbsUp className="w-4 h-4 text-green-500" />;
-        case 'prieš': return <ThumbsDown className="w-4 h-4 text-red-500" />;
-        case 'susilaikė': return <Minus className="w-4 h-4 text-amber-500" />;
-        default: return <UserX className="w-4 h-4 text-gray-500" />;
+        case 'už': return <ThumbsUp className="w-4 h-4 text-vote-for" />;
+        case 'prieš': return <ThumbsDown className="w-4 h-4 text-vote-against" />;
+        case 'susilaikė': return <Minus className="w-4 h-4 text-vote-abstain" />;
+        default: return <UserX className="w-4 h-4 text-muted-foreground" />;
     }
 };
 
 const getChoiceBg = (choice: string) => {
     switch (choice.toLowerCase()) {
-        case 'už': return 'bg-green-500';
-        case 'prieš': return 'bg-red-500';
-        case 'susilaikė': return 'bg-amber-500';
-        default: return 'bg-gray-500';
+        case 'už': return 'bg-vote-for';
+        case 'prieš': return 'bg-vote-against';
+        case 'susilaikė': return 'bg-vote-abstain';
+        default: return 'bg-muted-foreground';
     }
 };
 
@@ -121,8 +121,8 @@ const VoteDetailView = ({ voteId }: { voteId: string }) => {
                         <span className={cn(
                             'px-3 py-1 rounded-full font-bold text-xs',
                             vote.result_type.toLowerCase().includes('priimta')
-                                ? 'bg-green-500/10 text-green-500'
-                                : 'bg-red-500/10 text-red-500',
+                                ? 'bg-vote-for/10 text-vote-for'
+                                : 'bg-vote-against/10 text-vote-against',
                         )}>
                             {vote.result_type}
                         </span>
@@ -142,7 +142,7 @@ const VoteDetailView = ({ voteId }: { voteId: string }) => {
             {/* Party Breakdown */}
             {partyBreakdown.length > 0 && (
                 <Card className="p-6">
-                    <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-4 flex items-center gap-2">
+                    <h3 className="text-base font-semibold text-foreground mb-4 flex items-center gap-2">
                         <BarChart3 className="w-4 h-4" />
                         Balsavimas pagal frakciją
                     </h3>
@@ -156,18 +156,18 @@ const VoteDetailView = ({ voteId }: { voteId: string }) => {
                                 <div key={p.party} className="flex items-center gap-3">
                                     <div className="w-16 text-right">
                                         <span
-                                            className="text-[10px] font-bold px-1.5 py-0.5 rounded text-white"
+                                            className="text-xs font-bold px-1.5 py-0.5 rounded text-white"
                                             style={{ backgroundColor: p.color }}
                                         >
                                             {p.short}
                                         </span>
                                     </div>
                                     <div className="flex-1 flex h-5 rounded-full overflow-hidden bg-muted">
-                                        {forPct > 0 && <div className="h-full bg-green-500" style={{ width: `${forPct}%` }} />}
-                                        {againstPct > 0 && <div className="h-full bg-red-500" style={{ width: `${againstPct}%` }} />}
-                                        {abstainPct > 0 && <div className="h-full bg-amber-500" style={{ width: `${abstainPct}%` }} />}
+                                        {forPct > 0 && <div className="h-full bg-vote-for" style={{ width: `${forPct}%` }} />}
+                                        {againstPct > 0 && <div className="h-full bg-vote-against" style={{ width: `${againstPct}%` }} />}
+                                        {abstainPct > 0 && <div className="h-full bg-vote-abstain" style={{ width: `${abstainPct}%` }} />}
                                     </div>
-                                    <div className="text-[10px] text-muted-foreground w-8 text-right">{p.total}</div>
+                                    <div className="text-xs text-muted-foreground w-8 text-right">{p.total}</div>
                                 </div>
                             );
                         })}
@@ -178,7 +178,7 @@ const VoteDetailView = ({ voteId }: { voteId: string }) => {
             {/* Individual Votes */}
             <Card className="p-0 overflow-hidden">
                 <div className="flex flex-col md:flex-row items-center justify-between p-5 border-b border-border gap-3">
-                    <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                    <h3 className="text-base font-semibold text-foreground flex items-center gap-2">
                         <UserX className="w-4 h-4 text-primary" />
                         Individualūs balsai
                     </h3>
@@ -189,7 +189,7 @@ const VoteDetailView = ({ voteId }: { voteId: string }) => {
                                     key={choice}
                                     onClick={() => setFilterChoice(filterChoice === choice ? null : choice)}
                                     className={cn(
-                                        'px-2 py-1 text-[10px] font-bold rounded transition-all',
+                                        'px-2 py-1 text-xs font-bold rounded transition-all',
                                         filterChoice === choice
                                             ? `${getChoiceBg(choice)} text-white`
                                             : 'bg-muted text-muted-foreground hover:bg-muted/80',
@@ -217,14 +217,14 @@ const VoteDetailView = ({ voteId }: { voteId: string }) => {
                         <div key={i} className="py-2.5 px-5 flex items-center justify-between hover:bg-muted/20 transition-colors group">
                             <div className="flex items-center gap-3">
                                 <div
-                                    className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
+                                    className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white"
                                     style={{ backgroundColor: getPartyColor(v.party) }}
                                 >
                                     {v.name.charAt(0)}
                                 </div>
                                 <div>
                                     <div className="font-medium text-sm group-hover:text-primary transition-colors">{v.name}</div>
-                                    <div className="text-[10px] text-muted-foreground">{getPartyShort(v.party)}</div>
+                                    <div className="text-xs text-muted-foreground">{getPartyShort(v.party)}</div>
                                 </div>
                             </div>
                             <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-muted border border-border text-xs font-medium w-28 justify-center">
@@ -240,7 +240,7 @@ const VoteDetailView = ({ voteId }: { voteId: string }) => {
                         </div>
                     )}
                 </div>
-                <div className="p-2 border-t border-border bg-muted/20 text-center text-[10px] text-muted-foreground">
+                <div className="p-2 border-t border-border bg-muted/20 text-center text-xs text-muted-foreground">
                     Rodoma {filteredVotes.length} įrašų
                 </div>
             </Card>

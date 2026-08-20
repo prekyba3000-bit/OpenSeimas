@@ -2,6 +2,7 @@ import React from 'react';
 import { HashRouter, Routes, Route, Navigate, useParams, Outlet } from 'react-router';
 import { MainLayout } from './components/MainLayout';
 import { LandingPage } from './components/LandingPage';
+import { initTheme, watchSystemTheme } from './lib/theme';
 
 import MpProfileView from './views/MpProfileView';
 import VotesListView from './views/VotesListView';
@@ -36,7 +37,11 @@ const VoteDetailRoute = () => {
 
 function App() {
     React.useEffect(() => {
-        document.documentElement.classList.add('dark');
+        // The theme is resolved before paint by the inline script in
+        // index.html and re-applied here; this used to unconditionally force
+        // `dark`, which is why there was no way to ask for anything else.
+        initTheme();
+        return watchSystemTheme(() => {});
     }, []);
 
     return (
