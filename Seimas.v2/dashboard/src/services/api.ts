@@ -713,6 +713,29 @@ export async function request<T>(endpoint: string, options: RequestOptions<T> = 
   throw lastError ?? new ApiError(0, "Request failed");
 }
 
+/**
+ * The most recent day the Seimas voted.
+ *
+ * `outcomes` is null while `votes.result_type` is NULL everywhere — the LRS
+ * feed publishes tallies and no pass/fail field. Null means "render no outcome
+ * line", not "render zero".
+ */
+export interface LastSittingDay {
+  sitting_date: string | null;
+  vote_count: number;
+  mps_present: number;
+  days_since: number | null;
+  is_recess: boolean;
+  outcomes: { decided: number } | null;
+}
+
+export interface Freshness {
+  generated_at: string;
+  politicians: { row_count: number; latest: string | null };
+  votes: { row_count: number; latest: string | null };
+  [domain: string]: unknown;
+}
+
 // ── Public API ───────────────────────────────────────────────────────────────
 
 export const api = {
@@ -736,6 +759,10 @@ export const api = {
 
   getVotes: (limit = 50, offset = 0) =>
     request<VoteSummary[]>(`/votes?limit=${limit}&offset=${offset}`),
+
+  getLastSittingDay: () => request<LastSittingDay>("/meta/last-sitting-day"),
+
+  getFreshness: () => request<Freshness>("/meta/freshness"),
 
   getVote: (id: string) => request<VoteDetail>(`/votes/${id}`),
 

@@ -39,6 +39,7 @@ import {
 import { ProblemDetailsNotice } from '../components/ProblemDetailsNotice';
 import { Button } from '../components/Button';
 import { occupancyLabel } from '../utils/mpCounts';
+import { AbsenteeismCard } from '../components/AbsenteeismCard';
 
 const EMPTY_CHRONO: ChronoResponse = { items: [], clusters: [] };
 const EMPTY_BENFORD: BenfordResponse = { items: [] };
@@ -456,6 +457,13 @@ export default function SkaidrumasHubView() {
           </div>
         </div>
       </section>
+
+      {/* „Gėdos siena“ — attendance by sitting day. It was on the landing,
+          which the Phase 2 wireframe reduces to three attention zones. It is
+          not deleted: it is the same subject as the low-attendance warnings
+          directly above it, and this is where a reader who wants that
+          question comes looking. */}
+      <AbsenteeismCard />
 
       {/* ── FORENSIC ENGINES ─────────────────────────────────────────── */}
 
