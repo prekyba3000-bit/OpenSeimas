@@ -33,11 +33,37 @@ const PARTY_MAP: Record<string, PartyMeta> = {
     { short: 'Mišri', hex: '#8C857A', tailwind: 'bg-[#8C857A]' },
 };
 
-const FALLBACK: PartyMeta = { short: '?', hex: '#7D766C', tailwind: 'bg-[#7D766C]' };
+const FALLBACK: PartyMeta = { short: 'Nenurodyta', hex: '#7D766C', tailwind: 'bg-[#7D766C]' };
+
+/**
+ * A label for a party string the map above does not know.
+ *
+ * The seat-map legend made this visible: five separate entries all reading
+ * „?“, which is a colour with no label — exactly what the legend exists to
+ * prevent. They turned out to be spelling variants of parties already in the
+ * map („Lietuvos socialdemokratų partija“ alongside „…partijos frakcija“,
+ * „Liberalų sąjūdis“ alongside „Liberalų sąjūdžio frakcija“).
+ *
+ * They are deliberately *not* folded into their neighbours here. Party
+ * membership and faction membership are different things in the Seimas, and a
+ * UI-layer merge would silently assert that 53 members sit with LSDP when the
+ * data says 48 do and 5 carry a different string. The variants are a data
+ * problem, recorded in docs/BACKLOG.md; until it is settled at the source, an
+ * unknown string gets its own honest label rather than a shrug or a guess.
+ */
+function labelFor(partyName: string): string {
+  const cleaned = partyName.replace(/[„“"]/g, '').trim();
+  if (!cleaned) return FALLBACK.short;
+  // „Lietuvos socialdemokratų partija" → „Lietuvos socialdemokratų…"; long
+  // enough to identify, short enough for a legend row.
+  return cleaned.length > 28 ? `${cleaned.slice(0, 27)}…` : cleaned;
+}
 
 export function getPartyMeta(partyName: string | null | undefined): PartyMeta {
   if (!partyName || partyName === 'Unknown') return FALLBACK;
-  return PARTY_MAP[partyName] ?? FALLBACK;
+  const known = PARTY_MAP[partyName];
+  if (known) return known;
+  return { ...FALLBACK, short: labelFor(partyName) };
 }
 
 export function getPartyColor(partyName: string | null | undefined): string {

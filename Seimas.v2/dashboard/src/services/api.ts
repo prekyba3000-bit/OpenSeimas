@@ -43,7 +43,10 @@ export interface VoteDetail {
   result_type: string | null;
   stats: Record<string, number>;
   party_stats: Record<string, Record<string, number>>;
-  votes: { name: string; party: string; choice: string }[];
+  // mp_id lets a client join a vote to a seat without matching on
+  // display_name. Optional because a cached response from before the field
+  // existed will not carry it.
+  votes: { mp_id?: string; name: string; party: string; choice: string | null }[];
 }
 
 export interface ComparisonResult {
@@ -724,6 +727,9 @@ export interface LastSittingDay {
   sitting_date: string | null;
   vote_count: number;
   mps_present: number;
+  /** Members with a recorded choice that day. Absence is "not in this list" —
+   *  the only safe direction, since the source records choices, not absences. */
+  mps_present_ids: string[];
   days_since: number | null;
   is_recess: boolean;
   outcomes: { decided: number } | null;
