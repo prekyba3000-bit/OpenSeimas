@@ -222,6 +222,22 @@
     @apply border-border outline-ring/50;
   }
 
+  /* A visible focus ring, everywhere, once.
+     `outline-ring/50` above sets the outline's colour and width but never its
+     *style*, which defaults to `none` — so the computed outline-style was
+     `none` on every focusable element in the app and keyboard users had no
+     indicator at all. Eighteen components had their own `focus-visible:` rules;
+     the other several hundred focusable elements had nothing.
+
+     `:focus-visible` rather than `:focus`, so a mouse click does not leave a
+     ring behind. The offset lifts it clear of the element's own border, and
+     the ring token is the same pine already used for primary actions. */
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+    border-radius: var(--radius-sm, 0.375rem);
+  }
+
   body {
     /* The two declarations that used to follow @apply referenced
        --color-bg-void and --color-text-bright, neither of which is defined
