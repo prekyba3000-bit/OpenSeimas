@@ -2,6 +2,7 @@ import React from "react";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { DataStripVote } from "./DataStripVote";
+import { toOutcome } from "../utils/voteOutcome";
 
 /**
  * An unrecorded outcome must render as unrecorded.
@@ -65,25 +66,22 @@ describe("DataStripVote outcome honesty", () => {
  * "priimta" first labelled rejected votes as passed.
  */
 describe("result string mapping", () => {
-  const mapOutcome = (result: string | null) =>
-    result?.toLowerCase().includes("nepriimta")
-      ? "FAILED"
-      : result?.toLowerCase().includes("priimta")
-        ? "PASSED"
-        : null;
-
+  // This used to test a copy of the mapping defined inside the test file,
+  // which meant it could pass while the shipped code was wrong. It now calls
+  // the function the app actually calls.
   it("maps 'nepriimta' to FAILED, not PASSED", () => {
     expect("nepriimta".includes("priimta")).toBe(true); // the trap itself
-    expect(mapOutcome("Nepriimta")).toBe("FAILED");
+    expect(toOutcome("Nepriimta")).toBe("FAILED");
   });
 
   it("maps 'priimta' to PASSED", () => {
-    expect(mapOutcome("Priimta")).toBe("PASSED");
+    expect(toOutcome("Priimta")).toBe("PASSED");
   });
 
   it("maps null and unrecognised values to null, never to a default outcome", () => {
-    expect(mapOutcome(null)).toBeNull();
-    expect(mapOutcome("")).toBeNull();
-    expect(mapOutcome("Svarstymas")).toBeNull();
+    expect(toOutcome(null)).toBeNull();
+    expect(toOutcome(undefined)).toBeNull();
+    expect(toOutcome("")).toBeNull();
+    expect(toOutcome("Svarstymas")).toBeNull();
   });
 });

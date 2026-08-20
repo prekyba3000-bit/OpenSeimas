@@ -1,4 +1,5 @@
 import type { DashboardStats, MpSummary } from "../services/api";
+import { ltPlural } from "./ltPlural";
 
 /**
  * How the platform talks about how many MPs there are.
@@ -65,13 +66,7 @@ export function seatTotal(
 /** „1 laisva vieta" / „2 laisvos vietos" — Lithuanian plural agreement. */
 export function vacancyLabel(vacant: number): string | null {
   if (vacant <= 0) return null;
-  const lastTwo = vacant % 100;
-  const last = vacant % 10;
-  // 11–19 and 0 take the genitive plural; 1 takes the singular; 2–9 the plural.
-  if (lastTwo >= 11 && lastTwo <= 19) return `${vacant} laisvų vietų`;
-  if (last === 1) return `${vacant} laisva vieta`;
-  if (last === 0) return `${vacant} laisvų vietų`;
-  return `${vacant} laisvos vietos`;
+  return `${vacant} ${ltPlural(vacant, "laisva vieta", "laisvos vietos", "laisvų vietų")}`;
 }
 
 /** „Kadencija baigta" marker text for a former member, with the dates served. */
