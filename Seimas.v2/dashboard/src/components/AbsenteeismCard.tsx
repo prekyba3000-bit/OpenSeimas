@@ -72,11 +72,11 @@ export const AbsenteeismCard: React.FC = () => {
   return (
     <div className="rounded-xl border border-border bg-card overflow-hidden">
       {/* Header */}
-      <div className="p-6 border-b border-border bg-gradient-to-r from-red-500/5 to-transparent">
+      <div className="p-6 border-b border-border bg-gradient-to-r from-destructive/5 to-transparent">
         <div className="flex items-start justify-between mb-2">
           <div>
             <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5 text-red-500" />
+              <AlertTriangle className="w-5 h-5 text-destructive" />
               {data.title}
             </h2>
             {data.subtitle && (
@@ -94,17 +94,17 @@ export const AbsenteeismCard: React.FC = () => {
         <div className="grid grid-cols-2 border-b border-border">
           <div className="p-4 border-r border-border text-center">
             <div className="flex items-center justify-center gap-2 mb-1">
-              <Calendar className="w-4 h-4 text-red-500" />
+              <Calendar className="w-4 h-4 text-destructive" />
               <span className="text-2xl font-bold text-foreground">{summary.top15_total_absent_days}</span>
             </div>
-            <div className="text-[10px] text-muted-foreground uppercase tracking-wider">praleistų dienų (top 15)</div>
+            <div className="text-xs text-muted-foreground">praleistų dienų (top 15)</div>
           </div>
           <div className="p-4 text-center">
             <div className="flex items-center justify-center gap-2 mb-1">
-              <Euro className="w-4 h-4 text-red-500" />
+              <Euro className="w-4 h-4 text-destructive" />
               <span className="text-2xl font-bold text-foreground">€{summary.top15_total_wage_unearned_eur.toLocaleString()}</span>
             </div>
-            <div className="text-[10px] text-muted-foreground uppercase tracking-wider">neuždirbtas atlyginimas</div>
+            <div className="text-xs text-muted-foreground">neuždirbtas atlyginimas</div>
           </div>
         </div>
       )}
@@ -115,16 +115,16 @@ export const AbsenteeismCard: React.FC = () => {
           const partyColor = getPartyColor(record.party);
           const partyShort = getPartyShort(record.party);
           const barColor =
-            record.participation_pct >= 90 ? '#10b981' :
-            record.participation_pct >= 70 ? '#f59e0b' :
-            '#ef4444';
+            record.participation_pct >= 90 ? 'hsl(var(--vote-for))' :
+            record.participation_pct >= 70 ? 'hsl(var(--attention))' :
+            'hsl(var(--vote-against))';
 
           return (
             <div key={record.rank} className="p-4 hover:bg-muted/20 transition-colors">
               <div className="flex items-center gap-4">
                 {/* Rank */}
-                <div className="w-7 h-7 rounded-full bg-red-500/10 flex items-center justify-center shrink-0">
-                  <span className="text-xs font-bold text-red-500">#{record.rank}</span>
+                <div className="w-7 h-7 rounded-full bg-destructive/10 flex items-center justify-center shrink-0">
+                  <span className="text-xs font-bold text-destructive">#{record.rank}</span>
                 </div>
 
                 {/* Photo */}
@@ -150,7 +150,7 @@ export const AbsenteeismCard: React.FC = () => {
                     >
                       {partyShort}
                     </span>
-                    <span className="text-[10px] text-muted-foreground">
+                    <span className="text-xs text-muted-foreground">
                       {record.days_present}/{record.total_days} dienų
                     </span>
                   </div>
@@ -159,16 +159,16 @@ export const AbsenteeismCard: React.FC = () => {
                 {/* Absent days */}
                 <div className="text-right shrink-0">
                   <div className="flex items-center gap-1 justify-end">
-                    <TrendingDown className="w-3 h-3 text-red-500" />
-                    <span className="text-sm font-bold text-red-500">{record.days_absent} d.</span>
+                    <TrendingDown className="w-3 h-3 text-destructive" />
+                    <span className="text-sm font-bold text-destructive">{record.days_absent} d.</span>
                   </div>
-                  <div className="text-[10px] text-muted-foreground">praleista</div>
+                  <div className="text-xs text-muted-foreground">praleista</div>
                 </div>
 
                 {/* Wage impact */}
                 <div className="text-right shrink-0 min-w-[80px]">
                   <div className="text-sm font-bold text-foreground">€{record.wage_unearned_eur.toLocaleString()}</div>
-                  <div className="text-[10px] text-red-400">neuždirbta</div>
+                  <div className="text-xs text-destructive">neuždirbta</div>
                 </div>
 
                 {/* Percentage */}
@@ -195,10 +195,10 @@ export const AbsenteeismCard: React.FC = () => {
 
       {/* Footer */}
       <div className="p-4 border-t border-border bg-muted/20 flex items-center justify-between">
-        <p className="text-[10px] text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           Atnaujinta: {new Date(data.generated_at).toLocaleString('lt-LT')}
         </p>
-        <p className="text-[10px] text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           Dienos atlyginimas ≈ €{data.methodology?.daily_rate_eur ?? 191} (pagal viešus duomenis)
         </p>
       </div>

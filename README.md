@@ -1,6 +1,11 @@
 # OpenSeimas
 
-**Make Lithuanian voting choices understandable, relevant, and personally meaningful — through transparent evidence and explainable, non-partisan civic guidance.**
+**OpenSeimas exists so that the majority of Lithuanians voting in the 2028 Seimas
+election make a personally reasoned decision — based on what their representatives
+actually did, not what they promised — and so that voting stops feeling pointless to
+those who never voted.** It never tells anyone whom to vote for: it shows what every
+MP and faction verifiably did, and helps each voter reach their own conclusion. The
+moment the platform steers, it becomes a party actor and the trust floor collapses.
 
 OpenSeimas V.4 is a voter-first civic platform for the Lithuanian Parliament (Seimas), in two modes:
 
@@ -61,4 +66,10 @@ CI runs both against a fresh Postgres on every PR (`.github/workflows/ci.yml`).
 
 ## License
 
+Copyright (c) 2026 `<FILL IN: legal name>` — see [NOTICE](NOTICE).
+
 AGPL-3.0 — see [LICENSE](LICENSE). Data exports are CC BY 4.0 when published.
+
+AGPL is deliberate for a civic platform: anyone may run and modify OpenSeimas, but a
+hosted fork must publish its changes. That keeps a derivative from carrying this
+project's data and none of its trust floor.

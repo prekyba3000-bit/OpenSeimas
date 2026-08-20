@@ -10,19 +10,19 @@ interface TickerItemProps {
 }
 
 function TickerItem({ icon: Icon, label, value, trend, trendValue }: TickerItemProps) {
-  const trendColor = trend === 'up' ? 'text-green-400' : trend === 'down' ? 'text-red-400' : 'text-gray-500';
+  const trendColor = trend === 'up' ? 'text-vote-for' : trend === 'down' ? 'text-vote-against' : 'text-muted-foreground';
   
   return (
-    <div className="flex items-center gap-3 px-4 py-3 border-r border-white/10 min-w-[200px] flex-shrink-0">
+    <div className="flex items-center gap-3 px-4 py-3 border-r border-border min-w-[200px] flex-shrink-0">
       <div className="flex items-center justify-center w-8 h-8">
-        <Icon className="w-5 h-5 text-blue-400" />
+        <Icon className="w-5 h-5 text-primary" />
       </div>
       <div className="flex-1 min-w-0">
-        <div className="text-[9px] uppercase tracking-wider text-gray-500 font-bold font-mono">
+        <div className="text-xs text-muted-foreground">
           {label}
         </div>
         <div className="flex items-baseline gap-2">
-          <span className="text-xl font-bold text-white font-mono tabular-nums">
+          <span className="text-lg font-semibold text-foreground font-mono tabular-nums">
             {value}
           </span>
           {trendValue && (
@@ -44,17 +44,13 @@ interface TickerTapeProps {
 export function TickerTape({ items, autoScroll = true }: TickerTapeProps) {
   return (
     <div className="relative w-full overflow-hidden">
-      {/* Scanline overlay */}
-      <div 
-        className="absolute inset-0 pointer-events-none z-10"
-        style={{
-          backgroundImage: 'repeating-linear-gradient(0deg, rgba(255,255,255,0.02) 0px, transparent 1px, transparent 2px, rgba(255,255,255,0.02) 3px)',
-        }}
-      />
-      
-      {/* Edge fade gradients */}
-      <div className="absolute left-0 top-0 bottom-0 w-16 bg-gradient-to-r from-[#141517] to-transparent z-20 pointer-events-none" />
-      <div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-[#141517] to-transparent z-20 pointer-events-none" />
+      {/* The CRT scanline overlay that used to sit here was removed: a fake
+          cathode-ray artefact is set dressing, and it was drawn in white over
+          a page that is now paper. The edge fades stay — they hide the marquee
+          seam — but they fade to the actual page colour instead of a literal
+          dark hex. */}
+      <div className="absolute left-0 top-0 bottom-0 w-16 bg-gradient-to-r from-background to-transparent z-20 pointer-events-none" />
+      <div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-background to-transparent z-20 pointer-events-none" />
       
       {/* Ticker content */}
       <div 
@@ -66,8 +62,13 @@ export function TickerTape({ items, autoScroll = true }: TickerTapeProps) {
         {items.map((item, i) => (
           <TickerItem key={i} {...item} />
         ))}
-        {/* Duplicate for seamless loop */}
-        {items.map((item, i) => (
+        {/* Second copy exists only to make the marquee loop seamlessly: the
+            animation translates by -50%, so the duplicate slides in as the
+            original slides out. With autoScroll off there is no animation to
+            hide it, and it renders as a visible second set of stat cards —
+            which is exactly how the landing page came to show each metric
+            twice. Render it only when it is actually doing that job. */}
+        {autoScroll && items.map((item, i) => (
           <TickerItem key={`duplicate-${i}`} {...item} />
         ))}
       </div>

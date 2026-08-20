@@ -1,12 +1,20 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router';
-import { Search, Mic, Users, X, BarChart3 } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { cn } from './ui/utils';
 import { MpSummary } from '../services/api';
 import { getPartyColor, getPartyShort, getPartyMeta } from '../utils/partyColors';
 import { useTapReveal } from '../hooks/useTapReveal';
 import { SEIMAS_SEATS_TOTAL, vacancyLabel } from '../utils/mpCounts';
+import {
+  SeatMode,
+  SeatEncoding,
+  factionEncoding,
+  voteEncoding,
+  presenceEncoding,
+} from './seatMapModes';
+import type { LastSittingDay, VoteDetail } from '../services/api';
 
 export interface Seat {
   id: string;
@@ -15,19 +23,42 @@ export interface Seat {
   mp: MpSummary | null;
 }
 
+/**
+ * Coordinate space for the hemicycle.
+ *
+ * The seats were laid out around (300, 350) inside a 600x400 box, but the
+ * outermost row used radius 390 — so the arc actually spanned x = -90..655 and
+ * the parent's overflow-hidden silently cut roughly 90px of seats off the left
+ * edge and 55px off the right. The chamber was drawn with its ends missing.
+ *
+ * Centre and box are now derived from the largest radius the layout can reach,
+ * so every seat lands inside with a margin instead of by luck.
+ */
+const HEMICYCLE = {
+  rows: 8,
+  innerRadius: 180,
+  rowGap: 35,
+  margin: 10,
+} as const;
+
+const MAX_RADIUS = HEMICYCLE.innerRadius + (HEMICYCLE.rows - 1) * HEMICYCLE.rowGap;
+const CENTER_X = MAX_RADIUS + HEMICYCLE.margin;
+const BASELINE_Y = MAX_RADIUS + HEMICYCLE.margin;
+export const MAP_WIDTH = CENTER_X * 2;
+export const MAP_HEIGHT = BASELINE_Y + HEMICYCLE.margin * 2;
+
 function generateHemicycle(count: number): { x: number; y: number }[] {
   const seats: { x: number; y: number }[] = [];
-  const rows = 8;
   let idx = 0;
-  for (let r = 0; r < rows; r++) {
-    const radius = 180 + r * 35;
+  for (let r = 0; r < HEMICYCLE.rows; r++) {
+    const radius = HEMICYCLE.innerRadius + r * HEMICYCLE.rowGap;
     const seatsInRow = 12 + r * 4;
     for (let s = 0; s < seatsInRow; s++) {
       if (idx >= count) break;
       const angle = Math.PI - (Math.PI / (seatsInRow - 1)) * s;
       seats.push({
-        x: 300 + Math.cos(angle) * radius,
-        y: 350 - Math.sin(angle) * radius,
+        x: CENTER_X + Math.cos(angle) * radius,
+        y: BASELINE_Y - Math.sin(angle) * radius,
       });
       idx++;
     }
@@ -38,13 +69,23 @@ function generateHemicycle(count: number): { x: number; y: number }[] {
 interface SeimasMapProps {
   mps?: MpSummary[];
   compact?: boolean;
+  /** The most recent completed vote, for the „Balsavimas" encoding. */
+  latestVote?: VoteDetail | null;
+  /** Last-sitting-day presence, for the „Dalyvavimas" encoding. */
+  lastSittingDay?: LastSittingDay | null;
 }
 
-export function SeimasMap({ mps = [], compact = false }: SeimasMapProps) {
+export function SeimasMap({
+  mps = [],
+  compact = false,
+  latestVote = null,
+  lastSittingDay = null,
+}: SeimasMapProps) {
   const navigate = useNavigate();
   const [hoveredSeat, setHoveredSeat] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedParty, setSelectedParty] = useState<string | null>(null);
+  const [mode, setMode] = useState<SeatMode>('frakcijos');
   const { isTouch, revealedId, activate, dismiss } = useTapReveal();
 
   const activeMps = useMemo(
@@ -68,6 +109,31 @@ export function SeimasMap({ mps = [], compact = false }: SeimasMapProps) {
       .map(([name, count]) => ({ name, count, ...getPartyMeta(name) }));
   }, [activeMps]);
 
+  const seatedIds = useMemo(() => activeMps.map(m => m.id), [activeMps]);
+
+  // Modes whose data has not arrived are not offered. An empty „Balsavimas"
+  // map would be 141 identical grey dots reading as "nobody voted".
+  const availableModes = useMemo(() => {
+    const list: Array<{ id: SeatMode; label: string }> = [
+      { id: 'frakcijos', label: 'Frakcijos' },
+    ];
+    if (latestVote) list.push({ id: 'balsavimas', label: 'Balsavimas' });
+    if (lastSittingDay?.mps_present_ids?.length) {
+      list.push({ id: 'dalyvavimas', label: 'Dalyvavimas' });
+    }
+    return list;
+  }, [latestVote, lastSittingDay]);
+
+  const activeMode = availableModes.some(m => m.id === mode) ? mode : 'frakcijos';
+
+  const encoding: SeatEncoding = useMemo(() => {
+    if (activeMode === 'balsavimas') return voteEncoding(latestVote, seatedIds);
+    if (activeMode === 'dalyvavimas') {
+      return presenceEncoding(lastSittingDay?.mps_present_ids ?? [], seatedIds);
+    }
+    return factionEncoding(activeMps);
+  }, [activeMode, activeMps, latestVote, lastSittingDay, seatedIds]);
+
   const seats: (Seat & { isDimmed: boolean })[] = useMemo(() => {
     return layout.map((pos, i) => {
       const mp = activeMps[i] ?? null;
@@ -84,7 +150,11 @@ export function SeimasMap({ mps = [], compact = false }: SeimasMapProps) {
     });
   }, [layout, activeMps, searchTerm, selectedParty]);
 
-  const mapHeight = compact ? 'aspect-[16/8]' : 'aspect-[16/10]';
+  // The panel takes the hemicycle's own aspect ratio, so the chamber always
+  // fits whatever width it is given. The previous fixed scale steps
+  // (scale-[0.5] … lg:scale-100) were tuned to one panel width and clipped the
+  // outer rows everywhere else.
+  const mapAspect = `${MAP_WIDTH} / ${MAP_HEIGHT}`;
 
   const revealedMp = useMemo(
     () => (revealedId ? seats.find(s => s.mp?.id === revealedId)?.mp ?? null : null),
@@ -95,40 +165,84 @@ export function SeimasMap({ mps = [], compact = false }: SeimasMapProps) {
 
   return (
     <div className="flex flex-col gap-3">
-      {!compact && (
-        <div className="flex flex-col sm:flex-row gap-3 justify-between items-start sm:items-center bg-card border border-border p-3 rounded-xl">
-          <div className="relative w-full sm:w-56">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+      {/* The panel states its own encoding. A chamber of 141 coloured dots
+          means nothing without a sentence saying what the colour is. */}
+      <div className="flex flex-col gap-3">
+        {availableModes.length > 1 && (
+          <div
+            className="inline-flex w-fit rounded-lg border border-border bg-muted p-1"
+            role="group"
+            aria-label="Ką rodo spalvos"
+          >
+            {availableModes.map(m => (
+              <button
+                key={m.id}
+                type="button"
+                onClick={() => setMode(m.id)}
+                aria-pressed={activeMode === m.id}
+                className={cn(
+                  'min-h-9 px-3 rounded-md text-sm font-medium transition-colors',
+                  activeMode === m.id
+                    ? 'bg-card text-foreground shadow-card'
+                    : 'text-muted-foreground hover:text-foreground',
+                )}
+              >
+                {m.label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        <p className="text-sm text-muted-foreground line-clamp-2">{encoding.caption}</p>
+
+        {/* „Rask savo narį“ — by name. The wireframe asked for a district
+            lookup, but constituency_number and constituency_name are NULL for
+            all 148 members: migration 010 added the columns and nothing ever
+            filled them. Inventing a district for a member would be the exact
+            failure this project exists to avoid, so the affordance is name
+            search and the data gap is in the backlog. */}
+        <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+          <div className="relative w-full sm:w-72">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden />
             <input
-              type="text"
-              placeholder="Rasti narį..."
-              className="w-full bg-muted/50 border-none rounded-lg pl-9 pr-4 py-2 text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+              type="search"
+              placeholder="Rask savo narį — vardas ar pavardė"
+              aria-label="Rask savo narį pagal vardą"
+              className="w-full min-h-11 bg-card border border-input rounded-lg pl-9 pr-9 py-2 text-sm text-foreground focus:ring-2 focus:ring-ring outline-none transition-all"
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
             />
             {searchTerm && (
-              <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                <X className="w-3 h-3" />
+              <button
+                type="button"
+                onClick={() => setSearchTerm('')}
+                aria-label="Išvalyti paiešką"
+                className="absolute right-1 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:text-foreground"
+              >
+                <X className="w-4 h-4" />
               </button>
             )}
           </div>
 
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 hide-scrollbar">
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium border border-transparent bg-muted text-muted-foreground whitespace-nowrap">
-              <Users className="w-3.5 h-3.5" />
-              {activeMps.length} iš {SEIMAS_SEATS_TOTAL} vietų
-              {vacancyLabel(SEIMAS_SEATS_TOTAL - activeMps.length)
-                ? ` · ${vacancyLabel(SEIMAS_SEATS_TOTAL - activeMps.length)}` : ''}
-            </div>
-            <div className="h-4 w-px bg-border mx-1" />
+          <span className="text-sm text-muted-foreground">
+            {activeMps.length} iš {SEIMAS_SEATS_TOTAL} vietų
+            {vacancyLabel(SEIMAS_SEATS_TOTAL - activeMps.length)
+              ? ` · ${vacancyLabel(SEIMAS_SEATS_TOTAL - activeMps.length)}` : ''}
+          </span>
+        </div>
+
+        {!compact && activeMode === 'frakcijos' && (
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 hide-scrollbar">
             {parties.slice(0, 5).map(p => (
               <button
                 key={p.name}
+                type="button"
                 onClick={() => setSelectedParty(selectedParty === p.name ? null : p.name)}
+                aria-pressed={selectedParty === p.name}
                 className={cn(
-                  'h-6 px-2 rounded-full border-2 transition-all flex items-center gap-1.5 shrink-0 text-[10px] font-bold text-white',
-                  selectedParty === p.name ? 'ring-2 ring-offset-2 ring-primary scale-105' : 'opacity-80 hover:opacity-100',
-                  'border-white/10',
+                  'min-h-9 px-3 rounded-full border transition-all flex items-center gap-1.5 shrink-0 text-sm font-medium text-white',
+                  selectedParty === p.name ? 'ring-2 ring-offset-2 ring-ring' : 'opacity-90 hover:opacity-100',
+                  'border-black/10',
                 )}
                 style={{ backgroundColor: p.hex }}
                 title={p.name}
@@ -137,20 +251,24 @@ export function SeimasMap({ mps = [], compact = false }: SeimasMapProps) {
               </button>
             ))}
             {selectedParty && (
-              <button onClick={() => setSelectedParty(null)} className="text-xs text-muted-foreground underline ml-1">
+              <button
+                type="button"
+                onClick={() => setSelectedParty(null)}
+                className="min-h-9 px-2 text-sm text-muted-foreground underline"
+              >
                 Valyti
               </button>
             )}
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
-      <div className={cn(
-        'relative w-full bg-gradient-to-br from-card to-muted/20 border border-border rounded-xl overflow-hidden shadow-inner select-none',
-        mapHeight,
-      )}>
-        <div className="absolute inset-0 z-10 flex items-center justify-center overflow-hidden">
-          <div className="relative w-[600px] h-[400px] scale-[0.5] sm:scale-[0.7] md:scale-[0.85] lg:scale-100 origin-center transition-transform duration-500">
+      <div
+        className="relative w-full bg-gradient-to-br from-card to-muted/20 border border-border rounded-xl overflow-hidden shadow-inner select-none"
+        style={{ aspectRatio: mapAspect }}
+      >
+        <div className="absolute inset-0 z-10">
+          <div className="relative h-full w-full">
             <TooltipProvider delayDuration={0}>
               {seats.map((seat, i) => (
                 <Tooltip key={seat.id}>
@@ -162,25 +280,36 @@ export function SeimasMap({ mps = [], compact = false }: SeimasMapProps) {
                       className={cn(
                         'absolute w-[14px] h-[14px] rounded-full shadow-sm transition-all duration-300 ease-out',
                         seat.mp
-                          ? 'cursor-pointer border border-black/10 dark:border-white/10'
+                          ? 'cursor-pointer border border-black/10 dark:border-border'
                           // Vacant seat: hollow, so it reads as an empty seat
                           // rather than an unnamed member.
                           : 'border-2 border-dashed border-muted-foreground/40 bg-transparent cursor-default',
                         // Invisible padding widens the tap target from 14px to
-                        // 28px in map coordinates. Seats sit 34–51px apart, so
-                        // this cannot overlap a neighbour. It is still under
-                        // 44px once the map is scaled down on a phone — 141
-                        // seats cannot each be 44px in this area — which is why
-                        // a tap reveals rather than navigates.
-                        "before:absolute before:-inset-[7px] before:content-['']",
+                        // 34px in map coordinates — the tightest neighbour
+                        // spacing, so it is the largest slot that still cannot
+                        // overlap an adjacent seat. Scaled down on a phone it
+                        // is still under 44px: 141 seats cannot each be 44px in
+                        // this area, which is why a tap reveals who the seat
+                        // belongs to rather than navigating straight there.
+                        "before:absolute before:-inset-[10px] before:content-['']",
                         seat.isDimmed ? 'opacity-10 scale-75' : '',
                         (hoveredSeat === i || (!!seat.mp && revealedId === seat.mp.id)) &&
-                          'z-50 ring-2 ring-foreground scale-[2]',
+                          'z-50 ring-2 ring-foreground',
                       )}
                       style={{
-                        left: seat.x,
-                        top: seat.y,
-                        backgroundColor: seat.mp ? getPartyColor(seat.mp.party) : 'transparent',
+                        // Percentages, not map pixels: the seat keeps its place
+                        // in the chamber at any panel width.
+                        left: `${(seat.x / MAP_WIDTH) * 100}%`,
+                        top: `${(seat.y / MAP_HEIGHT) * 100}%`,
+                        // Centring and the hover magnification share one
+                        // transform: an inline transform overrides Tailwind's
+                        // scale utility, so composing them here keeps the
+                        // highlight working.
+                        transform:
+                          hoveredSeat === i || (!!seat.mp && revealedId === seat.mp.id)
+                            ? 'translate(-50%, -50%) scale(2)'
+                            : 'translate(-50%, -50%)',
+                        backgroundColor: encoding.colorFor(seat.mp) ?? 'transparent',
                       }}
                       onClick={() => {
                         if (!seat.mp) return;
@@ -218,7 +347,7 @@ export function SeimasMap({ mps = [], compact = false }: SeimasMapProps) {
                             </span>
                           </div>
                           <h4 className="font-bold text-sm leading-tight">{seat.mp.name}</h4>
-                          <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
+                          <div className="flex items-center gap-3 text-xs text-muted-foreground">
                             <span>{seat.mp.vote_count} balsų</span>
                             <span>•</span>
                             <span>{seat.mp.attendance?.toFixed(0) ?? '—'}% dalyvavimas</span>
@@ -231,12 +360,10 @@ export function SeimasMap({ mps = [], compact = false }: SeimasMapProps) {
               ))}
             </TooltipProvider>
 
-            <div className="absolute left-1/2 -translate-x-1/2 top-[340px] flex flex-col items-center opacity-70">
-              <div className="w-14 h-7 bg-card border border-border rounded-lg shadow-md flex items-center justify-center">
-                <Mic className="w-3 h-3 text-muted-foreground" />
-              </div>
-              <div className="w-28 h-8 bg-muted border border-border/50 rounded-t-2xl mt-1" />
-            </div>
+            {/* A microphone icon sat here on a drawn rostrum. It implied a
+                live session the app has no data for — the last sitting was
+                weeks ago — so it was decoration claiming a state. Removed
+                rather than restyled. */}
           </div>
         </div>
 
@@ -259,7 +386,7 @@ export function SeimasMap({ mps = [], compact = false }: SeimasMapProps) {
                 <p className="truncate text-xs text-muted-foreground">
                   {revealedMp.party || 'Nepriklausomas (-a)'}
                 </p>
-                <p className="mt-0.5 text-[11px] text-muted-foreground">
+                <p className="mt-0.5 text-xs text-muted-foreground">
                   {revealedMp.vote_count} balsų
                   {typeof revealedMp.attendance === 'number'
                     ? ` · ${revealedMp.attendance.toFixed(0)}% dalyvavimas`
@@ -285,18 +412,27 @@ export function SeimasMap({ mps = [], compact = false }: SeimasMapProps) {
           </div>
         )}
 
-        {!compact && (
-          <div className="absolute bottom-3 left-3 z-20 flex flex-wrap gap-2 max-w-[90%]">
-            <div className="flex flex-wrap gap-3 bg-background/90 backdrop-blur p-2 px-3 rounded-lg border border-border shadow-sm text-[10px] text-muted-foreground font-medium">
-              {parties.slice(0, 6).map(p => (
-                <div key={p.name} className="flex items-center gap-1.5">
-                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: p.hex }} />
-                  {p.short} ({p.count})
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+      </div>
+
+      {/* The legend is part of the panel, not an overlay that disappears in
+          compact mode. In „Balsavimas" it doubles as the tally, which is why
+          it carries counts in every mode rather than colour swatches alone. */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
+        {encoding.legend.map(entry => (
+          <span key={entry.key} className="inline-flex items-center gap-1.5">
+            <span
+              className={cn(
+                'w-2.5 h-2.5 rounded-full shrink-0',
+                entry.color === 'transparent'
+                  ? 'border-2 border-dashed border-muted-foreground/50'
+                  : 'border border-black/10 dark:border-border',
+              )}
+              style={entry.color === 'transparent' ? undefined : { backgroundColor: entry.color }}
+              aria-hidden
+            />
+            {entry.label} ({entry.count})
+          </span>
+        ))}
       </div>
     </div>
   );

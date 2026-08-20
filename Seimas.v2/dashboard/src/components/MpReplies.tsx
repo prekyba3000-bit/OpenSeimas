@@ -1,14 +1,12 @@
 import React from 'react';
+import { formatLtDateLong } from '../utils/ltDate';
 import { useQuery } from '@tanstack/react-query';
 import { BadgeCheck, MessageSquare } from 'lucide-react';
 import { trustApi } from '../services/trust';
 
 function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('lt-LT', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
+  // Shared civic formatter — see utils/ltDate.
+  return formatLtDateLong(iso) ?? iso;
 }
 
 /**
@@ -29,7 +27,7 @@ export function MpReplies({ mpId }: { mpId: string }) {
     <section className="space-y-3">
       <div className="flex items-center gap-2">
         <MessageSquare className="h-4 w-4 text-primary" />
-        <h2 className="text-sm font-semibold uppercase tracking-[0.15em] text-muted-foreground">
+        <h2 className="text-base font-semibold text-foreground">
           Seimo nario atsakymas
         </h2>
       </div>
