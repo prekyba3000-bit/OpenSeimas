@@ -15,30 +15,45 @@ import {
   BookOpen,
   Database,
   Mail,
+  ChevronDown,
 } from 'lucide-react';
 import { cn } from './ui/utils';
 import { Toaster } from 'sonner';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { ThemeToggle } from './ThemeToggle';
 
-const dataNavItems = [
+/**
+ * Eleven destinations became seven.
+ *
+ * Four of the eleven — Sesijos, Palyginimas, Pasisakymai ir balsavimai, and
+ * the three „Apie duomenis" pages — are things a reader goes looking for
+ * deliberately, not things they choose between on arrival. They live behind
+ * „Daugiau", which is collapsed by default and opens on the page you are
+ * already on. Nothing was removed; every route still exists and every link
+ * still resolves.
+ */
+const primaryNavItems = [
   { path: '/dashboard', label: 'Apžvalga', icon: LayoutDashboard },
-  { path: '/dashboard/mps', label: 'Seimo Nariai', icon: Users },
+  { path: '/dashboard/mps', label: 'Seimo nariai', icon: Users },
   { path: '/dashboard/votes', label: 'Balsavimai', icon: FileText },
   { path: '/dashboard/factions', label: 'Frakcijos', icon: Shield },
+];
+
+const moreNavItems = [
   { path: '/dashboard/sessions', label: 'Sesijos', icon: Calendar },
   { path: '/dashboard/compare', label: 'Palyginimas', icon: Scale },
   { path: '/dashboard/stebejimas', label: 'Pasisakymai ir balsavimai', icon: Trophy },
 ];
 
-const transparencyNavItems = [
+const aboutNavItems = [
   { path: '/dashboard/skaidrumas', label: 'Skaidrumo centras', icon: ScanEye },
   { path: '/dashboard/methodology', label: 'Metodika', icon: BookOpen },
   { path: '/dashboard/sources', label: 'Šaltiniai', icon: Database },
   { path: '/dashboard/corrections', label: 'Pataisymai', icon: Mail },
 ];
 
-const allNavForTitle = [...transparencyNavItems, ...dataNavItems].sort(
+
+const allNavForTitle = [...aboutNavItems, ...moreNavItems, ...primaryNavItems].sort(
   (a, b) => b.path.length - a.path.length,
 );
 
@@ -57,7 +72,7 @@ function NavButton({
   pathname,
   onNavigate,
 }: {
-  item: (typeof dataNavItems)[0];
+  item: (typeof primaryNavItems)[0];
   pathname: string;
   onNavigate: () => void;
 }) {
@@ -90,10 +105,21 @@ export function MainLayout() {
   // instead of the page. At `lg` and up `lg:translate-x-0 lg:static` pins the
   // sidebar visible regardless, so this flag is purely the mobile drawer.
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
+  // „Daugiau" starts open on the pages it contains, so a reader who navigated
+  // there does not find their own location hidden behind a collapsed group.
+  const [moreOpen, setMoreOpen] = React.useState(false);
   const closeSidebar = React.useCallback(() => setIsSidebarOpen(false), []);
   const [cmdOpen, setCmdOpen] = React.useState(false);
   const location = useLocation();
   const pathname = location.pathname;
+
+  const inMore = React.useMemo(
+    () => [...moreNavItems, ...aboutNavItems].some((i) => pathname.startsWith(i.path)),
+    [pathname],
+  );
+  React.useEffect(() => {
+    if (inMore) setMoreOpen(true);
+  }, [inMore]);
 
   return (
     <div className="min-h-screen bg-background text-foreground flex overflow-hidden">
@@ -111,23 +137,36 @@ export function MainLayout() {
           </span>
         </div>
 
-        <div className="flex-1 flex flex-col py-4 px-3 overflow-y-auto space-y-4">
-          <div>
-            <p className="px-3 mb-1 text-xs font-medium text-muted-foreground">Duomenys</p>
-            <div className="space-y-1">
-              {dataNavItems.map((item) => (
+        <div className="flex-1 flex flex-col py-4 px-3 overflow-y-auto space-y-1">
+          {primaryNavItems.map((item) => (
+            <NavButton key={item.path} item={item} pathname={pathname} onNavigate={closeSidebar} />
+          ))}
+
+          <button
+            type="button"
+            onClick={() => setMoreOpen((v) => !v)}
+            aria-expanded={moreOpen}
+            className="flex items-center gap-3 px-3 min-h-11 py-2 rounded-md transition-colors text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+          >
+            <ChevronDown
+              size={18}
+              className={cn('transition-transform', moreOpen ? '' : '-rotate-90')}
+              aria-hidden
+            />
+            <span>Daugiau</span>
+          </button>
+
+          {moreOpen && (
+            <div className="space-y-1 pl-3">
+              {moreNavItems.map((item) => (
+                <NavButton key={item.path} item={item} pathname={pathname} onNavigate={closeSidebar} />
+              ))}
+              <p className="px-3 pt-3 pb-1 text-xs font-medium text-muted-foreground">Apie duomenis</p>
+              {aboutNavItems.map((item) => (
                 <NavButton key={item.path} item={item} pathname={pathname} onNavigate={closeSidebar} />
               ))}
             </div>
-          </div>
-          <div>
-            <p className="px-3 mb-1 text-xs font-medium text-muted-foreground">Skaidrumas</p>
-            <div className="space-y-1">
-              {transparencyNavItems.map((item) => (
-                <NavButton key={item.path} item={item} pathname={pathname} onNavigate={closeSidebar} />
-              ))}
-            </div>
-          </div>
+          )}
         </div>
 
         <div className="p-4 border-t border-sidebar-border text-xs text-sidebar-foreground/60 space-y-2">
