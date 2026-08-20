@@ -50,7 +50,7 @@ export function LandingPage() {
 
       <section className="flex-1 flex flex-col md:flex-row items-center justify-center px-6 md:px-12 py-12 md:py-24 max-w-7xl mx-auto w-full gap-12">
         <div className="flex-1 space-y-8">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold uppercase tracking-wider">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium">
             <span className="w-2 h-2 rounded-full bg-primary" />
             Vieši duomenys ir metodika
           </div>
@@ -125,10 +125,10 @@ export function LandingPage() {
         </div>
 
         <div className="flex-1 w-full max-w-xl relative">
-          <div className="absolute -inset-4 bg-gradient-to-tr from-primary/20 to-secondary/20 rounded-[2rem] -z-10 blur-xl opacity-70" />
-          <div className="aspect-[4/3] rounded-2xl overflow-hidden shadow-raised border border-border bg-gradient-to-br from-card via-muted/30 to-primary/10 relative flex flex-col items-center justify-center p-8 text-center">
+          <div className="absolute -inset-4 bg-gradient-to-tr from-primary/10 to-attention/10 rounded-[2rem] -z-10 blur-xl opacity-60" />
+          <div className="aspect-[4/3] rounded-xl overflow-hidden shadow-raised border border-border bg-gradient-to-br from-card via-muted/30 to-primary/10 relative flex flex-col items-center justify-center p-8 text-center">
             <div className="rounded-xl border border-border bg-background/80 backdrop-blur-sm px-6 py-8 max-w-sm space-y-3">
-              <p className="text-xs uppercase tracking-widest text-primary font-semibold">Iliustracija</p>
+              <p className="text-sm text-primary font-medium">Iliustracija</p>
               <p className="text-foreground font-semibold text-lg">Portalas suvestinės ir analizės ekrane</p>
               <p className="text-sm text-muted-foreground leading-relaxed">
                 Vietoje stock nuotraukos — neutralus blokas, kad nebūtų painiavos su oficialia valstybės komunikacija.

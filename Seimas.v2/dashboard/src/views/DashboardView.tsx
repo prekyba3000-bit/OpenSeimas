@@ -106,7 +106,7 @@ export const DashboardView = () => {
                 <div className="xl:col-span-3">
                     <Card className="p-4 h-full">
                         <div className="flex items-center justify-between mb-3">
-                            <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                            <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
                                 <Users className="w-4 h-4 text-primary" />
                                 Posėdžių salė
                             </h2>
@@ -122,7 +122,7 @@ export const DashboardView = () => {
                 <div className="xl:col-span-2">
                     <Card className="p-0 h-full flex flex-col overflow-hidden">
                         <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-                            <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                            <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
                                 <Activity className="w-4 h-4 text-vote-for" />
                                 Naujausi balsavimai
                             </h2>
@@ -154,7 +154,7 @@ export const DashboardView = () => {
                 <Card className="lg:col-span-2 p-0 overflow-hidden">
                     <div className="px-6 py-4 border-b border-border flex items-center gap-2">
                         <Activity className="w-4 h-4 text-primary" />
-                        <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
+                        <h2 className="text-base font-semibold text-foreground">
                             Veiklos suvestinė
                         </h2>
                     </div>
@@ -184,8 +184,8 @@ export const DashboardView = () => {
                     </div>
                 </Card>
 
-                <Card className="flex flex-col gap-4 p-6">
-                    <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                <Card className="flex flex-col gap-4 p-6 self-start">
+                    <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
                         <Shield className="w-4 h-4 text-primary" />
                         Sistemos būsena
                     </h2>
@@ -200,7 +200,7 @@ export const DashboardView = () => {
                     <p className="text-sm text-muted-foreground">
                         Duomenys sinchronizuojami automatiškai iš viešų LR Seimo šaltinių.
                     </p>
-                    <div className="mt-auto pt-4 border-t border-border">
+                    <div className="pt-4 border-t border-border">
                         <div className="grid grid-cols-2 gap-3">
                             <MiniStat label="Mandatą turi" value={activeCount(stats) !== null ? String(activeCount(stats)) : '—'} />
                             <MiniStat label="Posėdžių dienos" value={stats ? String(stats.sitting_days) : '—'} />

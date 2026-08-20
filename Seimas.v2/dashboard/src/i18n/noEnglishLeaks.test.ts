@@ -40,6 +40,12 @@ const LEAKS: Array<[string, RegExp]> = [
   ["No MPs found", /No MPs found/],
   ["Clear Filters", /Clear Filters/],
   ["Loading MP roster", /Loading MP roster/],
+  // The forensic engine names are composed client-side and head the
+  // „Kodėl toks balas?“ sections on every MP profile.
+  ["Benford's Law Analysis", /Benford's Law Analysis/],
+  ["Chrono-Forensics", /Chrono-Forensics/],
+  ["Vote Geometry", /["']Vote Geometry["']/],
+  ["Phantom Network", /["']Phantom Network["']/],
 ];
 
 function sourceFiles(dir: string, acc: string[] = []): string[] {

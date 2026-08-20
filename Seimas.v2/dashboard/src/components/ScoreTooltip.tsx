@@ -21,7 +21,7 @@ export function ScoreTooltip({ profile, className = "" }: ScoreTooltipProps) {
       className={`rounded-xl border border-border bg-card/60 p-4 text-sm ${className}`}
       aria-label="Rodiklių suvestinė"
     >
-      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-3">
+      <p className="text-sm font-medium text-muted-foreground mb-3">
         Rodikliai
       </p>
       <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
