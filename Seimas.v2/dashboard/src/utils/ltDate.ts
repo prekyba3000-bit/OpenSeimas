@@ -63,3 +63,22 @@ export function formatLtFreshness(value: string | Date | null | undefined, now: 
   if (sameDay(d, yesterday)) return `vakar, ${time}`;
   return formatLtDateLong(d);
 }
+
+/**
+ * „2026-07" → „2026 m. liepa".
+ *
+ * Nominative, not the genitive the full-date formatter uses: a month standing
+ * on its own as an axis label is a noun, not part of a date.
+ */
+const LT_MONTHS_NOMINATIVE = [
+  "sausis", "vasaris", "kovas", "balandis", "gegužė", "birželis",
+  "liepa", "rugpjūtis", "rugsėjis", "spalis", "lapkritis", "gruodis",
+];
+
+export function formatLtMonth(period: string | null | undefined): string | null {
+  if (!period) return null;
+  const m = /^(\d{4})-(\d{2})$/.exec(period.trim());
+  if (!m) return null;
+  const month = LT_MONTHS_NOMINATIVE[Number(m[2]) - 1];
+  return month ? `${m[1]} m. ${month}` : null;
+}

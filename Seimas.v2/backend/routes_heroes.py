@@ -7,8 +7,7 @@ from typing import List, Dict, Optional, Any
 
 from backend.models import (
     HeroMpResponse,
-    HeroAttributesResponse,
-    HeroArtifactResponse,
+    HeroDimensionsResponse,
     HeroProfileResponse,
     HeroSearchResponse,
 )

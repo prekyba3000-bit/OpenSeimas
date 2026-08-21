@@ -23,8 +23,6 @@ const API_BASE = `${ConfigApiUrl}/api`;
 /** Backend JSON key for MP / accountability highlight strings (computed so civic grep stays clean). */
 const WIRE_MP_HIGHLIGHT_EVIDENCE = ["hero", "evidence"].join("_");
 
-const XP_CURRENT_LEVEL = ["xp", "current", "level"].join("_");
-const XP_NEXT_LEVEL = ["xp", "next", "level"].join("_");
 
 // Backend path rename (heroes → monitoring) is tracked in v4 backlog.
 // Change the value here when the backend endpoint is updated; no other
@@ -60,28 +58,6 @@ export interface ComparisonResult {
   }[];
 }
 
-export interface AccountabilityPerson {
-  id: string;
-  name: string;
-  party: string | null;
-  photo_url: string | null;
-  attendance: number;
-  vote_count: number;
-  risk_score: number;
-  integrity_score: number;
-  risk_signals_7d: { high: number; medium: number; low: number };
-  evidence: string[];
-  watch_evidence: string[];
-  rank: number;
-}
-
-export interface AccountabilitySnapshot {
-  generated_at: string;
-  window_days: number;
-  heroes: AccountabilityPerson[];
-  watchlist: AccountabilityPerson[];
-}
-
 export type ForensicStatus = "clean" | "warning" | "flagged" | "critical" | "unavailable";
 
 export type ForensicFlag = {
@@ -96,8 +72,6 @@ export type ForensicFlag = {
 };
 
 export type ForensicBreakdown = {
-  baseRiskScore: number;
-  baseRiskPenalty: number;
   benford: ForensicFlag & { pValue?: number | null };
   chrono: ForensicFlag & { worstZscore?: number | null };
   voteGeometry: ForensicFlag & { maxDeviationSigma?: number | null };
@@ -113,7 +87,6 @@ export type ForensicBreakdown = {
     explanation: string;
   };
   totalForensicAdjustment: number;
-  finalIntegrityScore: number;
 };
 
 /** Civic MP profile (mapped from raw API). Presentation fields remain until WS2 profile UI migration. */
@@ -137,7 +110,7 @@ export type MpProfile = {
   /** Per-attribute data quality: "direct" | "proxy" | "unavailable". */
   metrics_provenance?: Partial<Record<"STR" | "WIS" | "CHA" | "INT" | "STA", string>>;
   // TODO(v4): add faction once backend exposes it
-} & MpProfilePresentationLegacy;
+} & MpProfileDimensions;
 
 export type MpMetrics = {
   attendance_percentage?: number | null;
@@ -149,24 +122,22 @@ export type MpMetrics = {
   years_in_parliament?: number | null;
 };
 
-type XpCurrentLevelKey = `${"xp"}_${"current"}_${"level"}`;
-type XpNextLevelKey = `${"xp"}_${"next"}_${"level"}`;
-
-/** TODO(v4): WS2 — remove when profile UI no longer reads gamification fields from API. */
-export type MpProfilePresentationLegacy = {
-  level: number;
-  xp: number;
-} & Record<XpCurrentLevelKey, number> &
-  Record<XpNextLevelKey, number> & {
-  alignment: string;
-  attributes: {
-    STR: number;
-    WIS: number;
-    CHA: number;
-    INT: number;
-    STA: number;
+/**
+ * The gamification fields are gone from the API. The type that named them —
+ * `MpProfileDimensions`, with its `level`, `xp` and the computed-key
+ * indirection that kept "xp_next_level" out of source — went with them.
+ */
+export type MpProfileDimensions = {
+  /**
+   * The three chamber-relative dimensions, named for what they measure.
+   * Were STR / WIS / CHA in an RPG stat block that also carried INT (the
+   * composite verdict) and STA (a second aggregation nothing rendered).
+   */
+  dimensions: {
+    legislative_activity: number;
+    experience: number;
+    visibility: number;
   };
-  artifacts: Array<{ name: string; rarity: string }>;
 };
 
 export interface MpSearchResponse {
@@ -199,8 +170,6 @@ type _RawForensicEntry = {
 };
 
 type _RawForensicBreakdown = {
-  base_risk_score: number;
-  base_risk_penalty: number;
   benford: _RawForensicEntry & { p_value?: number | null };
   chrono: _RawForensicEntry & { worst_zscore?: number | null };
   vote_geometry: _RawForensicEntry & { max_deviation_sigma?: number | null };
@@ -216,7 +185,6 @@ type _RawForensicBreakdown = {
     explanation: string;
   };
   total_forensic_adjustment: number;
-  final_integrity_score: number;
 };
 
 // ── Zod (validates wire shape / Layer A) ────────────────────────────────────
@@ -230,8 +198,6 @@ const rawForensicEntrySchema = z.object({
 });
 
 const rawForensicBreakdownSchema: z.ZodType<_RawForensicBreakdown> = z.object({
-  base_risk_score: z.number(),
-  base_risk_penalty: z.number(),
   benford: rawForensicEntrySchema.extend({ p_value: z.number().nullable().optional() }),
   chrono: rawForensicEntrySchema.extend({ worst_zscore: z.number().nullable().optional() }),
   vote_geometry: rawForensicEntrySchema.extend({
@@ -249,7 +215,6 @@ const rawForensicBreakdownSchema: z.ZodType<_RawForensicBreakdown> = z.object({
     explanation: z.string(),
   }),
   total_forensic_adjustment: z.number(),
-  final_integrity_score: z.number(),
 });
 
 export const mpProfileSchema = z
@@ -264,24 +229,11 @@ export const mpProfileSchema = z
       mandate_start_date: z.string().nullable().optional(),
       mandate_end_date: z.string().nullable().optional(),
     }),
-    level: z.number(),
-    xp: z.number(),
-    [XP_CURRENT_LEVEL]: z.number(),
-    [XP_NEXT_LEVEL]: z.number(),
-    alignment: z.string(),
-    attributes: z.object({
-      STR: z.number(),
-      WIS: z.number(),
-      CHA: z.number(),
-      INT: z.number(),
-      STA: z.number(),
+    dimensions: z.object({
+      legislative_activity: z.number(),
+      experience: z.number(),
+      visibility: z.number(),
     }),
-    artifacts: z.array(
-      z.object({
-        name: z.string(),
-        rarity: z.string(),
-      }),
-    ),
     forensic_breakdown: rawForensicBreakdownSchema,
     // The real, source-backed numbers. `attributes` above are derived composites
     // and several of them read from tables that are still empty — prefer these.
@@ -323,32 +275,6 @@ const mpSearchResponseRawSchema = z.object({
   results: mpLeaderboardRawSchema,
 });
 
-const accountabilityPersonRawSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  party: z.string().nullable(),
-  photo_url: z.string().nullable(),
-  attendance: z.number(),
-  vote_count: z.number(),
-  risk_score: z.number(),
-  integrity_score: z.number(),
-  risk_signals_7d: z.object({
-    high: z.number(),
-    medium: z.number(),
-    low: z.number(),
-  }),
-  [WIRE_MP_HIGHLIGHT_EVIDENCE]: z.array(z.string()),
-  watch_evidence: z.array(z.string()),
-  rank: z.number(),
-});
-
-const accountabilitySnapshotRawSchema = z.object({
-  generated_at: z.string(),
-  window_days: z.number(),
-  heroes: z.array(accountabilityPersonRawSchema),
-  watchlist: z.array(accountabilityPersonRawSchema),
-});
-
 function forensicSeverityFromStatus(status: ForensicStatus): ForensicFlag["severity"] {
   if (status === "flagged" || status === "critical") return "high";
   if (status === "warning") return "medium";
@@ -375,11 +301,7 @@ function mapRawForensicEntry(
 type _ParsedMpProfileWire = {
   mp: MpProfile["mp"];
   forensic_breakdown: _RawForensicBreakdown;
-  level: number;
-  xp: number;
-  alignment: string;
-  attributes: MpProfile["attributes"];
-  artifacts: MpProfile["artifacts"];
+  dimensions: MpProfile["dimensions"];
   metrics?: MpMetrics;
   metrics_provenance?: MpProfile["metrics_provenance"];
 } & Record<string, unknown>;
@@ -392,8 +314,6 @@ type _ParsedMpProfileWire = {
  */
 function mapRawForensicBreakdown(raw: _RawForensicBreakdown): ForensicBreakdown {
   return {
-    baseRiskScore: raw.base_risk_score,
-    baseRiskPenalty: raw.base_risk_penalty,
     benford: {
       ...mapRawForensicEntry("benford", "Benfordo dėsnio analizė", raw.benford),
       pValue: raw.benford.p_value,
@@ -419,7 +339,6 @@ function mapRawForensicBreakdown(raw: _RawForensicBreakdown): ForensicBreakdown 
       explanation: raw.loyalty_bonus.explanation,
     },
     totalForensicAdjustment: raw.total_forensic_adjustment,
-    finalIntegrityScore: raw.final_integrity_score,
   };
 }
 
@@ -430,60 +349,13 @@ function mapRawToMpProfile(raw: z.infer<typeof mpProfileSchema>): MpProfile {
     mp: r.mp,
     forensicBreakdown: mapRawForensicBreakdown(r.forensic_breakdown),
     evidence: wireEvidence,
-    level: r.level,
-    xp: r.xp,
-    [XP_CURRENT_LEVEL]: r[XP_CURRENT_LEVEL] as number,
-    [XP_NEXT_LEVEL]: r[XP_NEXT_LEVEL] as number,
-    alignment: r.alignment,
-    attributes: r.attributes,
-    artifacts: r.artifacts,
+    dimensions: r.dimensions,
     metrics: r.metrics,
     metrics_provenance: r.metrics_provenance,
   } as MpProfile;
 }
 
 /** Same z.infer widening as `mpProfileSchema` when object keys are computed strings. */
-type _ParsedAccountabilityPersonWire = {
-  id: string;
-  name: string;
-  party: string | null;
-  photo_url: string | null;
-  attendance: number;
-  vote_count: number;
-  risk_score: number;
-  integrity_score: number;
-  risk_signals_7d: { high: number; medium: number; low: number };
-  watch_evidence: string[];
-  rank: number;
-} & Record<string, unknown>;
-
-function mapRawAccountabilityPerson(row: z.infer<typeof accountabilityPersonRawSchema>): AccountabilityPerson {
-  const r = row as unknown as _ParsedAccountabilityPersonWire;
-  return {
-    id: r.id,
-    name: r.name,
-    party: r.party,
-    photo_url: r.photo_url,
-    attendance: r.attendance,
-    vote_count: r.vote_count,
-    risk_score: r.risk_score,
-    integrity_score: r.integrity_score,
-    risk_signals_7d: r.risk_signals_7d,
-    evidence: (r[WIRE_MP_HIGHLIGHT_EVIDENCE] ?? []) as string[],
-    watch_evidence: r.watch_evidence,
-    rank: r.rank,
-  };
-}
-
-function mapRawAccountabilitySnapshot(raw: z.infer<typeof accountabilitySnapshotRawSchema>): AccountabilitySnapshot {
-  return {
-    generated_at: raw.generated_at,
-    window_days: raw.window_days,
-    heroes: raw.heroes.map(mapRawAccountabilityPerson),
-    watchlist: raw.watchlist.map(mapRawAccountabilityPerson),
-  };
-}
-
 // ── Forensic Engine types ────────────────────────────────────────────────────
 
 export interface ChronoItem {
@@ -723,6 +595,30 @@ export async function request<T>(endpoint: string, options: RequestOptions<T> = 
  * feed publishes tallies and no pass/fail field. Null means "render no outcome
  * line", not "render zero".
  */
+/**
+ * Attendance month by month across a member's own mandate.
+ *
+ * `attendance` is null in two different situations, which is why
+ * `eligible_days` travels beside it:
+ *   eligible_days === 0  the Seimas did not sit that month — a gap, not an
+ *                        absence, and never a zero.
+ *   0 < eligible < 3     too few sitting days for a percentage to mean
+ *                        anything.
+ */
+export interface AttendanceTrajectory {
+  mp_id: string;
+  unit: "month";
+  min_eligible_days: number;
+  mandate_start_date: string | null;
+  mandate_end_date: string | null;
+  buckets: Array<{
+    period: string;
+    eligible_days: number;
+    days_present: number;
+    attendance: number | null;
+  }>;
+}
+
 export interface LastSittingDay {
   sitting_date: string | null;
   vote_count: number;
@@ -766,6 +662,9 @@ export const api = {
   getVotes: (limit = 50, offset = 0) =>
     request<VoteSummary[]>(`/votes?limit=${limit}&offset=${offset}`),
 
+  getAttendanceTrajectory: (id: string) =>
+    request<AttendanceTrajectory>(`/mps/${id}/attendance-trajectory`),
+
   getLastSittingDay: () => request<LastSittingDay>("/meta/last-sitting-day"),
 
   getFreshness: () => request<Freshness>("/meta/freshness"),
@@ -775,10 +674,6 @@ export const api = {
   compareMps: (ids: string[]) =>
     request<ComparisonResult>(`/mps/compare?ids=${ids.join(",")}`),
 
-  getAccountabilitySnapshot: (limit = 10) =>
-    request<AccountabilitySnapshot>(`/accountability/heroes-villains?limit=${limit}`, {
-      parse: (data) => mapRawAccountabilitySnapshot(accountabilitySnapshotRawSchema.parse(data)),
-    }),
 
   getMpLeaderboard: (limit = 20, options?: RequestOptions<MpLeaderboardRow[]>) =>
     request<MpLeaderboardRow[]>(`${MONITORING_API_URL}?limit=${limit}`, {

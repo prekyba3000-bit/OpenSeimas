@@ -30,14 +30,47 @@ export function MethodologyView() {
       </div>
 
       <Card className="p-6 space-y-6 border-border bg-card">
-        <section>
-          <h2 className="text-lg font-semibold mb-2">Skaidrumo indeksas</h2>
+        {/* The composite, demoted here rather than deleted. It is no longer
+            shown on any profile, list or panel; the formula is published so
+            that removing it from the surfaces is not the same as hiding it.
+            LT-COPY: needs native review — whole section. */}
+        <section id="skaidrumo-indeksas">
+          <h2 className="text-lg font-semibold mb-2">
+            Skaidrumo indeksas — kodėl jo neberodome
+          </h2>
           <p className="text-muted-foreground text-sm leading-relaxed">
-            <strong className="text-foreground">Skaidrumo indeksas</strong> — suvestinis vientisumo balas (0–100),
-            grindžiamas rizikos signalais iš duomenų bazėje esančių forensinių modulių (Benford, chronologija,
-            balsavimo geometrija, „phantom“ tinklai ir kt.), kai jie prieinami. Jei šaltinių nėra arba duomenys dar
-            nesinchronizuoti, bazinė reikšmė gali likti aukšta — tai <strong>ne</strong> „švarumo sertifikatas“,
-            o <strong>modelio išvestis</strong>, kurią visada vertinkite kartu su šaltiniais ir kontekstu.
+            Anksčiau kiekvieno Seimo nario profilyje rodėme vieną suvestinį balą (0–100).
+            Jo nebeskelbiame nei profilyje, nei sąrašuose, nei jokioje kitoje vietoje.
+            Formulę paliekame čia, kad jos pašalinimas iš puslapių nebūtų tas pat, kas
+            jos nuslėpimas.
+          </p>
+          <p className="text-muted-foreground text-sm leading-relaxed mt-3">
+            <strong className="text-foreground">Formulė:</strong>{' '}
+            <code className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded">
+              100 − bazinė rizikos bauda + forensinių modulių korekcija
+            </code>{' '}
+            (rezultatas apribojamas 0–100). Bazinė rizika skaičiuojama iš duomenų bazėje
+            esančių signalų; modulių korekcija — iš Benfordo, chronologijos, balsavimo
+            geometrijos, paslėptų ryšių ir frakcijos lojalumo modulių.
+          </p>
+          <p className="text-muted-foreground text-sm leading-relaxed mt-3">
+            <strong className="text-foreground">Kodėl neberodome.</strong> Vienas skaičius
+            atsako į klausimą už pilietį, užuot padėjęs jam pačiam apsispręsti. Jis suplokština
+            žmogų į vieną ašį: daug įstatymų rengiantis, bet retai balsuojantis narys atrodo
+            „blogas“, o posėdžiuose sėdintis, bet nieko neinicijuojantis — „geras“. Ir jis yra
+            per tikslus duomenims, kuriais remiasi: 31 % balsavimų neturi paskelbtų pavienių
+            balsų, o dalyvavimas turi mandato laikotarpio ribas ir slenksčius.
+          </p>
+          <p className="text-muted-foreground text-sm leading-relaxed mt-3">
+            <strong className="text-foreground">Kalibravimo trūkumas.</strong> Kai forensinių
+            modulių duomenų nėra, formulė grąžina bazinę reikšmę — todėl daugumai narių balas
+            buvo 100. Toks skaičius kelia daugiau pasitikėjimo, nei yra užsitarnavęs: jis rodė
+            ne švarų įrašą, o duomenų nebuvimą.
+          </p>
+          <p className="text-muted-foreground text-sm leading-relaxed mt-3">
+            Vietoj jo profilyje rodome penkis atskirus rodiklius. Jie nesudedami: kiekvienas
+            matuoja skirtingą dalyką, kiekvienas turi savo vardiklį, ir kiekvienas pasako, ko
+            <em>nerodo</em>.
           </p>
         </section>
 

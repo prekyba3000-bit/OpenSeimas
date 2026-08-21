@@ -23,14 +23,8 @@ function pickFlag(entry: ForensicFlag): ForensicFlag {
  * TODO(v4): if ForensicBreakdown shape changes, update mapping here.
  */
 export function forensicBreakdownToFlags(bd: ForensicBreakdown): ForensicFlag[] {
-  const baseRisk: ForensicFlag = {
-    engine: "base_risk",
-    status: bd.baseRiskPenalty < 0 ? "warning" : "clean",
-    title: "Bazinė rizika",
-    description: `Bazinis rizikos balas: ${bd.baseRiskScore}. Bazinė bauda: ${bd.baseRiskPenalty} taškų.`,
-    severity: bd.baseRiskPenalty < 0 ? "medium" : "none",
-    penalty: bd.baseRiskPenalty,
-  };
+  // „Bazinė rizika" was not an engine finding — it was the composite's own
+  // input, restated as a flag. It went with the composite.
 
   const loyalty: ForensicFlag = {
     engine: "loyalty",
@@ -42,7 +36,6 @@ export function forensicBreakdownToFlags(bd: ForensicBreakdown): ForensicFlag[] 
   };
 
   return [
-    baseRisk,
     pickFlag(bd.benford),
     pickFlag(bd.chrono),
     pickFlag(bd.voteGeometry),
