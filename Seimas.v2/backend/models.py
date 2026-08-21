@@ -20,30 +20,25 @@ class HeroMpResponse(BaseModel):
     mandate_end_date: Optional[str] = None
 
 
-class HeroAttributesResponse(BaseModel):
-    STR: float
-    WIS: float
-    CHA: float
-    INT: float
-    STA: float
+class HeroDimensionsResponse(BaseModel):
+    """The three dimensions computed from maxima across the chamber.
 
+    Named for what they measure. They were STR / WIS / CHA / INT / STA — an
+    RPG stat block, with INT holding the composite verdict and STA a second
+    aggregation nothing rendered. `extra="ignore"` on the profile means a
+    field removed here silently stops being served, which is the intent.
+    """
 
-class HeroArtifactResponse(BaseModel):
-    name: str
-    rarity: str
+    legislative_activity: float
+    experience: float
+    visibility: float
 
 
 class HeroProfileResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     mp: HeroMpResponse
-    level: int
-    xp: int
-    xp_current_level: int
-    xp_next_level: int
-    alignment: str
-    attributes: HeroAttributesResponse
-    artifacts: List[HeroArtifactResponse]
+    dimensions: HeroDimensionsResponse
     metrics: Dict[str, Any] = Field(default_factory=dict)
     metrics_provenance: Dict[str, str] = Field(default_factory=dict)
     forensic_breakdown: Dict[str, Any] = Field(default_factory=dict)
