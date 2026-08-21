@@ -7,16 +7,29 @@ import { Button } from '../components/Button';
 import MpProfileCard from '../components/MpProfileCard';
 import { WikiPanel } from '../components/WikiPanel';
 import { MpReplies } from '../components/MpReplies';
-import { ScoreTooltip } from '../components/ScoreTooltip';
+import { DimensionDial } from '../components/DimensionDial';
+import { AttendanceTrajectoryStrip } from '../components/AttendanceTrajectory';
+import {
+  CIVIC_DIMENSION_ORDER,
+  type MpCivicDimension,
+} from '../utils/mpLegacyDimensions';
 import { readMpDimension } from '../utils/mpLegacyDimensions';
 import { mandatePeriodLabel, servedNoDays } from '../utils/mpCounts';
 import { formatLtDateLong } from '../utils/ltDate';
-import { ApiError, api, type ForensicFlag, MpProfile, MpVoteRecord } from '../services/api';
+import {
+  ApiError,
+  api,
+  type AttendanceTrajectory,
+  type ForensicFlag,
+  MpProfile,
+  MpVoteRecord,
+} from '../services/api';
 import { toastErrorDeduped } from '../utils/toastDeduped';
 import { ProblemDetailsNotice } from '../components/ProblemDetailsNotice';
 import { LT } from '../i18n/lt';
 import { NO_CHOICE_RECORDED_LT } from '../utils/perMemberChoices';
 import { SITE_NAME } from '../utils/routeTitles';
+import { ltPlural } from '../utils/ltPlural';
 
 type ProfileTab = 'apzvalga' | 'balsavimai' | 'apygarda' | 'biografija';
 
@@ -54,6 +67,26 @@ function formatVoteChoiceLabel(choice: string | null | undefined): string {
   return c;
 }
 
+/**
+ * „iš 93 posėdžių dienų per mandato laikotarpį" — the denominator, in words.
+ *
+ * Only attendance has one the client can state precisely, because the
+ * trajectory endpoint reports it. The three chamber-relative dimensions are
+ * scored against the highest value in the chamber, which their drawer
+ * explains; asserting a number here would be inventing one.
+ */
+function dimensionCoverage(
+  dim: MpCivicDimension,
+  trajectory: AttendanceTrajectory | null,
+): string | null {
+  if (dim !== 'attendance' || !trajectory) return null;
+  const eligible = trajectory.buckets.reduce((sum, b) => sum + b.eligible_days, 0);
+  if (eligible === 0) return null;
+  const months = trajectory.buckets.filter((b) => b.attendance !== null).length;
+  // LT-COPY: needs native review
+  return `iš ${eligible} ${ltPlural(eligible, 'posėdžių dienos', 'posėdžių dienų', 'posėdžių dienų')} · ${months} mėn. su duomenimis`;
+}
+
 const TAB_LABELS: Record<ProfileTab, string> = {
   apzvalga: 'Apžvalga',
   balsavimai: 'Balsavimai',
@@ -62,6 +95,7 @@ const TAB_LABELS: Record<ProfileTab, string> = {
 };
 
 interface MpProfileLayoutProps {
+  trajectory?: AttendanceTrajectory | null;
   profile: MpProfile | null;
   votes: MpVoteRecord[];
   votesLoading: boolean;
@@ -74,6 +108,7 @@ interface MpProfileLayoutProps {
 
 export const MpProfileLayout = ({
   profile,
+  trajectory = null,
   votes,
   votesLoading,
   loading = false,
@@ -214,9 +249,33 @@ export const MpProfileLayout = ({
 
       <div className="pb-8">
         {tab === 'apzvalga' && (
+          /* Evidence first. The order is the argument: what this member did,
+             then the dimensions that describe it, then how those change over
+             time — and no verdict anywhere in the sequence. */
           <div className="flex flex-col gap-6">
             <MpProfileCard profile={profile} highlightEngine={highlightEngine} />
-            <ScoreTooltip profile={profile} />
+
+            <section aria-label="Rodikliai">
+              <h2 className="text-base font-semibold text-foreground mb-1">Rodikliai</h2>
+              {/* LT-COPY: needs native review */}
+              <p className="text-sm text-muted-foreground mb-4 max-w-prose">
+                Penki atskiri rodikliai. Jie nesudedami į vieną balą — kiekvienas matuoja
+                skirtingą dalyką, ir jų suma nieko nereikštų.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                {CIVIC_DIMENSION_ORDER.map((dim: MpCivicDimension) => (
+                  <DimensionDial
+                    key={dim}
+                    dimension={dim}
+                    value={readMpDimension(profile, dim)}
+                    coverage={dimensionCoverage(dim, trajectory)}
+                  />
+                ))}
+              </div>
+            </section>
+
+            <AttendanceTrajectoryStrip data={trajectory} />
+
             <MpReplies mpId={profile.mp.id} />
           </div>
         )}
@@ -278,6 +337,14 @@ const MpProfileView = ({ mpId }: { mpId: string }) => {
     enabled: Boolean(mpId) && profileQuery.isSuccess,
   });
 
+  // Additive: the profile renders without it, minus the strip and attendance's
+  // denominator. A trajectory failure must not blank a member's page.
+  const trajectoryQuery = useQuery({
+    queryKey: ['mps', mpId, 'attendance-trajectory'],
+    queryFn: () => api.getAttendanceTrajectory(mpId),
+    enabled: Boolean(mpId) && profileQuery.isSuccess,
+  });
+
   const profile = profileQuery.data ?? null;
   const votes = votesQuery.data ?? [];
   const votesLoading = votesQuery.isFetching;
@@ -314,6 +381,7 @@ const MpProfileView = ({ mpId }: { mpId: string }) => {
   return (
     <MpProfileLayout
       profile={profile}
+      trajectory={trajectoryQuery.data ?? null}
       votes={votes}
       votesLoading={votesLoading}
       loading={loading}

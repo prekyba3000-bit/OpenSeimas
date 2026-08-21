@@ -684,6 +684,30 @@ export async function request<T>(endpoint: string, options: RequestOptions<T> = 
  * feed publishes tallies and no pass/fail field. Null means "render no outcome
  * line", not "render zero".
  */
+/**
+ * Attendance month by month across a member's own mandate.
+ *
+ * `attendance` is null in two different situations, which is why
+ * `eligible_days` travels beside it:
+ *   eligible_days === 0  the Seimas did not sit that month — a gap, not an
+ *                        absence, and never a zero.
+ *   0 < eligible < 3     too few sitting days for a percentage to mean
+ *                        anything.
+ */
+export interface AttendanceTrajectory {
+  mp_id: string;
+  unit: "month";
+  min_eligible_days: number;
+  mandate_start_date: string | null;
+  mandate_end_date: string | null;
+  buckets: Array<{
+    period: string;
+    eligible_days: number;
+    days_present: number;
+    attendance: number | null;
+  }>;
+}
+
 export interface LastSittingDay {
   sitting_date: string | null;
   vote_count: number;
@@ -726,6 +750,9 @@ export const api = {
 
   getVotes: (limit = 50, offset = 0) =>
     request<VoteSummary[]>(`/votes?limit=${limit}&offset=${offset}`),
+
+  getAttendanceTrajectory: (id: string) =>
+    request<AttendanceTrajectory>(`/mps/${id}/attendance-trajectory`),
 
   getLastSittingDay: () => request<LastSittingDay>("/meta/last-sitting-day"),
 
