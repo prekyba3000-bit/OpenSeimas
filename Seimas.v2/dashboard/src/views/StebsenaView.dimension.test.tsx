@@ -15,7 +15,7 @@ import { readMpDimension, DIMENSION_UNAVAILABLE_LT } from "../utils/mpLegacyDime
 describe("leaderboard dimension values", () => {
   it("readMpDimension returns null rather than a zero for a missing metric", () => {
     const bare = { id: "x", name: "X" } as never;
-    expect(readMpDimension(bare, "integrity")).toBeNull();
+    expect(readMpDimension(bare, "legislativeActivity")).toBeNull();
   });
 
   it("the shared unavailable string is a sentence, not a number", () => {
@@ -31,5 +31,24 @@ describe("leaderboard dimension values", () => {
     const src = readFileSync(join(__dirname, "StebsenaView.tsx"), "utf8");
     const code = src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
     expect(code).not.toMatch(/readMpDimension\([^)]*\)\s*\?\?\s*0/);
+  });
+});
+
+/**
+ * §2.3: a dimension-sorted view ranks only the members it can rank.
+ *
+ * „Sort last as negative infinity" still placed them in the ranking, at the
+ * bottom, which reads as worst — the same lie as a 0.0 cell, one layer up.
+ */
+describe("dimension-sorted leaderboard", () => {
+  it("lifts NULL rows out of the ranking rather than sorting them last", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const src = readFileSync(join(__dirname, "StebsenaView.tsx"), "utf8");
+    const code = src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+
+    expect(code).not.toMatch(/Number\.NEGATIVE_INFINITY/);
+    expect(code).toMatch(/unranked/);
+    expect(code).toMatch(/Nepakanka duomenų/);
   });
 });

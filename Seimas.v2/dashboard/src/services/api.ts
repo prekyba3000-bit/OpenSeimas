@@ -58,28 +58,6 @@ export interface ComparisonResult {
   }[];
 }
 
-export interface AccountabilityPerson {
-  id: string;
-  name: string;
-  party: string | null;
-  photo_url: string | null;
-  attendance: number;
-  vote_count: number;
-  risk_score: number;
-  integrity_score: number;
-  risk_signals_7d: { high: number; medium: number; low: number };
-  evidence: string[];
-  watch_evidence: string[];
-  rank: number;
-}
-
-export interface AccountabilitySnapshot {
-  generated_at: string;
-  window_days: number;
-  heroes: AccountabilityPerson[];
-  watchlist: AccountabilityPerson[];
-}
-
 export type ForensicStatus = "clean" | "warning" | "flagged" | "critical" | "unavailable";
 
 export type ForensicFlag = {
@@ -297,32 +275,6 @@ const mpSearchResponseRawSchema = z.object({
   results: mpLeaderboardRawSchema,
 });
 
-const accountabilityPersonRawSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  party: z.string().nullable(),
-  photo_url: z.string().nullable(),
-  attendance: z.number(),
-  vote_count: z.number(),
-  risk_score: z.number(),
-  integrity_score: z.number(),
-  risk_signals_7d: z.object({
-    high: z.number(),
-    medium: z.number(),
-    low: z.number(),
-  }),
-  [WIRE_MP_HIGHLIGHT_EVIDENCE]: z.array(z.string()),
-  watch_evidence: z.array(z.string()),
-  rank: z.number(),
-});
-
-const accountabilitySnapshotRawSchema = z.object({
-  generated_at: z.string(),
-  window_days: z.number(),
-  heroes: z.array(accountabilityPersonRawSchema),
-  watchlist: z.array(accountabilityPersonRawSchema),
-});
-
 function forensicSeverityFromStatus(status: ForensicStatus): ForensicFlag["severity"] {
   if (status === "flagged" || status === "critical") return "high";
   if (status === "warning") return "medium";
@@ -404,47 +356,6 @@ function mapRawToMpProfile(raw: z.infer<typeof mpProfileSchema>): MpProfile {
 }
 
 /** Same z.infer widening as `mpProfileSchema` when object keys are computed strings. */
-type _ParsedAccountabilityPersonWire = {
-  id: string;
-  name: string;
-  party: string | null;
-  photo_url: string | null;
-  attendance: number;
-  vote_count: number;
-  risk_score: number;
-  integrity_score: number;
-  risk_signals_7d: { high: number; medium: number; low: number };
-  watch_evidence: string[];
-  rank: number;
-} & Record<string, unknown>;
-
-function mapRawAccountabilityPerson(row: z.infer<typeof accountabilityPersonRawSchema>): AccountabilityPerson {
-  const r = row as unknown as _ParsedAccountabilityPersonWire;
-  return {
-    id: r.id,
-    name: r.name,
-    party: r.party,
-    photo_url: r.photo_url,
-    attendance: r.attendance,
-    vote_count: r.vote_count,
-    risk_score: r.risk_score,
-    integrity_score: r.integrity_score,
-    risk_signals_7d: r.risk_signals_7d,
-    evidence: (r[WIRE_MP_HIGHLIGHT_EVIDENCE] ?? []) as string[],
-    watch_evidence: r.watch_evidence,
-    rank: r.rank,
-  };
-}
-
-function mapRawAccountabilitySnapshot(raw: z.infer<typeof accountabilitySnapshotRawSchema>): AccountabilitySnapshot {
-  return {
-    generated_at: raw.generated_at,
-    window_days: raw.window_days,
-    heroes: raw.heroes.map(mapRawAccountabilityPerson),
-    watchlist: raw.watchlist.map(mapRawAccountabilityPerson),
-  };
-}
-
 // ── Forensic Engine types ────────────────────────────────────────────────────
 
 export interface ChronoItem {
@@ -763,10 +674,6 @@ export const api = {
   compareMps: (ids: string[]) =>
     request<ComparisonResult>(`/mps/compare?ids=${ids.join(",")}`),
 
-  getAccountabilitySnapshot: (limit = 10) =>
-    request<AccountabilitySnapshot>(`/accountability/heroes-villains?limit=${limit}`, {
-      parse: (data) => mapRawAccountabilitySnapshot(accountabilitySnapshotRawSchema.parse(data)),
-    }),
 
   getMpLeaderboard: (limit = 20, options?: RequestOptions<MpLeaderboardRow[]>) =>
     request<MpLeaderboardRow[]>(`${MONITORING_API_URL}?limit=${limit}`, {

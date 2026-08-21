@@ -19,13 +19,14 @@ import {
   Mail,
 } from 'lucide-react';
 import { CitationCopyButton } from '../components/CitationCopyButton';
+import { VerifiedVotesPanel } from '../components/VerifiedVotesPanel';
+import { CorrectionsAndRepliesPanel } from '../components/CorrectionsAndRepliesPanel';
 import {
   ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, Cell, LineChart, Line, Legend,
 } from 'recharts';
 import {
   api,
-  type AccountabilitySnapshot,
   type BenfordResponse,
   type ChronoResponse,
   type DashboardStats,
@@ -88,7 +89,6 @@ export default function SkaidrumasHubView() {
       { queryKey: ['skaidrumas', 'stats'] as const, queryFn: () => api.getStats() },
       { queryKey: ['skaidrumas', 'mps'] as const, queryFn: () => api.getMps() },
       { queryKey: ['skaidrumas', 'votesPreview'] as const, queryFn: () => api.getVotes(8, 0) },
-      { queryKey: ['skaidrumas', 'accountability'] as const, queryFn: () => api.getAccountabilitySnapshot(10) },
       {
         queryKey: ['skaidrumas', 'chrono'] as const,
         queryFn: async () => {
@@ -147,10 +147,10 @@ export default function SkaidrumasHubView() {
     ],
   });
 
-  const [statsQ, mpsQ, votesQ, accountabilityQ, chronoQ, benfordQ, loyaltyQ, phantomQ, voteGeoQ] = hubQueries;
+  const [statsQ, mpsQ, votesQ, chronoQ, benfordQ, loyaltyQ, phantomQ, voteGeoQ] = hubQueries;
 
   const loading = hubQueries.some((q) => q.isPending);
-  const coreError = [statsQ, mpsQ, votesQ, accountabilityQ].find((q) => q.isError)?.error;
+  const coreError = [statsQ, mpsQ, votesQ].find((q) => q.isError)?.error;
   const refetchHub = () => {
     hubQueries.forEach((q) => void q.refetch());
   };
@@ -158,7 +158,6 @@ export default function SkaidrumasHubView() {
   const stats = statsQ.data ?? null;
   const mps = React.useMemo(() => mpsQ.data ?? [], [mpsQ.data]);
   const votes = React.useMemo(() => votesQ.data ?? [], [votesQ.data]);
-  const accountability = accountabilityQ.data ?? null;
   const chrono = chronoQ.data ?? null;
   const benford = benfordQ.data ?? null;
   const loyalty = loyaltyQ.data ?? null;
@@ -393,73 +392,14 @@ export default function SkaidrumasHubView() {
       </section>
 
       <section className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        <div className="rounded-xl border border-border bg-card p-4">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <ShieldAlert className="w-4 h-4 text-vote-for" />
-              <h2 className="text-base font-semibold text-foreground">Stebėsenos suvestinė (10)</h2>
-            </div>
-            <span className="text-xs text-muted-foreground">7 d.</span>
-          </div>
-          <div className="space-y-2">
-            {(accountability?.heroes ?? []).map((item) => (
-              <button
-                key={`highlight-${item.id}`}
-                type="button"
-                onClick={() => {
-                  // TODO(v4): refine to a more specific engine once snapshot rows carry engine data
-                  goToMpForensicFlag(item.id, 'base_risk');
-                }}
-                className="w-full text-left rounded-md border border-border p-3 hover:bg-muted/30 transition-colors cursor-pointer"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="text-sm font-semibold">#{item.rank} {item.name}</div>
-                  <div className="text-xs text-vote-for font-mono">{item.integrity_score}</div>
-                </div>
-                <div className="text-xs text-muted-foreground mt-1">{item.party || 'Nežinoma'} · {formatAttendance(item.attendance)} lankomumas</div>
-                <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
-                  {item.evidence.slice(0, 3).map((evidence) => (
-                    <li key={`${item.id}-${evidence}`}>• {evidence}</li>
-                  ))}
-                </ul>
-              </button>
-            ))}
-          </div>
-        </div>
+        {/* „Stebėsenos suvestinė" and „Top 10 stebėsena" stood here: heroes and
+            a watchlist, ranked by a composite verdict over named people. They
+            are retired, not restyled — see the corrections log. What replaces
+            them is evidence: what the Seimas verifiably did, and what the
+            platform has been told it got wrong. */}
+        <VerifiedVotesPanel votes={votes} />
 
-        <div className="rounded-xl border border-border bg-card p-4">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-destructive" />
-              <h2 className="text-base font-semibold text-foreground">Top 10 stebėsena</h2>
-            </div>
-            <span className="text-xs text-muted-foreground">7 d.</span>
-          </div>
-          <div className="space-y-2">
-            {(accountability?.watchlist ?? []).map((item) => (
-              <button
-                key={`watch-${item.id}`}
-                type="button"
-                onClick={() => {
-                  // TODO(v4): refine to a more specific engine once snapshot rows carry engine data
-                  goToMpForensicFlag(item.id, 'base_risk');
-                }}
-                className="w-full text-left rounded-md border border-border p-3 hover:bg-muted/30 transition-colors cursor-pointer"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="text-sm font-semibold">#{item.rank} {item.name}</div>
-                  <div className="text-xs text-destructive font-mono">{item.risk_score}</div>
-                </div>
-                <div className="text-xs text-muted-foreground mt-1">{item.party || 'Nežinoma'} · {formatAttendance(item.attendance)} lankomumas</div>
-                <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
-                  {item.watch_evidence.slice(0, 3).map((evidence) => (
-                    <li key={`${item.id}-${evidence}`}>• {evidence}</li>
-                  ))}
-                </ul>
-              </button>
-            ))}
-          </div>
-        </div>
+        <CorrectionsAndRepliesPanel />
       </section>
 
       {/* „Gėdos siena“ — attendance by sitting day. It was on the landing,
