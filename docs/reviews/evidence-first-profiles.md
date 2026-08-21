@@ -1,6 +1,17 @@
 # Evidence-first profiles — §2.1 recon
 
-**Status: awaiting review. No implementation started.**
+**Status: decisions received; implementation in progress.**
+
+| | |
+| --- | --- |
+| Branch | `feat/evidence-first-profiles`, green, pushed, **not merged** |
+| Last commit | `3ca4a6b` |
+| Tests | 122 backend · 182 dashboard |
+
+⚠️ **The backend and frontend must deploy together.** `bd51a34` changes the
+wire format (`attributes` → `dimensions`, composite and RPG fields removed);
+`3ca4a6b` is the client that reads the new shape. Merging one without the
+other blanks the three chamber-relative dials.
 
 Branch `feat/evidence-first-profiles`, cut from `main` at `fce625d` —
 after the `/api/mps` resolver fix was merged and deployed, per the gate.
@@ -23,7 +34,62 @@ grep, because grep has already missed dead files twice on this project.
 | — | OG / print metadata | `index.html`, `MainLayout.tsx` | No composite in either | No change. |
 | — | `components/ForensicExplainer.tsx` | dead (no importer) | `finalIntegrityScore` | Leave; it is in the dead-code workstream. |
 
-## Four conflicts — I need decisions before implementing
+## Decisions received (2026-08-21)
+
+**A** — Five dials: attendance, partyLoyalty, experience, legislativeActivity,
+visibility. `integrity` dies. Attendance gets both a dial and the trajectory
+strip, from the same resolver. `partyLoyalty` keeps its published name; its
+drawer states what it measures (faction-line conformity) and what it does not.
+
+**B** — Default `ORDER BY display_name ASC` stays; drop the integrity column;
+user-sorted dimension columns exclude NULL rows into a labelled „Nepakanka
+duomenų" group below. No 0.0 cell anywhere. Permanent fix for
+corrections-instance #4.
+
+**C** — Retire heroes-villains entirely. Replace the two hub panels with
+„Naujausi patikrinti balsavimai" and „Pataisymai ir atsakymai". Standalone
+corrections entry — different disease from the five-instance one.
+
+**D** — Remove the RPG layer *and* `risk_score` / `integrity` from public
+responses. Rule: the public API ships evidence and descriptive dimensions;
+verdicts ship nowhere.
+
+**Retirement vs demote** — demote, as recommended. Formula to the methodology
+page, `methodology_versions` entry for the trail, ship now. Methodology note
+acknowledges the calibration defect (the composite reads 100 for most members).
+
+### A note on where D and A met
+
+Three of the five dials read from the RPG `attributes` block, so deleting it
+outright would have broken decision A. D also says the API *should* ship
+descriptive dimensions — so the block was **renamed, not removed**:
+`STR/WIS/CHA` → `legislative_activity` / `experience` / `visibility`. Two
+fields went with the rename: `INT` (the composite) and `STA`
+(`score_consistency(attendance, amendments)` — a second aggregation that no
+surface ever rendered).
+
+## Done so far
+
+| Commit | What |
+| --- | --- |
+| `bd51a34` | **D + C (backend).** RPG layer off the wire; composite behind a `public_breakdown()` boundary; `/api/accountability/heroes-villains` retired with a tombstone; bulk leaderboard stops sorting by `(level, xp)`. 6 new tests. |
+| `3ca4a6b` | **A (client).** Five dimensions; `integrity` removed from the type, the labels, the order, the profile header, the profile card and the leaderboard column; `IntegrityBar` deleted; gamification types removed. |
+
+## Still to do
+
+1. §2.2 — profile restructure: identity + mandate, recent record, the five
+   dials with denominator + coverage + „Kaip skaičiuojama?" drawer, the
+   attendance trajectory strip (gaps render as gaps), corrections & replies.
+   Needs a backend addition for per-month attendance.
+2. §2.3 — leaderboard „Nepakanka duomenų" group; context bands.
+3. C (frontend) — replace the two hub panels.
+4. Methodology page: composite formula, plain-language explanation, calibration
+   note; `methodology_versions` entry.
+5. Standalone corrections-log entry for the verdict machine.
+6. §3 tests 1–7, including the import-graph guard and 360px checks.
+7. §4 verification + screenshots.
+
+## Original conflict analysis (retained for the record)
 
 ### A. There are six dimensions live, not four
 
