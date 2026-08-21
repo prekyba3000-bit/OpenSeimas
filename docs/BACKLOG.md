@@ -147,6 +147,31 @@ re-ingest. Roughly 11% of all votes are affected.
 Depends on: nothing. Related to [the tally backfill](#) — both are re-reads of
 the same 5,279 votes and should run in one pass if possible.
 
+### /api/mps does not apply the attendance overrides
+Found while writing `Seimas.v2/scripts/verify_attendance_v2.py`.
+
+The v1 → v2 switch is automatic and well built: `effective_attendance_version()`
+reads `methodology_versions`, and `resolve_attendance()` / `attendance_overrides()`
+apply both the value swap and the under-3-eligible-days suppression. But only
+`hero_engine.py` calls them — the `/api/v2/heroes/*` paths.
+
+`/api/mps` and `/api/mps/{id}` in `routes_public.py` read `mp_stats_summary`
+(the v1 view) directly, through
+`COALESCE(s.attendance_percentage, 0) AS attendance`. Two consequences from
+2026-08-26:
+
+1. The MP **list** will keep serving v1 numbers while the MP **profile** serves
+   v2 — the same member reading two different attendances on two pages.
+2. That `COALESCE(..., 0)` is the fabricated-zero pattern again: a suppressed
+   member (fewer than three eligible sitting days — 4 of them today) is served
+   as `0.0`, which reads as *never showed up* rather than *not enough data*.
+
+The verification script checks both explicitly and will name whichever path is
+wrong. Fixing it means routing `/api/mps` through the same resolver rather than
+reading the summary view, and dropping the COALESCE so null stays null.
+
+Depends on: nothing. Should land before 2026-08-26.
+
 ### Party strings — the same faction under two spellings
 `politicians.current_party` carries variants that the seat map colours as
 separate factions, because they are separate strings:

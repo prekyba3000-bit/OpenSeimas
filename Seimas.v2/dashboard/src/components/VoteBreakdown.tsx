@@ -67,7 +67,7 @@ function LegendItem({ label, count, percentage, color }: LegendItemProps) {
             {label}
           </span>
           <span className="text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>
-            {count} votes
+            {count} balsai
           </span>
         </div>
       </div>

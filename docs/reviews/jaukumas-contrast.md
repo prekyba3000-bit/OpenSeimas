@@ -9,7 +9,7 @@ change:
 cd Seimas.v2/dashboard && python3 scripts/contrast-report.py > ../../docs/reviews/jaukumas-contrast.md
 ```
 
-Last run 2026-08-20, against WCAG 2.2:
+Last run 2026-08-21, against WCAG 2.2:
 **4.5:1** for normal text, **3:1** for large text (≥18.66px bold or
 ≥24px) and for non-text elements that carry meaning.
 
@@ -48,7 +48,7 @@ slightly darker than the card.
 | LRLS | `#937DAA` | 3.32 | 4.54 | ✅ |
 | LVŽS | `#6E8E62` | 3.35 | 4.51 | ✅ |
 | Mišri | `#8C857A` | 3.33 | 4.54 | ✅ |
-| ? | `#7D766C` | 4.09 | 3.70 | ✅ |
+| Nenurodyta | `#7D766C` | 4.09 | 3.70 | ✅ |
 | (fallback) | `#7D766C` | 4.09 | 3.70 | ✅ |
 
 Tightest margin: **TS-LKD** at 3.17:1.

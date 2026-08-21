@@ -1,5 +1,6 @@
 import type { MpSummary, VoteDetail } from "../services/api";
 import { getPartyColor, getPartyMeta } from "../utils/partyColors";
+import { perMemberChoiceState } from "../utils/perMemberChoices";
 
 export type SeatMode = "frakcijos" | "balsavimas" | "dalyvavimas";
 
@@ -72,7 +73,9 @@ export function factionEncoding(mps: MpSummary[]): SeatEncoding {
  * mode is withheld instead.
  */
 export function hasRecordedChoices(vote: VoteDetail | null): boolean {
-  return (vote?.votes ?? []).some((v) => v.choice != null && v.choice !== "");
+  // Defers to the shared predicate so „missing" and „unpublished" cannot drift
+  // apart between the seat map, the vote page and the MP profile.
+  return perMemberChoiceState(vote?.votes) === "present";
 }
 
 export function voteEncoding(vote: VoteDetail | null, seatedIds: string[]): SeatEncoding {

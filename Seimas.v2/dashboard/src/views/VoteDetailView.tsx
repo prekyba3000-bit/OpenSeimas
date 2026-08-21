@@ -9,9 +9,16 @@ import { VoteBreakdown } from '../components/VoteBreakdown';
 import { getPartyColor, getPartyShort } from '../utils/partyColors';
 import { cn } from '../components/ui/utils';
 import { ProblemDetailsNotice } from '../components/ProblemDetailsNotice';
+import { formatLtDateLong } from '../utils/ltDate';
+import { NoPerMemberData } from '../components/NoPerMemberData';
+import {
+    perMemberChoiceState,
+    hasAggregateTallies,
+    NO_CHOICE_RECORDED_LT,
+} from '../utils/perMemberChoices';
 
-const getChoiceIcon = (choice: string) => {
-    switch (choice.toLowerCase()) {
+const getChoiceIcon = (choice: string | null | undefined) => {
+    switch (choice?.toLowerCase()) {
         case 'už': return <ThumbsUp className="w-4 h-4 text-vote-for" />;
         case 'prieš': return <ThumbsDown className="w-4 h-4 text-vote-against" />;
         case 'susilaikė': return <Minus className="w-4 h-4 text-vote-abstain" />;
@@ -19,8 +26,8 @@ const getChoiceIcon = (choice: string) => {
     }
 };
 
-const getChoiceBg = (choice: string) => {
-    switch (choice.toLowerCase()) {
+const getChoiceBg = (choice: string | null | undefined) => {
+    switch (choice?.toLowerCase()) {
         case 'už': return 'bg-vote-for';
         case 'prieš': return 'bg-vote-against';
         case 'susilaikė': return 'bg-vote-abstain';
@@ -90,12 +97,17 @@ const VoteDetailView = ({ voteId }: { voteId: string }) => {
         return <Card className="p-20 text-center text-muted-foreground">Balsavimas nerastas</Card>;
     }
 
-    const totalVotes = Object.values(vote.stats).reduce((a, b) => a + b, 0);
+    // `stats` for a vote with no per-member data is `{ null: 140 }` — 140 rows
+    // that carry no choice. Summing it gave „140 balsų" for a vote where nobody
+    // is recorded as having voted.
+    const choiceState = perMemberChoiceState(vote.votes);
+    const showTallies = hasAggregateTallies(vote.stats);
     const breakdownStats = {
         for: vote.stats['Už'] ?? 0,
         against: vote.stats['Prieš'] ?? 0,
         abstain: vote.stats['Susilaikė'] ?? 0,
     };
+    const totalVotes = breakdownStats.for + breakdownStats.against + breakdownStats.abstain;
 
     return (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-5xl mx-auto space-y-6">
@@ -115,7 +127,7 @@ const VoteDetailView = ({ voteId }: { voteId: string }) => {
                 </div>
                 <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
                     <span className="flex items-center gap-2 px-3 py-1 rounded-full bg-muted">
-                        <Calendar className="w-4 h-4" /> {vote.date}
+                        <Calendar className="w-4 h-4" /> {formatLtDateLong(vote.date) ?? vote.date}
                     </span>
                     {vote.result_type && (
                         <span className={cn(
@@ -127,20 +139,28 @@ const VoteDetailView = ({ voteId }: { voteId: string }) => {
                             {vote.result_type}
                         </span>
                     )}
-                    <span className="flex items-center gap-2 px-3 py-1 rounded-full bg-muted">
-                        <PieChart className="w-4 h-4" /> {totalVotes} balsų
-                    </span>
+                    {showTallies && (
+                        <span className="flex items-center gap-2 px-3 py-1 rounded-full bg-muted">
+                            <PieChart className="w-4 h-4" /> {totalVotes} balsų
+                        </span>
+                    )}
                 </div>
                 {vote.description && (
                     <p className="text-muted-foreground text-sm leading-relaxed border-t border-border pt-4 mt-4">{vote.description}</p>
                 )}
             </Card>
 
-            {/* Vote Breakdown (Figma component) */}
-            <VoteBreakdown stats={breakdownStats} totalVotes={totalVotes} />
+            {/* The aggregate tallies and the per-member list are separate
+                fields from separate parts of the source, so each is gated on
+                its own data rather than on the other's. Today they always agree
+                — 3,626 votes have both, 1,653 have neither — but coupling them
+                would hide a tally the moment that stops being true. */}
+            {showTallies && <VoteBreakdown stats={breakdownStats} totalVotes={totalVotes} />}
+
+            {choiceState !== 'present' && <NoPerMemberData />}
 
             {/* Party Breakdown */}
-            {partyBreakdown.length > 0 && (
+            {choiceState === 'present' && partyBreakdown.length > 0 && (
                 <Card className="p-6">
                     <h3 className="text-base font-semibold text-foreground mb-4 flex items-center gap-2">
                         <BarChart3 className="w-4 h-4" />
@@ -175,7 +195,10 @@ const VoteDetailView = ({ voteId }: { voteId: string }) => {
                 </Card>
             )}
 
-            {/* Individual Votes */}
+            {/* Individual Votes — the whole card, not just its rows. A search
+                box and three filter chips over an empty list invite a reader to
+                go looking for data that was never published. */}
+            {choiceState === 'present' && (
             <Card className="p-0 overflow-hidden">
                 <div className="flex flex-col md:flex-row items-center justify-between p-5 border-b border-border gap-3">
                     <h3 className="text-base font-semibold text-foreground flex items-center gap-2">
@@ -229,7 +252,14 @@ const VoteDetailView = ({ voteId }: { voteId: string }) => {
                             </div>
                             <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-muted border border-border text-xs font-medium w-28 justify-center">
                                 {getChoiceIcon(v.choice)}
-                                <span>{v.choice}</span>
+                                {/* A member with no recorded choice on an
+                                    otherwise-published vote rendered an empty
+                                    chip. Say what it is instead — and not
+                                    „Nedalyvavo", which asserts an absence the
+                                    source did not record. */}
+                                <span className={v.choice ? undefined : 'text-muted-foreground'}>
+                                    {v.choice ?? NO_CHOICE_RECORDED_LT}
+                                </span>
                             </div>
                         </div>
                     ))}
@@ -244,6 +274,7 @@ const VoteDetailView = ({ voteId }: { voteId: string }) => {
                     Rodoma {filteredVotes.length} įrašų
                 </div>
             </Card>
+            )}
         </motion.div>
     );
 };
