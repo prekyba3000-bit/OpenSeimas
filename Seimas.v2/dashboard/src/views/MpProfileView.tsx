@@ -7,7 +7,6 @@ import { Button } from '../components/Button';
 import MpProfileCard from '../components/MpProfileCard';
 import { WikiPanel } from '../components/WikiPanel';
 import { MpReplies } from '../components/MpReplies';
-import { IntegrityBar } from '../components/IntegrityBar';
 import { ScoreTooltip } from '../components/ScoreTooltip';
 import { readMpDimension } from '../utils/mpLegacyDimensions';
 import { mandatePeriodLabel, servedNoDays } from '../utils/mpCounts';
@@ -128,11 +127,10 @@ export const MpProfileLayout = ({
   const fallbackPhoto =
     'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%231f2937" width="100" height="100"/><text x="50" y="58" text-anchor="middle" fill="%239ca3af" font-size="34">MP</text></svg>';
 
-  // Route through the same rule as the metrics grid: integrity stays hidden
-  // (null) until the forensic tables are populated, so the header bar cannot
-  // show a baseline 100 the grid deliberately suppresses.
-  const integrityValue = readMpDimension(profile, 'integrity');
-  const riskTierSignal = Reflect.get(profile, ['align', 'ment'].join('')) as string | undefined;
+  // „Skaidrumo indeksas" — the composite — used to headline this profile. It
+  // is gone: the platform's voice is a librarian's, not a judge's, and a
+  // single number fills the citizen's judgment-gap with a plausible-looking
+  // default verdict. The formula lives on the methodology page.
 
   return (
     <div className="flex flex-col gap-6">
@@ -190,7 +188,6 @@ export const MpProfileLayout = ({
               )}
             </div>
           )}
-          <IntegrityBar score={integrityValue} riskTierSignal={riskTierSignal} className="max-w-md" />
         </div>
       </header>
 

@@ -330,31 +330,7 @@ export default function StebsenaView() {
                   </th>
                   {visibleDimensions.map((dim) => (
                     <th key={dim} className="text-right p-4">
-                      {dim === 'integrity' ? (
-                        <div className="inline-flex items-center justify-end gap-1">
-                          <SortHeader label={CIVIC_DIMENSION_LABELS_LT[dim]} keyName={dim} />
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <button
-                                type="button"
-                                className="p-0.5 rounded text-primary hover:bg-border/50"
-                                aria-label="Skaidrumo indekso paaiškinimas"
-                              >
-                                <HelpCircle className="w-3.5 h-3.5" />
-                              </button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-72 text-xs text-popover-foreground" align="end">
-                              <p className="font-semibold mb-1">Skaidrumo indeksas</p>
-                              <p className="text-muted-foreground leading-relaxed">{SKAIDRUMO_HELP_LT}</p>
-                              <p className="mt-2 text-muted-foreground">
-                                API: <code className="text-xs bg-muted px-1 rounded">forensic_breakdown</code>
-                              </p>
-                            </PopoverContent>
-                          </Popover>
-                        </div>
-                      ) : (
-                        <SortHeader label={CIVIC_DIMENSION_LABELS_LT[dim]} keyName={dim} />
-                      )}
+                      <SortHeader label={CIVIC_DIMENSION_LABELS_LT[dim]} keyName={dim} />
                     </th>
                   ))}
                 </tr>
@@ -391,21 +367,7 @@ export default function StebsenaView() {
                     </td>
                     {visibleDimensions.map((dim) => (
                       <td key={dim} className="p-4 text-right">
-                        {dim === 'integrity' ? (
-                          <div
-                            className="inline-flex items-center justify-end gap-2"
-                            title={getIntegrityTooltip(row)}
-                          >
-                            <span
-                              className={`inline-block w-3 h-3 rounded-full ${getIntDotClass(
-                                row.forensicBreakdown?.totalForensicAdjustment ?? 0,
-                              )}`}
-                            />
-                            <DimensionValue value={readMpDimension(row, dim)} />
-                          </div>
-                        ) : (
-                          <DimensionValue value={readMpDimension(row, dim)} />
-                        )}
+                        <DimensionValue value={readMpDimension(row, dim)} />
                       </td>
                     ))}
                   </tr>

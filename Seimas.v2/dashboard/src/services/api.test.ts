@@ -2,16 +2,6 @@ import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { ApiError, api } from "./api";
 
 const WIRE_MP_HIGHLIGHT_EVIDENCE = ["hero", "evidence"].join("_");
-const XP_CURRENT = ["xp", "current", "level"].join("_");
-const XP_NEXT = ["xp", "next", "level"].join("_");
-
-const ATTR = {
-  participation: ["S", "T", "R"].join(""),
-  partyLoyalty: ["W", "I", "S"].join(""),
-  visibility: ["C", "H", "A"].join(""),
-  transparency: ["I", "N", "T"].join(""),
-  consistency: ["S", "T", "A"].join(""),
-};
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -29,19 +19,7 @@ const validMpProfileRaw = {
     active: true,
     seimas_id: 101,
   },
-  level: 2,
-  xp: 450,
-  [XP_CURRENT]: 200,
-  [XP_NEXT]: 800,
-  alignment: "Lawful Good",
-  attributes: {
-    [ATTR.participation]: 55,
-    [ATTR.partyLoyalty]: 61,
-    [ATTR.visibility]: 49,
-    [ATTR.transparency]: 72,
-    [ATTR.consistency]: 66,
-  },
-  artifacts: [{ name: "Audit Seal", rarity: "Rare" }],
+      dimensions: { legislative_activity: 55, experience: 61, visibility: 49 },
   forensic_breakdown: {
     base_risk_score: 0.22,
     base_risk_penalty: -11,
@@ -56,7 +34,6 @@ const validMpProfileRaw = {
       explanation: "ok",
     },
     total_forensic_adjustment: -3,
-    final_integrity_score: 72,
   },
   [WIRE_MP_HIGHLIGHT_EVIDENCE]: [] as string[],
 };
@@ -126,7 +103,7 @@ describe("api network resilience and contract parsing", () => {
       jsonResponse([
         {
           ...validMpProfileRaw,
-          attributes: { ...validMpProfileRaw.attributes, [ATTR.transparency]: "broken-type" },
+          dimensions: { ...validMpProfileRaw.dimensions, visibility: "broken-type" },
         },
       ]),
     );
@@ -195,19 +172,12 @@ describe("mpProfileSchema null tolerance", () => {
       explanation: "-",
     },
     total_forensic_adjustment: 0,
-    final_integrity_score: 100,
   };
 
   function profileWire(metrics: Record<string, unknown>) {
     return {
       mp: { id: "x", name: "Testas" },
-      level: 1,
-      xp: 0,
-      xp_current_level: 0,
-      xp_next_level: 100,
-      alignment: "neutral",
-      attributes: { STR: 0, WIS: 0, CHA: 0, INT: 100, STA: 0 },
-      artifacts: [],
+      dimensions: { legislative_activity: 0, experience: 0, visibility: 0 },
       forensic_breakdown: forensic,
       metrics,
     };

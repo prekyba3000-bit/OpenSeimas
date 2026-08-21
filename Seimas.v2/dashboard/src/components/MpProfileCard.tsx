@@ -87,7 +87,7 @@ export default function MpProfileCard({ profile, highlightEngine }: MpProfileCar
       <Card className="p-6 bg-muted border-border rounded-xl space-y-4">
         <div>
           <div className="text-sm text-muted-foreground">Skaidrumas</div>
-          <div className="text-lg font-semibold mt-1 text-foreground">Kodėl toks balas?</div>
+          <div className="text-lg font-semibold mt-1 text-foreground">Ką rodo patikros</div>
         </div>
 
         <div className="text-foreground [&_.text-muted-foreground]:text-foreground/70 [&_.text-foreground]:text-foreground [&_a.text-muted-foreground]:text-foreground/70">
@@ -98,10 +98,6 @@ export default function MpProfileCard({ profile, highlightEngine }: MpProfileCar
           <div className="flex items-center justify-between text-sm">
             <span className="text-foreground">Bendra forensinė korekcija</span>
             <span className="font-bold text-foreground">{pointsLabel(adjustment)}</span>
-          </div>
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-foreground">Galutinis vientisumo balas</span>
-            <span className="font-bold text-primary">{profile.forensicBreakdown.finalIntegrityScore}</span>
           </div>
         </div>
       </Card>

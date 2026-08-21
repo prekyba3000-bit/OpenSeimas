@@ -23,8 +23,6 @@ const API_BASE = `${ConfigApiUrl}/api`;
 /** Backend JSON key for MP / accountability highlight strings (computed so civic grep stays clean). */
 const WIRE_MP_HIGHLIGHT_EVIDENCE = ["hero", "evidence"].join("_");
 
-const XP_CURRENT_LEVEL = ["xp", "current", "level"].join("_");
-const XP_NEXT_LEVEL = ["xp", "next", "level"].join("_");
 
 // Backend path rename (heroes → monitoring) is tracked in v4 backlog.
 // Change the value here when the backend endpoint is updated; no other
@@ -96,8 +94,6 @@ export type ForensicFlag = {
 };
 
 export type ForensicBreakdown = {
-  baseRiskScore: number;
-  baseRiskPenalty: number;
   benford: ForensicFlag & { pValue?: number | null };
   chrono: ForensicFlag & { worstZscore?: number | null };
   voteGeometry: ForensicFlag & { maxDeviationSigma?: number | null };
@@ -113,7 +109,6 @@ export type ForensicBreakdown = {
     explanation: string;
   };
   totalForensicAdjustment: number;
-  finalIntegrityScore: number;
 };
 
 /** Civic MP profile (mapped from raw API). Presentation fields remain until WS2 profile UI migration. */
@@ -137,7 +132,7 @@ export type MpProfile = {
   /** Per-attribute data quality: "direct" | "proxy" | "unavailable". */
   metrics_provenance?: Partial<Record<"STR" | "WIS" | "CHA" | "INT" | "STA", string>>;
   // TODO(v4): add faction once backend exposes it
-} & MpProfilePresentationLegacy;
+} & MpProfileDimensions;
 
 export type MpMetrics = {
   attendance_percentage?: number | null;
@@ -149,24 +144,22 @@ export type MpMetrics = {
   years_in_parliament?: number | null;
 };
 
-type XpCurrentLevelKey = `${"xp"}_${"current"}_${"level"}`;
-type XpNextLevelKey = `${"xp"}_${"next"}_${"level"}`;
-
-/** TODO(v4): WS2 — remove when profile UI no longer reads gamification fields from API. */
-export type MpProfilePresentationLegacy = {
-  level: number;
-  xp: number;
-} & Record<XpCurrentLevelKey, number> &
-  Record<XpNextLevelKey, number> & {
-  alignment: string;
-  attributes: {
-    STR: number;
-    WIS: number;
-    CHA: number;
-    INT: number;
-    STA: number;
+/**
+ * The gamification fields are gone from the API. The type that named them —
+ * `MpProfileDimensions`, with its `level`, `xp` and the computed-key
+ * indirection that kept "xp_next_level" out of source — went with them.
+ */
+export type MpProfileDimensions = {
+  /**
+   * The three chamber-relative dimensions, named for what they measure.
+   * Were STR / WIS / CHA in an RPG stat block that also carried INT (the
+   * composite verdict) and STA (a second aggregation nothing rendered).
+   */
+  dimensions: {
+    legislative_activity: number;
+    experience: number;
+    visibility: number;
   };
-  artifacts: Array<{ name: string; rarity: string }>;
 };
 
 export interface MpSearchResponse {
@@ -199,8 +192,6 @@ type _RawForensicEntry = {
 };
 
 type _RawForensicBreakdown = {
-  base_risk_score: number;
-  base_risk_penalty: number;
   benford: _RawForensicEntry & { p_value?: number | null };
   chrono: _RawForensicEntry & { worst_zscore?: number | null };
   vote_geometry: _RawForensicEntry & { max_deviation_sigma?: number | null };
@@ -216,7 +207,6 @@ type _RawForensicBreakdown = {
     explanation: string;
   };
   total_forensic_adjustment: number;
-  final_integrity_score: number;
 };
 
 // ── Zod (validates wire shape / Layer A) ────────────────────────────────────
@@ -230,8 +220,6 @@ const rawForensicEntrySchema = z.object({
 });
 
 const rawForensicBreakdownSchema: z.ZodType<_RawForensicBreakdown> = z.object({
-  base_risk_score: z.number(),
-  base_risk_penalty: z.number(),
   benford: rawForensicEntrySchema.extend({ p_value: z.number().nullable().optional() }),
   chrono: rawForensicEntrySchema.extend({ worst_zscore: z.number().nullable().optional() }),
   vote_geometry: rawForensicEntrySchema.extend({
@@ -249,7 +237,6 @@ const rawForensicBreakdownSchema: z.ZodType<_RawForensicBreakdown> = z.object({
     explanation: z.string(),
   }),
   total_forensic_adjustment: z.number(),
-  final_integrity_score: z.number(),
 });
 
 export const mpProfileSchema = z
@@ -264,24 +251,11 @@ export const mpProfileSchema = z
       mandate_start_date: z.string().nullable().optional(),
       mandate_end_date: z.string().nullable().optional(),
     }),
-    level: z.number(),
-    xp: z.number(),
-    [XP_CURRENT_LEVEL]: z.number(),
-    [XP_NEXT_LEVEL]: z.number(),
-    alignment: z.string(),
-    attributes: z.object({
-      STR: z.number(),
-      WIS: z.number(),
-      CHA: z.number(),
-      INT: z.number(),
-      STA: z.number(),
+    dimensions: z.object({
+      legislative_activity: z.number(),
+      experience: z.number(),
+      visibility: z.number(),
     }),
-    artifacts: z.array(
-      z.object({
-        name: z.string(),
-        rarity: z.string(),
-      }),
-    ),
     forensic_breakdown: rawForensicBreakdownSchema,
     // The real, source-backed numbers. `attributes` above are derived composites
     // and several of them read from tables that are still empty — prefer these.
@@ -375,11 +349,7 @@ function mapRawForensicEntry(
 type _ParsedMpProfileWire = {
   mp: MpProfile["mp"];
   forensic_breakdown: _RawForensicBreakdown;
-  level: number;
-  xp: number;
-  alignment: string;
-  attributes: MpProfile["attributes"];
-  artifacts: MpProfile["artifacts"];
+  dimensions: MpProfile["dimensions"];
   metrics?: MpMetrics;
   metrics_provenance?: MpProfile["metrics_provenance"];
 } & Record<string, unknown>;
@@ -392,8 +362,6 @@ type _ParsedMpProfileWire = {
  */
 function mapRawForensicBreakdown(raw: _RawForensicBreakdown): ForensicBreakdown {
   return {
-    baseRiskScore: raw.base_risk_score,
-    baseRiskPenalty: raw.base_risk_penalty,
     benford: {
       ...mapRawForensicEntry("benford", "Benfordo dėsnio analizė", raw.benford),
       pValue: raw.benford.p_value,
@@ -419,7 +387,6 @@ function mapRawForensicBreakdown(raw: _RawForensicBreakdown): ForensicBreakdown 
       explanation: raw.loyalty_bonus.explanation,
     },
     totalForensicAdjustment: raw.total_forensic_adjustment,
-    finalIntegrityScore: raw.final_integrity_score,
   };
 }
 
@@ -430,13 +397,7 @@ function mapRawToMpProfile(raw: z.infer<typeof mpProfileSchema>): MpProfile {
     mp: r.mp,
     forensicBreakdown: mapRawForensicBreakdown(r.forensic_breakdown),
     evidence: wireEvidence,
-    level: r.level,
-    xp: r.xp,
-    [XP_CURRENT_LEVEL]: r[XP_CURRENT_LEVEL] as number,
-    [XP_NEXT_LEVEL]: r[XP_NEXT_LEVEL] as number,
-    alignment: r.alignment,
-    attributes: r.attributes,
-    artifacts: r.artifacts,
+    dimensions: r.dimensions,
     metrics: r.metrics,
     metrics_provenance: r.metrics_provenance,
   } as MpProfile;

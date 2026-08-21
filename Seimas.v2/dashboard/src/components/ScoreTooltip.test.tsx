@@ -4,10 +4,11 @@ import { MemoryRouter } from "react-router";
 import { describe, expect, it } from "vitest";
 import type { MpProfile } from "../services/api";
 import { ScoreTooltip } from "./ScoreTooltip";
+import { CIVIC_DIMENSION_ORDER, CIVIC_DIMENSION_LABELS_LT } from "../utils/mpLegacyDimensions";
 
 /**
  * Guards the 2026-08-12 relabel: displayed numbers must come from `metrics`
- * (source-backed), never from the `attributes` composites, several of which
+ * (source-backed), never from the the chamber-relative dimensions, several of which
  * read from tables that are still empty.
  */
 function profile(overrides: Partial<MpProfile> = {}): MpProfile {
@@ -21,10 +22,10 @@ function profile(overrides: Partial<MpProfile> = {}): MpProfile {
     xp_next_level: 100,
     alignment: "neutral",
     // Deliberately contradicts metrics: attributes must not win.
-    attributes: { STR: 0, WIS: 12.36, CHA: 0, INT: 100, STA: 56.78 },
+    dimensions: { legislative_activity: 0, experience: 12.36, visibility: 0 },
     artifacts: [],
     metrics: { attendance_percentage: 70.97, party_loyalty: 77.27 },
-    metrics_provenance: { STR: "unavailable", WIS: "direct", CHA: "unavailable", INT: "direct", STA: "proxy" },
+    metrics_provenance: { legislative_activity: "unavailable", experience: "direct", visibility: "unavailable" },
     ...overrides,
   } as MpProfile;
 }
@@ -44,18 +45,17 @@ function valueFor(label: string): string {
 }
 
 describe("ScoreTooltip", () => {
-  it("renders attendance from metrics, not from the STA/STR composites", () => {
+  it("renders attendance from metrics, not from a chamber-relative dimension", () => {
     renderTooltip(profile());
 
-    expect(valueFor("Dalyvavimas")).toBe("71.0"); // metrics 70.97, not STA 56.78
-    expect(screen.queryByText("56.8")).not.toBeInTheDocument(); // STA never shown
-    expect(screen.queryByText("0.0")).not.toBeInTheDocument(); // STR / CHA never shown
+    expect(valueFor("Dalyvavimas")).toBe("71.0"); // metrics 70.97
+        expect(screen.queryByText("0.0")).not.toBeInTheDocument(); // unsourced dimensions never shown
   });
 
   it("uses the real party-loyalty metric rather than the seniority composite", () => {
     renderTooltip(profile());
 
-    // 77.27 is metrics.party_loyalty; 12.36 is the WIS composite, which now
+    // 77.27 is metrics.party_loyalty; 12.36 is the experience dimension, which now
     // sits under its own honest label instead of masquerading as loyalty.
     expect(valueFor("Partijos lojalumas")).toBe("77.3");
     expect(valueFor("Patirtis ir aktyvumas")).toBe("12.4");
@@ -69,8 +69,10 @@ describe("ScoreTooltip", () => {
   it("shows the honest note instead of a number for un-ingested metrics", () => {
     renderTooltip(profile());
 
-    // Integrity would otherwise render its no-data baseline of 100.0.
-    expect(screen.getByText("Skaidrumo indeksas")).toBeInTheDocument();
+    // „Skaidrumo indeksas" used to sit here rendering its no-data baseline of
+    // 100.0. The dimension is gone entirely now, so the guard is that neither
+    // the label nor the baseline appears.
+    expect(screen.queryByText("Skaidrumo indeksas")).not.toBeInTheDocument();
     expect(screen.queryByText("100.0")).not.toBeInTheDocument();
     expect(screen.getAllByText(/bus rodomas, kai bus įkelti šaltinio duomenys/i).length).toBeGreaterThan(0);
   });
@@ -90,8 +92,8 @@ describe("ScoreTooltip metric availability follows the backend", () => {
     // number appears with no frontend change.
     renderTooltip(
       profile({
-        attributes: { STR: 73.33, WIS: 22.9, CHA: 4.58, INT: 100, STA: 73.12 },
-        metrics_provenance: { STR: "direct", WIS: "direct", CHA: "direct", INT: "direct", STA: "proxy" },
+        dimensions: { legislative_activity: 73.33, experience: 22.9, visibility: 4.58 },
+        metrics_provenance: { legislative_activity: "direct", experience: "direct", visibility: "direct" },
       }),
     );
 
@@ -105,14 +107,10 @@ describe("ScoreTooltip metric availability follows the backend", () => {
     expect(valueFor("Viešumas")).toMatch(/bus rodomas/i);
   });
 
-  it("keeps integrity hidden even though the backend calls it direct", () => {
-    // The engine returns a baseline 100 for everyone when the forensic tables
-    // are empty, so provenance cannot tell a clean record from no data.
-    renderTooltip(
-      profile({
-        metrics_provenance: { STR: "direct", WIS: "direct", CHA: "direct", INT: "direct", STA: "proxy" },
-      }),
-    );
-    expect(valueFor("Skaidrumo indeksas")).toMatch(/bus rodomas/i);
+  it("has no integrity dimension left to hide", () => {
+    // „Skaidrumo indeksas" was the composite. It is not suppressed any more —
+    // it is gone, and the formula lives on the methodology page.
+    expect(CIVIC_DIMENSION_ORDER).not.toContain("integrity");
+    expect(Object.keys(CIVIC_DIMENSION_LABELS_LT)).not.toContain("integrity");
   });
 });
