@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Building2, ChevronRight, TrendingUp, Vote } from 'lucide-react';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { getPartyColor, getPartyShort } from '../utils/partyColors';
+import { formatAttendance } from '../utils/attendance';
 
 interface MpCardProps {
   name?: string;
@@ -17,7 +18,7 @@ interface MpCardProps {
     photo_url?: string;
     is_active?: boolean;
     vote_count?: number;
-    attendance?: number;
+    attendance?: number | null;
   };
 }
 
@@ -26,7 +27,7 @@ export function MpCard({ name, party, avatarUrl, onClick, mp }: MpCardProps) {
   const displayParty = party || mp?.current_party || mp?.party || 'Unknown';
   const photoUrl = avatarUrl || mp?.photo_url;
   const voteCount = mp?.vote_count ?? 0;
-  const attendance = mp?.attendance ?? 0;
+  const attendance = mp?.attendance ?? null;
 
   const [isHovered, setIsHovered] = useState(false);
   const [photoFailed, setPhotoFailed] = useState(false);
@@ -107,7 +108,7 @@ export function MpCard({ name, party, avatarUrl, onClick, mp }: MpCardProps) {
           </span>
           <span className="flex items-center gap-1">
             <TrendingUp className="w-3 h-3" />
-            {attendance > 0 ? `${attendance.toFixed(0)}%` : '—'}
+            {formatAttendance(attendance)}
           </span>
         </div>
       </div>
