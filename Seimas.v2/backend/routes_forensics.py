@@ -7,6 +7,7 @@ from psycopg2.extras import RealDictCursor
 from collections import defaultdict
 
 from backend import core
+from backend.hero_engine import attendance_overrides
 from backend.core import (
     _leaderboard_cache,
     _leaderboard_cache_lock,
@@ -36,6 +37,14 @@ def _require_admin_auth(authorization):
 router = APIRouter()
 
 
+def _resolvable_attendance(mp_id: str, raw, overrides):
+    """Attendance under the methodology in force, or None when unpublishable."""
+    if mp_id in overrides:
+        value = overrides[mp_id]
+        return float(value) if value is not None else None
+    return float(raw) if raw is not None else None
+
+
 @router.get("/api/accountability/heroes-villains")
 def get_heroes_villains(limit: int = 10):
     """
@@ -63,7 +72,7 @@ def get_heroes_villains(limit: int = 10):
                         p.display_name AS name,
                         p.current_party AS party,
                         p.photo_url,
-                        COALESCE(s.attendance_percentage, 0)::float AS attendance,
+                        s.attendance_percentage::float AS attendance,
                         COALESCE(s.total_votes_cast, 0)::int AS vote_count
                     FROM politicians p
                     LEFT JOIN mp_stats_summary s ON s.mp_id = p.id
@@ -79,7 +88,7 @@ def get_heroes_villains(limit: int = 10):
                         p.display_name AS name,
                         p.current_party AS party,
                         p.photo_url,
-                        0::float AS attendance,
+                        NULL::float AS attendance,
                         COALESCE(COUNT(DISTINCT mv.vote_id), 0)::int AS vote_count
                     FROM politicians p
                     LEFT JOIN mp_votes mv ON mv.politician_id = p.id
@@ -90,6 +99,18 @@ def get_heroes_villains(limit: int = 10):
                 )
 
             rows = cur.fetchall()
+            # Members whose attendance is unpublishable cannot be scored: the
+            # risk and integrity formulas both read it, and treating None as 0
+            # would rank someone as the worst attender in parliament on the
+            # strength of no data at all. They are left out of both lists
+            # rather than given an invented position in them.
+            _att = attendance_overrides(cur)
+            rows = [
+                r for r in rows
+                if _resolvable_attendance(str(r["id"]), r.get("attendance"), _att) is not None
+            ]
+            for r in rows:
+                r["attendance"] = _resolvable_attendance(str(r["id"]), r.get("attendance"), _att)
             if not rows:
                 return {"generated_at": datetime.datetime.utcnow().isoformat() + "Z", "window_days": 7, "heroes": [], "watchlist": []}
 

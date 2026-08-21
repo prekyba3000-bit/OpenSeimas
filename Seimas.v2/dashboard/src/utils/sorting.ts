@@ -21,8 +21,9 @@ export const sortMps = (mps: MpData[], sortBy: SortOption): MpData[] => {
     const nameB = (b.name || b.display_name || "").toLowerCase();
 
     // Handle missing stats safely (treat as 0)
-    const attendanceA = a.attendance || 0;
-    const attendanceB = b.attendance || 0;
+    // Members with no publishable figure sort last rather than as zero.
+    const attendanceA = typeof a.attendance === 'number' ? a.attendance : Number.NEGATIVE_INFINITY;
+    const attendanceB = typeof b.attendance === 'number' ? b.attendance : Number.NEGATIVE_INFINITY;
     const votesA = a.vote_count || 0;
     const votesB = b.vote_count || 0;
 
