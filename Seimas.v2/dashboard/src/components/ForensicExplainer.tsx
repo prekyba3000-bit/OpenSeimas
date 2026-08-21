@@ -37,7 +37,7 @@ export function ForensicExplainer({
   className = 'text-[#A9B1D6]/90',
   variant = 'inline',
 }: Props) {
-  const finalScore = breakdown?.finalIntegrityScore;
+  const finalScore = undefined; // composite removed from the wire
   const adj = breakdown?.totalForensicAdjustment;
 
   const engines = [
