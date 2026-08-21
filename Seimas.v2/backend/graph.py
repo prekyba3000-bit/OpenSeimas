@@ -41,10 +41,6 @@ def _openplanter_graph_node_element(
         "label": (label or node_id)[:220],
         "category": category,
         "party": "",
-        "alignment": "",
-        "integrity_score": 0,
-        "xp": 0,
-        "level": 0,
     }
     for k, v in extra.items():
         if v is not None:
@@ -70,10 +66,6 @@ def _build_openplanter_graph_payload(cur) -> Dict:
                     "label": summary["display_name"] or "Unknown",
                     "category": "politician",
                     "party": summary["current_party"] or "Unknown",
-                    "alignment": summary["alignment"] or "Unknown",
-                    "integrity_score": int(summary["integrity_score"]),
-                    "xp": int(summary["xp"]),
-                    "level": int(summary["level"]),
                 }
             }
         )
@@ -114,10 +106,6 @@ def _build_openplanter_graph_payload(cur) -> Dict:
                             "label": str(label)[:120],
                             "category": "phantom_entity",
                             "party": "",
-                            "alignment": "",
-                            "integrity_score": 0,
-                            "xp": 0,
-                            "level": 0,
                         }
                     }
                 )

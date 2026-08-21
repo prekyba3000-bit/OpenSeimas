@@ -58,8 +58,12 @@ async def test_openplanter_graph_ok(monkeypatch):
     assert len(body["nodes"]) >= 1
     n0 = body["nodes"][0]["data"]
     assert n0.get("category") == "politician"
-    assert n0.get("alignment") == "Lawful Good"
-    assert n0.get("integrity_score") == 72
+    # The graph node carries identity, not a verdict. It used to ship
+    # `alignment: "Lawful Good"` and an `integrity_score` — a D&D morality
+    # label and a composite, attached to a named politician.
+    assert n0.get("alignment") is None
+    assert n0.get("integrity_score") is None
+    assert n0.get("label")
 
 
 @pytest.mark.asyncio

@@ -582,8 +582,12 @@ def _build_forensic_breakdown(
     final_integrity_score = _clamp(100 + base_risk_penalty + total_forensic_adjustment)
 
     return {
-        "base_risk_score": round(base_risk_score, 3),
-        "base_risk_penalty": round(base_risk_penalty, 3),
+        # base_risk_score / base_risk_penalty / final_integrity_score are the
+        # composite. They stay computed — the formula is published on the
+        # methodology page — but they do not travel: the public API ships
+        # evidence and descriptive dimensions, and verdicts ship nowhere.
+        "_composite_base_risk_score": round(base_risk_score, 3),
+        "_composite_base_risk_penalty": round(base_risk_penalty, 3),
         "benford": benford,
         "chrono": chrono,
         "vote_geometry": vote_geometry,
@@ -592,7 +596,7 @@ def _build_forensic_breakdown(
         "raw_forensic_penalty_sum": raw_penalty_sum,
         "capped_forensic_penalty": forensic_penalty,
         "total_forensic_adjustment": total_forensic_adjustment,
-        "final_integrity_score": round(final_integrity_score, 2),
+        "_composite_final_integrity_score": round(final_integrity_score, 2),
     }
 
 
@@ -819,6 +823,19 @@ def attendance_overrides(db_cursor) -> Dict[str, Any]:
     return out
 
 
+def public_breakdown(breakdown: Dict[str, Any]) -> Dict[str, Any]:
+    """The forensic breakdown minus the composite.
+
+    Keys prefixed with `_composite_` are the aggregation — base risk, its
+    penalty, and the final integrity score. They stay computed, and the formula
+    is published on the methodology page, but they do not cross the wire: the
+    public API ships evidence and descriptive dimensions; verdicts ship
+    nowhere. The per-engine sub-objects (benford, chrono, vote_geometry,
+    phantom_network, loyalty_bonus) are evidence and stay.
+    """
+    return {k: v for k, v in breakdown.items() if not k.startswith("_composite_")}
+
+
 def _fetch_mp_metrics(mp_id: str, db_cursor) -> Dict[str, Any] | None:
     db_cursor.execute(
         """
@@ -1003,11 +1020,9 @@ def _fetch_metric_maxima(db_cursor) -> Dict[str, float]:
 
 def calculate_hero_profile(mp_id: str, db_cursor) -> Dict[str, Any]:
     metrics_provenance = {
-        "STR": "unavailable",
-        "WIS": "proxy",
-        "CHA": "proxy",
-        "INT": "proxy",
-        "STA": "proxy",
+        "legislative_activity": "unavailable",
+        "experience": "proxy",
+        "visibility": "proxy",
     }
 
     mp_row = _fetch_mp_metrics(mp_id, db_cursor)
@@ -1064,7 +1079,7 @@ def calculate_hero_profile(mp_id: str, db_cursor) -> Dict[str, Any]:
     )
     cha_score = score_visibility(speeches_given, maxima["max_speeches_given"], social_bonus)
     # INT remains 100 when forensic source tables are empty; this is expected baseline behavior.
-    int_score = float(forensic_breakdown["final_integrity_score"])
+    int_score = float(forensic_breakdown["_composite_final_integrity_score"])
     amendments_max = (
         maxima["max_amendments_proposed_direct"]
         if has_direct_amendments and maxima["amendments_direct_available"]
@@ -1073,24 +1088,16 @@ def calculate_hero_profile(mp_id: str, db_cursor) -> Dict[str, Any]:
     sta_score = score_consistency(attendance_percentage, amendments_proposed, amendments_max)
 
     if bills_authored == 0:
-        metrics_provenance["STR"] = "unavailable"
+        metrics_provenance["legislative_activity"] = "unavailable"
     elif maxima["max_bills_authored"] > 0 or maxima["max_committee_leadership"] > 0:
-        metrics_provenance["STR"] = "direct"
-    metrics_provenance["WIS"] = "direct"
+        metrics_provenance["legislative_activity"] = "direct"
+    metrics_provenance["experience"] = "direct"
     if maxima["max_speeches_given"] > 0:
-        metrics_provenance["CHA"] = "direct"
-    if (
-        _table_exists(db_cursor, "conflict_alerts")
-        or _table_exists(db_cursor, "benford_analyses")
-        or _table_exists(db_cursor, "amendment_profiles")
-        or _table_exists(db_cursor, "vote_geometry")
-        or _table_exists(db_cursor, "phantom_network")
-        or _table_exists(db_cursor, "phantom_network_hits")
-        or _table_exists(db_cursor, "phantom_links")
-    ):
-        metrics_provenance["INT"] = "direct"
-    if has_direct_amendments:
-        metrics_provenance["STA"] = "direct"
+        metrics_provenance["visibility"] = "direct"
+    # The provenance probes for INT and STA went with the dimensions they
+    # described: INT was the composite (demoted to the methodology page) and
+    # STA was score_consistency(attendance, amendments), a second aggregation
+    # that no surface ever rendered.
 
     xp = int(
         round(
@@ -1152,22 +1159,25 @@ def calculate_hero_profile(mp_id: str, db_cursor) -> Dict[str, Any]:
             "mandate_end_date": mp_row["mandate_end_date"].isoformat()
             if mp_row.get("mandate_end_date") else None,
         },
-        "level": level,
-        "xp": xp,
-        "xp_current_level": current_level_xp,
-        "xp_next_level": next_level_xp,
-        "alignment": alignment,
-        "attributes": {
-            "STR": round(_clamp(str_score), 2),
-            "WIS": round(_clamp(wis_score), 2),
-            "CHA": round(_clamp(cha_score), 2),
-            "INT": round(_clamp(int_score), 2),
-            "STA": round(_clamp(sta_score), 2),
+        # The RPG layer is gone: level, xp, alignment („Lawful Good" attached
+        # to a named politician), and artifacts. Nothing rendered them, but
+        # they shipped in every response and the media kit invites external API
+        # use. The public API ships evidence and descriptive dimensions;
+        # verdicts ship nowhere.
+        #
+        # `attributes` is renamed rather than removed — three of the five dials
+        # read from it. What went with the rename:
+        #   INT  the composite itself, demoted to the methodology page
+        #   STA  score_consistency(attendance, amendments) — a second
+        #        aggregation, never displayed, mixing two unrelated things
+        "dimensions": {
+            "legislative_activity": round(_clamp(str_score), 2),
+            "experience": round(_clamp(wis_score), 2),
+            "visibility": round(_clamp(cha_score), 2),
         },
-        "artifacts": _award_artifacts(metrics=metrics, integrity_score=int_score, level=level),
         "metrics": metrics,
         "metrics_provenance": metrics_provenance,
-        "forensic_breakdown": forensic_breakdown,
+        "forensic_breakdown": public_breakdown(forensic_breakdown),
     }
 
 
@@ -1208,21 +1218,11 @@ def fetch_graph_mp_summaries(db_cursor, active_only: bool = True) -> List[Dict[s
             level = 0
         else:
             level = max(0, int(math.floor(math.log(xp / 100))))
-        alignment = _derive_alignment(
-            party_loyalty=float(row["party_loyalty"] or 0),
-            attendance_percentage=float(
-                _attendance_by_mp.get(str(row["mp_id"]), row["attendance_percentage"]) or 0
-            ),
-        )
         summaries.append(
             {
                 "mp_id": str(row["mp_id"]),
                 "display_name": row["display_name"],
                 "current_party": row["current_party"],
-                "xp": xp,
-                "level": level,
-                "alignment": alignment,
-                "integrity_score": 100,
             }
         )
     return summaries
@@ -1253,7 +1253,10 @@ def calculate_all_hero_profiles(
         except ValueError:
             continue
 
-    profiles.sort(key=lambda p: (p["level"], p["xp"]), reverse=True)
+    # Alphabetical, not ranked. Sorting by level and xp made this a league
+    # table: whoever the aggregation happened to favour appeared first, and a
+    # screenshot of the top of it is a partisan artefact.
+    profiles.sort(key=lambda p: (p["mp"]["name"] or "").lower())
     return profiles
 
 
@@ -1352,8 +1355,8 @@ def _build_forensic_breakdown_fast(row: Dict[str, Any], party_loyalty_pct: float
     final_integrity_score = _clamp(100 + total_forensic_adjustment)
 
     return {
-        "base_risk_score": 0.0,
-        "base_risk_penalty": 0.0,
+        "_composite_base_risk_score": 0.0,
+        "_composite_base_risk_penalty": 0.0,
         "benford": benford,
         "chrono": chrono,
         "vote_geometry": vote_geometry,
@@ -1362,7 +1365,7 @@ def _build_forensic_breakdown_fast(row: Dict[str, Any], party_loyalty_pct: float
         "raw_forensic_penalty_sum": raw_penalty_sum,
         "capped_forensic_penalty": forensic_penalty,
         "total_forensic_adjustment": total_forensic_adjustment,
-        "final_integrity_score": round(final_integrity_score, 2),
+        "_composite_final_integrity_score": round(final_integrity_score, 2),
     }
 
 
@@ -1440,17 +1443,15 @@ def calculate_all_hero_profiles_fast(
             amendments_proposed_count, max_amendments_proposed_count,
         )
         cha_score = score_visibility(speeches_given, max_speeches_given, social_bonus)
-        int_score = float(forensic_breakdown["final_integrity_score"])
+        int_score = float(forensic_breakdown["_composite_final_integrity_score"])
         sta_score = score_consistency(
             attendance_percentage, amendments_proposed, max_amendments_proposed_proxy
         )
 
         metrics_provenance = {
-            "STR": "direct" if bills_authored > 0 and (max_bills_authored > 0 or max_committee_leadership > 0) else "unavailable",
-            "WIS": "direct",
-            "CHA": "direct" if max_speeches_given > 0 else "proxy",
-            "INT": "direct" if row.get("has_geometry_row") else "proxy",
-            "STA": "proxy",
+            "legislative_activity": "direct" if bills_authored > 0 and (max_bills_authored > 0 or max_committee_leadership > 0) else "unavailable",
+            "experience": "direct",
+            "visibility": "direct" if max_speeches_given > 0 else "proxy",
         }
 
         xp = int(round(total_votes_cast + (bills_proposed * 10) + (bills_passed * 50) - (high_risk_alerts * 100)))
@@ -1499,25 +1500,20 @@ def calculate_all_hero_profiles_fast(
                 "seimas_id": row["seimas_mp_id"],
                 "last_synced_at": str(row["last_synced_at"]) if row.get("last_synced_at") else None,
             },
-            "level": level,
-            "xp": xp,
-            "xp_current_level": current_level_xp,
-            "xp_next_level": next_level_xp,
-            "alignment": alignment,
-            "attributes": {
-                "STR": round(_clamp(str_score), 2),
-                "WIS": round(_clamp(wis_score), 2),
-                "CHA": round(_clamp(cha_score), 2),
-                "INT": round(_clamp(int_score), 2),
-                "STA": round(_clamp(sta_score), 2),
+            "dimensions": {
+                "legislative_activity": round(_clamp(str_score), 2),
+                "experience": round(_clamp(wis_score), 2),
+                "visibility": round(_clamp(cha_score), 2),
             },
-            "artifacts": _award_artifacts(metrics=metrics, integrity_score=int_score, level=level),
             "metrics": metrics,
             "metrics_provenance": metrics_provenance,
-            "forensic_breakdown": forensic_breakdown,
+            "forensic_breakdown": public_breakdown(forensic_breakdown),
         })
 
-    profiles.sort(key=lambda p: (p["level"], p["xp"]), reverse=True)
+    # Alphabetical, not ranked. Sorting by level and xp made this a league
+    # table: whoever the aggregation happened to favour appeared first, and a
+    # screenshot of the top of it is a partisan artefact.
+    profiles.sort(key=lambda p: (p["mp"]["name"] or "").lower())
     if limit is not None:
         return profiles[:limit]
     return profiles
