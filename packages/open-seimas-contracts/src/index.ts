@@ -49,7 +49,12 @@ export interface MpSummary {
   is_active: boolean;
   photo_url: string;
   vote_count: number;
-  attendance: number;
+  /**
+   * Null when no percentage is publishable — a member whose mandate covers
+   * fewer than three sitting days. Never 0: that reads as "never showed up"
+   * rather than "not enough data", and four members are in that position.
+   */
+  attendance: number | null;
   vote_mode: string | null;
   /** ISO date the mandate began. */
   mandate_start_date?: string | null;

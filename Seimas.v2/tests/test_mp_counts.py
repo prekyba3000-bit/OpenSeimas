@@ -128,9 +128,22 @@ def _mps_cursor(rows):
     # _table_exists, which reads ["reg"]) and the optional social_links column
     # (which reads truthiness). Answer "neither present" for both.
     cur.fetchone.return_value = {"reg": None}
-    cur.fetchall.return_value = rows
     cur.__enter__ = lambda s: s
     cur.__exit__ = lambda *a: False
+
+    # get_mps also asks the resolver for attendance overrides now, and that
+    # query returns a different shape. Answering every fetchall with the MP
+    # rows made the resolver read `mp_id` off a politician row.
+    state = {"sql": ""}
+
+    def execute(sql, params=None):
+        state["sql"] = sql
+
+    def fetchall():
+        return [] if "mp_attendance_v2" in state["sql"] else rows
+
+    cur.execute.side_effect = execute
+    cur.fetchall.side_effect = fetchall
     return cur
 
 
