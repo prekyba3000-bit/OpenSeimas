@@ -30,3 +30,29 @@ describe("context bands, not ranks", () => {
     expect(contextBand(5, peers(10))).not.toBeNull();
   });
 });
+
+/** §3.5: the band must use the same denominators as the dial beside it. */
+describe("band and dial cannot drift apart", () => {
+  it("bandFromProfiles reads through readMpDimension, not a parallel path", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const src = readFileSync(join(__dirname, "contextBand.ts"), "utf8");
+    const code = src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+
+    // If the band ever computed its own value the two could disagree about the
+    // same member on the same screen.
+    expect(code).toMatch(/readMpDimension\(profile, dim\)/);
+    expect(code).toMatch(/readMpDimension\(p, dim\)/);
+    expect(code).not.toMatch(/attributes\.|dimensions\./);
+  });
+
+  it("uses identical inputs for the member and the population", async () => {
+    const { bandFromProfiles } = await import("./contextBand");
+    const mk = (v: number | null) =>
+      ({ metrics: { attendance_percentage: v } }) as never;
+    const peers = Array.from({ length: 20 }, (_, i) => mk(i * 5));
+    const band = bandFromProfiles("attendance", mk(50), peers);
+    // 10 peers are strictly below 50 (0,5,…,45) out of 20 comparable.
+    expect(band).toEqual({ percentile: 50, population: 20 });
+  });
+});
