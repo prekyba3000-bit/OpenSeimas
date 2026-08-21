@@ -51,6 +51,11 @@ describe("no verdict reaches a surface", () => {
     ["artifacts", /["']artifacts["']/],
     ["the heroes/watchlist endpoint", /heroes-villains|getAccountabilitySnapshot/],
     ["a composite-derived rank", /integrity_score|risk_score/],
+    // Named composites are the easy half. This catches one invented in place:
+    // a „Skaidrumo indeksas" panel ranked members by `100 - attendance`, under
+    // a label describing something else, and no keyword search would have
+    // found it.
+    ["a locally invented composite", /100\s*-\s*(?:mp\.|row\.|item\.)?\w*[Aa]ttendance/],
   ])("renders no %s", (_label, pattern) => {
     const offenders = files.filter((f) => pattern.test(code(f)));
     expect(offenders.map((f) => f.replace(SRC, "src"))).toEqual([]);

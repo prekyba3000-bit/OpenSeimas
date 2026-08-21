@@ -350,27 +350,11 @@ export default function SkaidrumasHubView() {
           </div>
         </div>
 
-        <div className="rounded-xl border border-border bg-card p-4">
-          <div className="flex items-center gap-2 mb-4">
-            <ShieldAlert className="w-4 h-4 text-primary" />
-            <h2 className="text-base font-semibold text-foreground">Skaidrumo indeksas</h2>
-          </div>
-          <div className="space-y-2">
-            {riskyMps.map((mp) => {
-              const risk = hasAttendance(mp) ? Math.round(100 - mp.attendance!) : null;
-              return (
-                <div key={mp.id} className="flex items-center justify-between border-b border-border/60 py-2">
-                  <div>
-                    <div className="text-sm font-medium">{mp.name}</div>
-                    <div className="text-xs text-muted-foreground">{mp.party || 'Nežinoma'}</div>
-                  </div>
-                  <span className="text-sm font-mono text-primary">{risk}</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
+        {/* A „Skaidrumo indeksas" panel stood here ranking named members by
+            `100 - attendance` — a composite invented locally, under a label
+            that described something else entirely, presented as an index. The
+            low-attendance figures it was built from are already on this page,
+            in „Įspėjimai", stated as what they are. */}
         <div className="rounded-xl border border-border bg-card p-4">
           <div className="flex items-center gap-2 mb-4">
             <Radio className="w-4 h-4 text-primary" />
