@@ -14,7 +14,7 @@ verified against production data.
 | 2 Structure | `80e28be`, `9ff19ce`, `a647172`, `f258c11` | Last-sitting-day API, landing rebuild, seat-map encodings, votes grouping + nav |
 | 4 Verification | `99ae372`, `3974e06`, `d4c8ddc` | Invariant audit, focus ring, Android placeholder |
 
-**Tests:** 167 dashboard (from 120), 111 backend. Pre-push hook
+**Tests:** 180 dashboard (from 120), 111 backend. Pre-push hook
 unbypassed on every push.
 
 ## Verified after deploy
@@ -94,6 +94,50 @@ than carrying a copy: `docs/reviews/jaukumas-contrast.md`.
 | Faction stored under two spellings | Seat counts per faction are wrong wherever the variant appears |
 | No guard against phantom CSS variables | Sixteen existed; a build-time check would have caught all at once |
 | Dead code now 18 files, not 16 | Count re-derived from the import graph, not grep |
+
+## Follow-up (merged as `61769fb`)
+
+**The fifth invariant instance, closed at the UI layer.** The corrections
+log warned the seat map must never paint 140 hollow „Nedalyvavo" seats
+for a vote with no published per-member results. What actually happened
+was worse: the vote page called `choice.toLowerCase()` and the MP
+profile's Balsavimai tab called `choice.trim()`, both threw on the first
+null, and the error boundary blanked the page. **A third of the public
+record — 1,653 of 5,279 votes — was unreachable on production.**
+
+`perMemberChoiceState` now names three states, and the load-bearing
+distinction is `missing` vs `unpublished`: rendering unpublished as
+missing hides a fact we have, rendering missing as unpublished asserts
+one we do not. Unpublished votes show „Nėra duomenų apie pavienius
+balsus" with the source's own reason, and drop the member list, filter
+chips and party breakdown. Aggregate tallies are gated on their own
+data, not on the per-member state.
+
+Swept every consumer: `activityLine` and `seatMapModes` were already
+null-safe; one gap remained where a member who did not vote on an
+otherwise-published vote rendered an empty chip.
+
+**The 2026-08-26 verification, pre-built.**
+`Seimas.v2/scripts/verify_attendance_v2.py` — five checks, read-only
+transaction, non-zero exit on failure, and a date guard that refuses to
+produce a red verdict before the switch it exists to check. Not run.
+Each query was validated read-only on its own: 0 mismatched
+denominators, 0 present-outside-mandate rows, 4 thin members all NULL,
+Bilotaitė recomputing from raw rows to 67/93 = 72.04 — matching the
+hand-computed value exactly.
+
+Writing it surfaced a sixth gap, now backlogged: **`/api/mps` never
+calls the attendance resolver.** It reads `mp_stats_summary` through
+`COALESCE(attendance_percentage, 0)`, so from 26 August the list will
+serve v1 while the profile serves v2, and the 4 suppressed members will
+read as `0.0` — the fabricated-zero pattern once more. Checks 3 and 4
+will name it. **This should be fixed before 26 August.**
+
+Post-deploy smoke, all green: landing renders with real data; the
+corrections entry lists 5 instances and names the pattern; a null-result
+vote shows no badge; vote 5190 shows the empty-data state with no member
+list and no fabricated „140 balsų"; the MP vote history shows 34 „Nėra
+duomenų" and 6 real choices, matching the API exactly.
 
 ## Still open, needing you
 
