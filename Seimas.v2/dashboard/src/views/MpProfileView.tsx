@@ -16,6 +16,7 @@ import { ApiError, api, type ForensicFlag, MpProfile, MpVoteRecord } from '../se
 import { toastErrorDeduped } from '../utils/toastDeduped';
 import { ProblemDetailsNotice } from '../components/ProblemDetailsNotice';
 import { LT } from '../i18n/lt';
+import { NO_CHOICE_RECORDED_LT } from '../utils/perMemberChoices';
 import { SITE_NAME } from '../utils/routeTitles';
 
 type ProfileTab = 'apzvalga' | 'balsavimai' | 'apygarda' | 'biografija';
@@ -36,8 +37,17 @@ function parseHighlightFlag(raw: string | null): ForensicFlag['engine'] | undefi
     : undefined;
 }
 
-function formatVoteChoiceLabel(choice: string): string {
+/**
+ * A member's choice on one vote, or an honest blank.
+ *
+ * `choice` is typed `string` but is null on 31% of votes — the source
+ * publishes no per-member results for them — and `.trim()` on the first null
+ * threw, blanking the whole Balsavimai tab behind the error boundary.
+ */
+function formatVoteChoiceLabel(choice: string | null | undefined): string {
+  if (choice == null) return NO_CHOICE_RECORDED_LT;
   const c = choice.trim();
+  if (!c) return NO_CHOICE_RECORDED_LT;
   if (c === 'for' || c === LT.voteChoices.for) return LT.voteChoices.for;
   if (c === 'against' || c === LT.voteChoices.against) return LT.voteChoices.against;
   if (c === 'abstain' || c === LT.voteChoices.abstain) return LT.voteChoices.abstain;

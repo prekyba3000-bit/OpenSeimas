@@ -108,4 +108,19 @@ describe("seat map encodings", () => {
     expect(hasRecordedChoices({ id: "1", title: "x", votes: [] } as never)).toBe(false);
     expect(hasRecordedChoices(vote({ a: "Už", b: null }))).toBe(true);
   });
+
+  it("never colours the chamber from a missing choices array", () => {
+    // `missing` is not `unpublished`: no array means we do not have the data
+    // and know nothing about whether the source does. Either way the seat map
+    // must not paint from it — but only one of the two lets us say why.
+    const noArray = { id: "1", title: "x" } as never;
+    expect(hasRecordedChoices(noArray)).toBe(false);
+    expect(hasRecordedChoices(null)).toBe(false);
+
+    const enc = voteEncoding(noArray, seated);
+    expect(enc.legend.find((e) => e.key === "nedalyvavo")?.count).toBe(seated.length);
+    for (const id of seated) {
+      expect(enc.colorFor(mps.find((m) => m.id === id)!)).toBe("transparent");
+    }
+  });
 });
