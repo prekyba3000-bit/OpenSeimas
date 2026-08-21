@@ -40,6 +40,7 @@ import { ProblemDetailsNotice } from '../components/ProblemDetailsNotice';
 import { Button } from '../components/Button';
 import { occupancyLabel } from '../utils/mpCounts';
 import { AbsenteeismCard } from '../components/AbsenteeismCard';
+import { byAttendance, formatAttendance, hasAttendance, withAttendance } from '../utils/attendance';
 
 const EMPTY_CHRONO: ChronoResponse = { items: [], clusters: [] };
 const EMPTY_BENFORD: BenfordResponse = { items: [] };
@@ -173,12 +174,15 @@ export default function SkaidrumasHubView() {
   }, [mps, query]);
 
   const riskyMps = React.useMemo(
-    () => [...mps].sort((a, b) => (a.attendance ?? 0) - (b.attendance ?? 0)).slice(0, 6),
+    // Only members with a publishable figure can be ranked as lowest-attending.
+    // A suppressed member sorted to the top of this list was being named as a
+    // risk on the strength of no data at all.
+    () => withAttendance(mps).sort(byAttendance('asc')).slice(0, 6),
     [mps],
   );
 
   const tickerItems = React.useMemo(() => {
-    const lowAttendanceCount = mps.filter((m) => (m.attendance ?? 0) < 60).length;
+    const lowAttendanceCount = withAttendance(mps).filter((m) => m.attendance! < 60).length;
     const newestVote = votes[0]?.title ?? 'Nėra naujausių įrašų';
     return [
       // A citation must not be ambiguous about which number it quotes: this is
@@ -262,7 +266,7 @@ export default function SkaidrumasHubView() {
                 className="text-left rounded-md border border-border px-3 py-2 hover:bg-muted/40"
               >
                 <div className="font-medium text-sm">{mp.name}</div>
-                <div className="text-xs text-muted-foreground">{mp.party || 'Nežinoma'} · {mp.attendance}% lankomumas</div>
+                <div className="text-xs text-muted-foreground">{mp.party || 'Nežinoma'} · {formatAttendance(mp.attendance)} lankomumas</div>
               </button>
             ))}
           </div>
@@ -340,7 +344,7 @@ export default function SkaidrumasHubView() {
               >
                 <div className="text-sm font-semibold">{mp.name}</div>
                 <div className="text-xs text-muted-foreground mt-1">
-                  Žemas lankomumas: {mp.attendance}% · {mp.party || 'Nežinoma frakcija'}
+                  Žemas lankomumas: {formatAttendance(mp.attendance)} · {mp.party || 'Nežinoma frakcija'}
                 </div>
               </button>
             ))}
@@ -354,7 +358,7 @@ export default function SkaidrumasHubView() {
           </div>
           <div className="space-y-2">
             {riskyMps.map((mp) => {
-              const risk = Math.round(100 - (mp.attendance ?? 0));
+              const risk = hasAttendance(mp) ? Math.round(100 - mp.attendance!) : null;
               return (
                 <div key={mp.id} className="flex items-center justify-between border-b border-border/60 py-2">
                   <div>
@@ -412,7 +416,7 @@ export default function SkaidrumasHubView() {
                   <div className="text-sm font-semibold">#{item.rank} {item.name}</div>
                   <div className="text-xs text-vote-for font-mono">{item.integrity_score}</div>
                 </div>
-                <div className="text-xs text-muted-foreground mt-1">{item.party || 'Nežinoma'} · {item.attendance}% lankomumas</div>
+                <div className="text-xs text-muted-foreground mt-1">{item.party || 'Nežinoma'} · {formatAttendance(item.attendance)} lankomumas</div>
                 <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
                   {item.evidence.slice(0, 3).map((evidence) => (
                     <li key={`${item.id}-${evidence}`}>• {evidence}</li>
@@ -446,7 +450,7 @@ export default function SkaidrumasHubView() {
                   <div className="text-sm font-semibold">#{item.rank} {item.name}</div>
                   <div className="text-xs text-destructive font-mono">{item.risk_score}</div>
                 </div>
-                <div className="text-xs text-muted-foreground mt-1">{item.party || 'Nežinoma'} · {item.attendance}% lankomumas</div>
+                <div className="text-xs text-muted-foreground mt-1">{item.party || 'Nežinoma'} · {formatAttendance(item.attendance)} lankomumas</div>
                 <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
                   {item.watch_evidence.slice(0, 3).map((evidence) => (
                     <li key={`${item.id}-${evidence}`}>• {evidence}</li>

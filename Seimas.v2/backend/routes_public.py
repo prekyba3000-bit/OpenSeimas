@@ -8,6 +8,7 @@ from collections import defaultdict
 from psycopg2.extras import RealDictCursor
 
 from backend import core
+from backend.hero_engine import attendance_overrides
 from backend.core import (
     _leaderboard_cache,
     _leaderboard_cache_lock,
@@ -131,6 +132,21 @@ def get_activity():
             ]
 
 
+def _resolved_attendance(mp_id: str, raw, overrides: Dict[str, Any]):
+    """Attendance under the methodology in force, or None when unpublishable.
+
+    `overrides` carries only the members whose displayed value must change —
+    suppressed ones map to None, v2-swapped ones to a float. Everyone else
+    keeps their v1 value. Returns None rather than 0.0 throughout: a member
+    with no publishable figure has no figure, and 0.0 states something false
+    about a person instead of merely computing it differently.
+    """
+    if mp_id in overrides:
+        value = overrides[mp_id]
+        return float(value) if value is not None else None
+    return float(raw) if raw is not None else None
+
+
 @router.get("/api/mps")
 def get_mps(status: str = "active"):
     """List MPs.
@@ -165,13 +181,18 @@ def get_mps(status: str = "active"):
 
             social_col = "p.social_links," if has_social else ""
             stats_join = "LEFT JOIN mp_stats_summary s ON p.id = s.mp_id" if has_stats else ""
+            # No COALESCE on attendance. A member whose mandate covers fewer
+            # than three sitting days has no publishable percentage, and
+            # `COALESCE(..., 0)` turned that into 0.0 — which reads as "never
+            # showed up" rather than "not enough data". Four members are in
+            # that position today. Null travels; the client renders unknown.
             stats_cols = """
                     COALESCE(s.total_votes_cast, 0) AS vote_count,
-                    COALESCE(s.attendance_percentage, 0) AS attendance,
+                    s.attendance_percentage AS attendance,
                     s.most_frequent_vote
             """ if has_stats else """
                     0 AS vote_count,
-                    0 AS attendance,
+                    NULL AS attendance,
                     NULL AS most_frequent_vote
             """
 
@@ -205,6 +226,10 @@ def get_mps(status: str = "active"):
                 ORDER BY p.full_name_normalized;
             """)
             rows = cur.fetchall()
+            # The same resolver the profile uses. Without it this list served
+            # v1 numbers while /api/v2/heroes served v2, so from 2026-08-26 a
+            # member would read two different attendances on two pages.
+            overrides = attendance_overrides(cur)
             return [
                 {
                     "id": str(row["id"]),
@@ -215,7 +240,7 @@ def get_mps(status: str = "active"):
                     "photo_url": row["photo_url"],
                     "social_links": row.get("social_links") or {},
                     "vote_count": row["vote_count"],
-                    "attendance": float(row["attendance"]),
+                    "attendance": _resolved_attendance(str(row["id"]), row["attendance"], overrides),
                     "vote_mode": row["most_frequent_vote"],
                     # Let the client say *when* a former member served instead
                     # of only that they are "inactive".

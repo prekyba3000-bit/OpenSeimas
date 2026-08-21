@@ -8,6 +8,7 @@ import { Card } from '../components/Card';
 import { getPartyMeta, PartyMeta } from '../utils/partyColors';
 import { cn } from '../components/ui/utils';
 import { ProblemDetailsNotice } from '../components/ProblemDetailsNotice';
+import { averageAttendance, byAttendance, formatAttendance, hasAttendance } from '../utils/attendance';
 
 interface FactionData {
   name: string;
@@ -40,9 +41,8 @@ const FactionsView = () => {
     return Object.entries(groups)
       .map(([name, members]) => {
         const meta = getPartyMeta(name);
-        const avgAttendance = members.length
-          ? members.reduce((s, m) => s + (m.attendance ?? 0), 0) / members.length
-          : 0;
+        // null, not 0, when no member of the faction has a publishable figure.
+        const avgAttendance = averageAttendance(members);
         const totalVotes = members.reduce((s, m) => s + (m.vote_count ?? 0), 0);
         return { name, meta, members, avgAttendance, totalVotes };
       })
@@ -110,7 +110,7 @@ const FactionsView = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {factions.map(faction => {
           const isExpanded = expandedFaction === faction.name;
-          const sortedMembers = [...faction.members].sort((a, b) => (b.attendance ?? 0) - (a.attendance ?? 0));
+          const sortedMembers = [...faction.members].sort(byAttendance('desc'));
 
           return (
             <motion.div
@@ -142,7 +142,7 @@ const FactionsView = () => {
                       <div className="text-xs text-muted-foreground">nariai</div>
                     </div>
                     <div>
-                      <div className="text-xl font-bold text-foreground">{faction.avgAttendance.toFixed(0)}%</div>
+                      <div className="text-xl font-bold text-foreground">{formatAttendance(faction.avgAttendance)}</div>
                       <div className="text-xs text-muted-foreground">dalyvavimas</div>
                     </div>
                     <ChevronRight className={cn(
@@ -192,16 +192,24 @@ const FactionsView = () => {
                             <div className="flex items-center gap-2 text-xs text-muted-foreground">
                               <span>{mp.vote_count} balsų</span>
                               <span>•</span>
-                              <span>{mp.attendance?.toFixed(0) ?? '—'}%</span>
+                              <span>{formatAttendance(mp.attendance)}</span>
                             </div>
                           </div>
                           <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
                             style={{
-                              backgroundColor: (mp.attendance ?? 0) > 80 ? 'hsl(var(--vote-for) / 0.2)' : (mp.attendance ?? 0) > 50 ? 'hsl(var(--attention) / 0.2)' : 'hsl(var(--vote-against) / 0.2)',
-                              color: (mp.attendance ?? 0) > 80 ? 'hsl(var(--vote-for))' : (mp.attendance ?? 0) > 50 ? 'hsl(var(--attention))' : 'hsl(var(--vote-against))',
+                              // No colour band without a figure to band. A suppressed member
+                              // was being painted as the worst category on no data.
+                              backgroundColor: !hasAttendance(mp) ? 'hsl(var(--muted))'
+                                : mp.attendance! > 80 ? 'hsl(var(--vote-for) / 0.2)'
+                                : mp.attendance! > 50 ? 'hsl(var(--attention) / 0.2)'
+                                : 'hsl(var(--vote-against) / 0.2)',
+                              color: !hasAttendance(mp) ? 'hsl(var(--muted-foreground))'
+                                : mp.attendance! > 80 ? 'hsl(var(--vote-for))'
+                                : mp.attendance! > 50 ? 'hsl(var(--attention))'
+                                : 'hsl(var(--vote-against))',
                             }}
                           >
-                            {mp.attendance?.toFixed(0) ?? '?'}
+                            {formatAttendance(mp.attendance)}
                           </div>
                         </div>
                       ))}
