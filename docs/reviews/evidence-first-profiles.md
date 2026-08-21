@@ -184,3 +184,82 @@ want retirement instead, say so and the 14-day clock starts.
 
 No implementation, no file changes beyond this document. Awaiting
 decisions on A–D.
+
+---
+
+# Implementation report (§4)
+
+Complete. Branch `feat/evidence-first-profiles`, 205 dashboard / 127
+backend tests green, contrast report unchanged (no new colours).
+
+## The recon table, closed
+
+| # | Surface | What replaced the composite |
+| --- | --- | --- |
+| 1 | MP profile score block | Deleted; formula on the methodology page |
+| 2 | MP profile header bar | Deleted with `IntegrityBar` |
+| 3 | Leaderboard integrity column | Dropped; NULL rows lifted into „Nepakanka duomenų" |
+| 4 | Hub index list | Panel removed — it was `100 − attendance` mislabelled |
+| 5 | Hub watchlist | Replaced by „Pataisymai ir atsakymai" |
+| 6 | API per-MP | Demoted behind `public_breakdown()` |
+| 7 | API accountability | Endpoint retired, 404 |
+| — | Android shell | No native views; 360px checks cover it |
+| — | OG / print | Never carried a composite |
+
+## What the verification pass found that the recon did not
+
+**A composite invented in place.** „Skaidrumo indeksas" on the hub ranked
+named members by `100 − attendance`, under a label naming a different
+metric. It used none of the strings the audit searched for — it was found
+by looking at the rendered page at 1400px. The §3.1 guard now also
+asserts no surface computes `100 − <metric>`.
+
+That is the second time this branch a defect was found by rendering
+rather than grepping (the first: 31% of votes crashing two pages). Worth
+recording as a method, not an anecdote.
+
+## Deviations from §2, and why
+
+| Spec | Shipped | Why |
+| --- | --- | --- |
+| „Four dimension dials" | Five | Decision A. `integrity` was the composite; attendance keeps a dial *and* the strip |
+| „Remove composite-sorted leaderboard" | Dropped the column; kept alphabetical default | It was never composite-sorted — `ORDER BY display_name ASC`, rank was positional |
+| Context bands on comparison surfaces | Helper built and tested; not yet placed on a surface | No surface in §2 asks for one that also has ≥10 comparable peers in view. Available for the compare page |
+
+## Data limits stated on the page, not just in the code
+
+- Attendance carries „iš 93 posėdžių dienų · 14 mėn. su duomenimis".
+- Chamber-relative dials carry no invented denominator; their drawer says
+  they are scored against the chamber maximum.
+- Two of five dials render the unknown state — their ingests have not run.
+- The trajectory strip shows 4 recess gaps and 3 thin months out of 21.
+
+## `LT-COPY: needs native review`
+
+Every string below is machine-written Lithuanian awaiting a native pass.
+
+| File | Strings |
+| --- | --- |
+| `utils/dimensionExplainers.ts` | All 15 — formula, denominator and „ko nerodo" for each of the five dimensions |
+| `utils/attendance.ts` | `ATTENDANCE_UNKNOWN_REASON_LT` |
+| `utils/contextBand.ts` | The five band verbs + label template |
+| `components/AttendanceTrajectory.tsx` | Panel heading, the „tarpai reiškia" note, tooltip and screen-reader phrasings |
+| `components/VerifiedVotesPanel.tsx` | Heading, „Kiekvienas įrašas turi šaltinį", „Visi balsavimai" |
+| `components/CorrectionsAndRepliesPanel.tsx` | Heading, „Ką mums pranešė ir ką ištaisėme", empty state |
+| `views/MpProfileView.tsx` | „Penki atskiri rodikliai…", the attendance coverage template |
+| `views/StebsenaView.tsx` | „Nepakanka duomenų" group header and its count phrasing |
+| `views/MethodologyView.tsx` | The whole „Skaidrumo indeksas — kodėl jo neberodome" section |
+
+Two published entries are **not** on this list and were written to be
+read as-is: the `methodology_versions` row for `integrity_index` v2, and
+the corrections-log entry `verdiktu-skelbimas`. Both are live.
+
+## Governance
+
+- `methodology_versions`: `integrity_index` v2, `announced_at =
+  effective_from`, recording that demotion is a presentation change and
+  the 14-day rule governs retirement.
+- Corrections log: `verdiktu-skelbimas`, resolved. Opens „Skelbėme
+  verdiktus apie konkrečius žmones. Tai buvo klaida" and says explicitly
+  it was not a UI bug.
+- `CHANGELOG.md`: the breaking API changes, including the `STA` line.
