@@ -20,6 +20,7 @@ import { Card } from '../components/Card';
 import { Popover, PopoverContent, PopoverTrigger } from '../components/ui/popover';
 import { ProblemDetailsNotice } from '../components/ProblemDetailsNotice';
 import { LT } from '../i18n/lt';
+import { ltPlural } from '../utils/ltPlural';
 
 type SortKey = 'rank' | 'name' | 'faction' | MpCivicDimension;
 type SortDirection = 'asc' | 'desc';
@@ -127,17 +128,33 @@ export default function StebsenaView() {
     [visibleDimensions],
   );
 
-  const sorted = useMemo(() => {
+  /**
+   * Sorting by a dimension ranks only the members who have one.
+   *
+   * „Sort last as negative infinity" still put them in the ranking, at the
+   * bottom, which reads as worst — the same lie as a 0.0 cell, one layer up.
+   * They are lifted out into their own labelled group instead, so the ordering
+   * makes no claim about them at all.
+   */
+  const { sorted, unranked } = useMemo(() => {
     const ranked = rows.map((row, i) => ({ ...row, rank: i + 1 }));
+    const isDimension = sortKey !== 'rank' && sortKey !== 'name' && sortKey !== 'faction';
+
+    const comparable = isDimension
+      ? ranked.filter((row) => readMpDimension(row, sortKey) !== null)
+      : ranked;
+    const withoutData = isDimension
+      ? ranked.filter((row) => readMpDimension(row, sortKey) === null)
+      : [];
+
     const getValue = (row: MpRow & { rank: number }, key: SortKey) => {
       if (key === 'rank') return row.rank;
       if (key === 'name') return row.mp.name || '';
       if (key === 'faction') return row.faction ?? '';
-      // Unavailable metrics sort last rather than as a fake 0.
-      return readMpDimension(row, key) ?? Number.NEGATIVE_INFINITY;
+      return readMpDimension(row, key) as number;
     };
 
-    return [...ranked].sort((a, b) => {
+    const ordered = [...comparable].sort((a, b) => {
       const av = getValue(a, sortKey);
       const bv = getValue(b, sortKey);
       if (typeof av === 'string' && typeof bv === 'string') {
@@ -147,6 +164,12 @@ export default function StebsenaView() {
       const cmp = Number(av) - Number(bv);
       return sortDirection === 'asc' ? cmp : -cmp;
     });
+
+    // Alphabetical inside the group: any other order would imply a ranking of
+    // people the platform has just said it cannot rank.
+    withoutData.sort((a, b) => (a.mp.name || '').localeCompare(b.mp.name || ''));
+
+    return { sorted: ordered, unranked: withoutData };
   }, [rows, sortKey, sortDirection]);
 
   const toggleSort = (key: SortKey) => {
@@ -330,31 +353,7 @@ export default function StebsenaView() {
                   </th>
                   {visibleDimensions.map((dim) => (
                     <th key={dim} className="text-right p-4">
-                      {dim === 'integrity' ? (
-                        <div className="inline-flex items-center justify-end gap-1">
-                          <SortHeader label={CIVIC_DIMENSION_LABELS_LT[dim]} keyName={dim} />
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <button
-                                type="button"
-                                className="p-0.5 rounded text-primary hover:bg-border/50"
-                                aria-label="Skaidrumo indekso paaiškinimas"
-                              >
-                                <HelpCircle className="w-3.5 h-3.5" />
-                              </button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-72 text-xs text-popover-foreground" align="end">
-                              <p className="font-semibold mb-1">Skaidrumo indeksas</p>
-                              <p className="text-muted-foreground leading-relaxed">{SKAIDRUMO_HELP_LT}</p>
-                              <p className="mt-2 text-muted-foreground">
-                                API: <code className="text-xs bg-muted px-1 rounded">forensic_breakdown</code>
-                              </p>
-                            </PopoverContent>
-                          </Popover>
-                        </div>
-                      ) : (
-                        <SortHeader label={CIVIC_DIMENSION_LABELS_LT[dim]} keyName={dim} />
-                      )}
+                      <SortHeader label={CIVIC_DIMENSION_LABELS_LT[dim]} keyName={dim} />
                     </th>
                   ))}
                 </tr>
@@ -391,25 +390,45 @@ export default function StebsenaView() {
                     </td>
                     {visibleDimensions.map((dim) => (
                       <td key={dim} className="p-4 text-right">
-                        {dim === 'integrity' ? (
-                          <div
-                            className="inline-flex items-center justify-end gap-2"
-                            title={getIntegrityTooltip(row)}
-                          >
-                            <span
-                              className={`inline-block w-3 h-3 rounded-full ${getIntDotClass(
-                                row.forensicBreakdown?.totalForensicAdjustment ?? 0,
-                              )}`}
-                            />
-                            <DimensionValue value={readMpDimension(row, dim)} />
-                          </div>
-                        ) : (
-                          <DimensionValue value={readMpDimension(row, dim)} />
-                        )}
+                        <DimensionValue value={readMpDimension(row, dim)} />
                       </td>
                     ))}
                   </tr>
                 ))}
+
+                {/* Members the sorted dimension cannot rank. Kept on the page —
+                    dropping them would hide a member from the public record —
+                    but outside the ordering, which makes no claim about them. */}
+                {unranked.length > 0 && (
+                  <>
+                    <tr>
+                      <td
+                        colSpan={3 + visibleDimensions.length}
+                        className="px-4 pt-6 pb-2 text-sm font-semibold text-foreground border-t border-border"
+                      >
+                        {/* LT-COPY: needs native review */}
+                        Nepakanka duomenų
+                        <span className="ml-2 font-normal text-muted-foreground">
+                          — {unranked.length}{' '}
+                          {ltPlural(unranked.length, 'narys', 'nariai', 'narių')} be šio rodiklio;
+                          nerikiuojami
+                        </span>
+                      </td>
+                    </tr>
+                    {unranked.map((row) => (
+                      <tr key={`unranked-${row.mp.id}`} className="border-t border-border/60">
+                        <td className="p-4 text-muted-foreground">—</td>
+                        <td className="p-4">{row.mp.name}</td>
+                        <td className="p-4 text-foreground/85">{row.faction?.trim() || '—'}</td>
+                        {visibleDimensions.map((dim) => (
+                          <td key={dim} className="p-4 text-right">
+                            <DimensionValue value={readMpDimension(row, dim)} />
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </>
+                )}
               </tbody>
             </table>
           </Card>

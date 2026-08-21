@@ -434,6 +434,128 @@ def get_mp_votes(mp_id: str, limit: int = 20):
             ]
 
 
+# Same floor as the aggregate figure. Invariant: the thin-data suppression rule
+# holds on every surface, and a month with one or two sitting days yields 0%,
+# 50% or 100% — noise wearing a percentage sign.
+MIN_ELIGIBLE_DAYS_PER_BUCKET = 3
+
+
+@router.get("/api/mps/{mp_id}/attendance-trajectory")
+def get_attendance_trajectory(mp_id: str):
+    """Attendance month by month across a member's own mandate.
+
+    The aggregate figure answers "how often does this member turn up". It
+    cannot answer "is that changing", which is the question a citizen deciding
+    how to vote actually has — „attendance rising across the term" is a reading
+    the aggregate makes impossible.
+
+    Three states per month, kept distinct because they mean different things:
+
+      eligible_days == 0   the Seimas did not sit. Not the member's absence —
+                           there were four such months in this term. Renders as
+                           a gap, never as a zero.
+      0 < eligible < 3     too few sitting days for a percentage to mean
+                           anything. Suppressed, same floor as the aggregate.
+      otherwise            days_present / eligible_days.
+
+    Buckets span the member's mandate window only. Months before they were
+    sworn in are not their gaps, and a mid-term replacement measured against
+    the whole term would read as chronically absent.
+    """
+    with get_db_conn() as conn:
+        if not conn:
+            raise HTTPException(status_code=500, detail="Database connection failed")
+
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT mandate_start_date, mandate_end_date FROM politicians WHERE id = %s::uuid",
+                (mp_id,),
+            )
+            mp = cur.fetchone()
+            if not mp:
+                raise HTTPException(status_code=404, detail="MP not found")
+
+            cur.execute(
+                """
+                WITH sitting_days AS (
+                    SELECT sitting_date FROM sitting_registrations WHERE sitting_date IS NOT NULL
+                    UNION
+                    SELECT sitting_date FROM votes WHERE sitting_date IS NOT NULL
+                ),
+                eligible AS (
+                    SELECT d.sitting_date
+                    FROM sitting_days d, politicians p
+                    WHERE p.id = %(mp)s::uuid
+                      AND (p.mandate_start_date IS NULL OR d.sitting_date >= p.mandate_start_date)
+                      AND (p.mandate_end_date IS NULL OR d.sitting_date <= p.mandate_end_date)
+                ),
+                present AS (
+                    SELECT s.sitting_date
+                    FROM politicians p
+                    JOIN mp_registrations m ON m.seimas_mp_id = p.seimas_mp_id AND m.registered
+                    JOIN sitting_registrations s ON s.reg_id = m.reg_id
+                    WHERE p.id = %(mp)s::uuid AND s.sitting_date IS NOT NULL
+                    UNION
+                    SELECT v.sitting_date
+                    FROM mp_votes mv
+                    JOIN votes v ON v.seimas_vote_id = mv.vote_id
+                    WHERE mv.politician_id = %(mp)s::uuid
+                      AND v.sitting_date IS NOT NULL
+                      AND (lower(mv.vote_choice) IN ('uz', 'prie\u0161', 'pries', 'u\u017e')
+                           OR lower(mv.vote_choice) LIKE 'susilaik%%')
+                ),
+                span AS (
+                    SELECT generate_series(
+                        date_trunc('month', (SELECT MIN(sitting_date) FROM eligible)),
+                        date_trunc('month', (SELECT MAX(sitting_date) FROM eligible)),
+                        interval '1 month'
+                    )::date AS bucket
+                )
+                SELECT
+                    span.bucket,
+                    COUNT(DISTINCT e.sitting_date) AS eligible_days,
+                    COUNT(DISTINCT pr.sitting_date) AS days_present
+                FROM span
+                LEFT JOIN eligible e
+                       ON date_trunc('month', e.sitting_date)::date = span.bucket
+                LEFT JOIN present pr
+                       ON pr.sitting_date = e.sitting_date
+                GROUP BY span.bucket
+                ORDER BY span.bucket
+                """,
+                {"mp": mp_id},
+            )
+            rows = cur.fetchall()
+
+    buckets = []
+    for row in rows:
+        eligible = row["eligible_days"]
+        present = row["days_present"]
+        buckets.append(
+            {
+                "period": row["bucket"].strftime("%Y-%m"),
+                "eligible_days": eligible,
+                "days_present": present,
+                # None in both thin cases; the client tells them apart by
+                # eligible_days, which is why it travels.
+                "attendance": round(100.0 * present / eligible, 2)
+                if eligible >= MIN_ELIGIBLE_DAYS_PER_BUCKET
+                else None,
+            }
+        )
+
+    return {
+        "mp_id": mp_id,
+        "unit": "month",
+        "min_eligible_days": MIN_ELIGIBLE_DAYS_PER_BUCKET,
+        "mandate_start_date": mp["mandate_start_date"].isoformat()
+        if mp["mandate_start_date"] else None,
+        "mandate_end_date": mp["mandate_end_date"].isoformat()
+        if mp["mandate_end_date"] else None,
+        "buckets": buckets,
+    }
+
+
 @router.get("/api/votes")
 def get_votes(limit: int = 50, offset: int = 0):
     """List recent votes."""
