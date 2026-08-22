@@ -8,6 +8,7 @@ const base: LastSittingDay = {
   sitting_date: "2026-07-14",
   vote_count: 61,
   mps_present: 127,
+  mps_present_ids: [],
   days_since: 3,
   is_recess: false,
   outcomes: null,

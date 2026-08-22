@@ -7,8 +7,9 @@ import {
   withAttendance,
   ATTENDANCE_UNKNOWN_LT,
 } from "./attendance";
+import type { MpSummary } from "../services/api";
 
-const mp = (attendance: number | null) => ({ attendance }) as never;
+const mp = (attendance: number | null): Pick<MpSummary, "attendance"> => ({ attendance });
 
 describe("attendance that may not exist", () => {
   it("renders unknown rather than zero", () => {
