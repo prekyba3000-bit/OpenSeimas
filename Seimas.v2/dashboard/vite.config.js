@@ -34,6 +34,14 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
+    // Reset mock state between tests rather than trusting each file to do it.
+    // VoteDetailView.noChoices.test.tsx vi.mock()s ../services/api while
+    // provenanceContract.test.ts imports the real module from it; with mock
+    // state persisting, the suite failed about one run in three — and passed
+    // 3/3 with that one file excluded, which is what identified the pair.
+    // A flaky guard teaches people to re-run instead of look.
+    restoreMocks: true,
+    mockReset: true,
     setupFiles: './src/tests/setup.js',
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
     exclude: [...configDefaults.exclude, 'tests/**'],
