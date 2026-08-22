@@ -147,6 +147,36 @@ re-ingest. Roughly 11% of all votes are affected.
 Depends on: nothing. Related to [the tally backfill](#) — both are re-reads of
 the same 5,279 votes and should run in one pass if possible.
 
+### Flaky test: VoteDetailView.noChoices.test.tsx — OPEN
+Fails roughly one full-suite run in three; passes 4/4 in isolation. Mine,
+introduced with the file in `1beb52b`, and pre-dating the P6 typecheck work
+(confirmed by reproducing it with the original `setup.js`).
+
+**A flaky guard is worse than a failing one** — it teaches people to re-run
+instead of look, and this file guards the trust-floor behaviour for the 31%
+of votes with no per-member choices.
+
+Ruled out so far:
+- **Not** the jest-dom/tsconfig change — reproduces with the old setup file.
+- **Not** shared-fixture DOM leakage — the two fixtures now have distinct
+  titles and there is an explicit `afterEach(cleanup)`.
+- **Not** the dynamic `await import()` — switched to a static import so
+  `vi.mock` hoisting binds it deterministically. Still flakes.
+- **Not** a 1s `findByText` timeout — raised to 5s. Still flakes.
+
+Not yet ruled out: cross-file pollution of the `../services/api` module
+registry. One run of the suite excluding `provenanceContract.test.ts` (which
+imports the real `mpProfileSchema` from that module) passed 205/205, but one
+run is not evidence — needs 5+ runs each way to be worth anything.
+
+Next concrete step: run the suite 5× with and 5× without
+`provenanceContract.test.ts`. If that is the polluter, the fix is likely
+`vi.mock` scoping or `restoreMocks` in the vitest config rather than anything
+in either test file.
+
+Depends on: nothing. Should be closed before it costs someone a debugging
+session on an unrelated change.
+
 ### Party strings — the same faction under two spellings
 `politicians.current_party` carries variants that the seat map colours as
 separate factions, because they are separate strings:
