@@ -27,6 +27,16 @@ with conn.cursor() as cur:
     cur.execute("SELECT to_regclass('public.mp_leaderboard_metrics')")
     if cur.fetchone()[0]:
         cur.execute("REFRESH MATERIALIZED VIEW CONCURRENTLY mp_leaderboard_metrics;")
+    # mp_attendance_v2 backs the attendance methodology that takes effect
+    # 2026-08-26. It was built by migration 020 and nothing has refreshed it
+    # since; it agreed with a live recompute only because the chamber has not
+    # voted since 2026-07-14. From the autumn session it would freeze at 93
+    # eligible days while every surface presented it as current.
+    # CONCURRENTLY is safe here: idx_mp_attendance_v2_mp is the required
+    # unique index.
+    cur.execute("SELECT to_regclass('public.mp_attendance_v2')")
+    if cur.fetchone()[0]:
+        cur.execute("REFRESH MATERIALIZED VIEW CONCURRENTLY mp_attendance_v2;")
 conn.close()
 print(f"[{datetime.datetime.now().isoformat()}] views refreshed")
 EOF
