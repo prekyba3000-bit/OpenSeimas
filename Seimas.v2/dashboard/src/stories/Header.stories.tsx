@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from '@storybook/react-vite';
+import type { Meta, StoryObj } from '@storybook/react';
 import { Header } from '../components/Header';
 import { BrowserRouter } from 'react-router-dom'; // Mock router context if needed, but Header uses <a> currently
 
