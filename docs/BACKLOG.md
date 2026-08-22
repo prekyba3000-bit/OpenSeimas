@@ -269,3 +269,31 @@ ADR 0006 / methodology `attendance` v2 self-executes on this date; the 14-day
 advance-notice banner has been running since 2026-08-12. **Verify on the day**
 that the served methodology flips to v2, the banner clears, and the four
 members suppressed by the 3-day floor are still suppressed.
+
+### 2026-09-10 — the sessions view will mislabel the autumn session
+`views/SessionsView.tsx` is routed at `/sessions` and buckets votes with a
+hardcoded five-row `SESSIONS` array. The current row reads
+`IV (Pavasario) sesija`, `period: '2026-03-10 → dabar'`, `endDate: '2099-12-31'`.
+
+Two problems, one already live and one dated:
+
+- **Live now.** „dabar" asserts a sitting session. Measured against production
+  on 2026-08-23: the newest vote in the API is 2026-07-14, five weeks earlier,
+  and 128 votes dated after 2026-06-30 are already filed under a spring session.
+  Whether the session was genuinely extended into July or ended in June, the
+  page states a present-tense fact no source backs.
+- **From 2026-09-10.** The autumn session opens and its votes fall inside
+  `2026-03-10 → 2099-12-31`, so they will be shown to citizens as spring-session
+  votes until somebody hand-edits the array. The open end date guarantees the
+  wrong answer rather than an empty one.
+
+There is also a latent silent drop: dates falling between the hardcoded ranges
+match no session and vanish from the view with no notice. Currently zero votes
+land in those gaps, so this has not yet cost anything.
+
+The fix is not a new date literal. Session boundaries belong to LRS
+(`posedzio_id` already carries a session), so the view should read them from a
+populated source and render an unknown session as unknown — the same rule the
+seat map and the attendance dials now follow. Until then the array will need a
+manual edit every session, and the failure mode of forgetting is a confident
+wrong label rather than a visible gap.
