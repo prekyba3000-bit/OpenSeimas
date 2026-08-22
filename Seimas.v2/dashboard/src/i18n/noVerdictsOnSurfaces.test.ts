@@ -13,7 +13,7 @@ import { join } from "node:path";
 const SRC = join(__dirname, "..");
 
 const DEAD =
-  /Party_Clan|Admin_Server|SeatingMap|ComponentBreakdown|AlignmentScore|AlignmentResult|MpSelector|VoteListCard|SwipeableVote|SessionOverview|VerticalPower|DivergingBar|DocCard|CommandPalette|ConflictAlert|MobileVoteStrip|TokenHandOff|MenuTrigger|VoteStatusIcon|ActivityItem|VoteDiffRow|ForensicExplainer|Header\.tsx|components\/VotesListView/;
+  /AlignmentScore|MpSelector|Header\.tsx/;
 
 function sourceFiles(dirs: string[]): string[] {
   const out: string[] = [];
