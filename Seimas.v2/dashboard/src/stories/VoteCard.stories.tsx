@@ -1,5 +1,6 @@
-import type { Meta, StoryObj } from '@storybook/react-vite';
+import type { Meta, StoryObj } from '@storybook/react';
 import { VoteCard } from '../views/VotesListView';
+import type { VoteSummary } from '../services/api';
 
 const meta = {
     title: 'Components/VoteCard',
@@ -12,12 +13,18 @@ const meta = {
     argTypes: {
         onClick: { action: 'clicked' },
     },
+    // `onClick` is required on the component and supplied at runtime by the
+    // action above, which the typechecker cannot see. Declaring it here keeps
+    // every story's args assignable without loosening the component's props.
+    args: {
+        onClick: () => {},
+    },
 } satisfies Meta<typeof VoteCard>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const mockVote = {
+const mockVote: VoteSummary = {
     id: '1',
     date: '2024-01-01',
     title: 'Law on Transparency and Open Data',

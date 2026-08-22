@@ -19,7 +19,7 @@
        which buried the 37 that were real. Declared here rather than relying on
        the setup file: setup.js is JavaScript, so its imports do not put type
        augmentation into the program. */
-    "types": ["vite/client", "@testing-library/jest-dom/vitest"],
+    "types": ["vite/client", "node", "@testing-library/jest-dom/vitest"],
 
     /* Path aliases */
     "baseUrl": ".",

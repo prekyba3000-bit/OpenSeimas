@@ -172,6 +172,18 @@ prior ~1-in-3 failure rate is about a 1-in-5 chance of being luck. If it
 recurs, the next suspect is worker-level module registry sharing, and the
 lever is `pool`/`isolate` rather than mock state.
 
+### The last 11 tsc errors are in unused vendored files
+`ui/calendar.tsx` (1), `ui/chart.tsx` (5), `ui/resizable.tsx` (5) — shadcn
+scaffolding carrying type errors against the installed versions of
+react-day-picker, recharts and react-resizable-panels.
+
+**No app code imports any of the three.** They are dead code, so they belong
+in the dead-code workstream rather than behind a tsconfig `exclude` — masking
+a type error in a file nobody uses is the wrong trade twice over.
+
+That takes the dead-code candidate list from 18 to 21. Read each as evidence
+first per the standing rule, then remove.
+
 ### Party strings — the same faction under two spellings
 `politicians.current_party` carries variants that the seat map colours as
 separate factions, because they are separate strings:

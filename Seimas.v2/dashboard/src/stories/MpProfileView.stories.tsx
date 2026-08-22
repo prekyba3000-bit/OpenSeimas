@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from '@storybook/react-vite';
+import type { Meta, StoryObj } from '@storybook/react';
 import { expect, within, userEvent, screen } from '@storybook/test';
 import { http, HttpResponse, delay } from 'msw';
 import MpProfileView from '../views/MpProfileView';
