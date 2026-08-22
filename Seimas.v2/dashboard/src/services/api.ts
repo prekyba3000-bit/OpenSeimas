@@ -107,8 +107,11 @@ export type MpProfile = {
   evidence: string[];
   /** Source-backed metrics from the backend. Displayed values come from here. */
   metrics?: MpMetrics;
-  /** Per-attribute data quality: "direct" | "proxy" | "unavailable". */
-  metrics_provenance?: Partial<Record<"STR" | "WIS" | "CHA" | "INT" | "STA", string>>;
+  /** Per-dimension data quality: "direct" | "proxy" | "unavailable". */
+  metrics_provenance?: Partial<
+    Record<"legislative_activity" | "experience" | "visibility", string>
+  > &
+    Record<string, string | undefined>;
   // TODO(v4): add faction once backend exposes it
 } & MpProfileDimensions;
 
@@ -237,15 +240,21 @@ export const mpProfileSchema = z
     forensic_breakdown: rawForensicBreakdownSchema,
     // The real, source-backed numbers. `attributes` above are derived composites
     // and several of them read from tables that are still empty — prefer these.
+    // Keyed by what the dimensions measure, matching the payload. These were
+    // STR/WIS/CHA/INT/STA, and because `z.object()` strips what it does not
+    // declare, the rename left this schema quietly discarding every key the
+    // API sent — provenance arrived as `{}` and the two provenance-gated dials
+    // hid data the backend had just supplied.
+    //
+    // `catchall` rather than a closed shape: a new dimension should reach the
+    // client the moment the backend serves it, not one deploy later.
     metrics_provenance: z
       .object({
-        STR: z.string().optional(),
-        WIS: z.string().optional(),
-        CHA: z.string().optional(),
-        INT: z.string().optional(),
-        STA: z.string().optional(),
+        legislative_activity: z.string().optional(),
+        experience: z.string().optional(),
+        visibility: z.string().optional(),
       })
-      .partial()
+      .catchall(z.string())
       .optional(),
     // Nullable, not merely optional: the backend sends null for a metric it
     // declines to publish (e.g. attendance for a member with almost no
