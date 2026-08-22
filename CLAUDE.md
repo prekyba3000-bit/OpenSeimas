@@ -162,18 +162,23 @@ exactly or the summary is rejected. Pilot 10 samples into `docs/reviews/`
 for human review; no LLM-assisted text to production until approved.
 
 ### P6 — Standing hygiene (interleave when blocked)
-- **[corrected] Dead-code removal: 18 components**, not ~16 — two more
-  (`components/VotesListView.tsx`, `VoteListCard.tsx`) found by walking the
-  import graph rather than grepping. Read each as evidence first, remove in
-  small commits.
-- **[corrected] tsc errors: 104 total, not 34**, and they are three separate
-  problems needing three different fixes:
-  | count | kind | fix |
-  | ---: | --- | --- |
-  | 11 | vendored `ui/` (calendar, chart, resizable) | exclude or patch without forking |
-  | 67 | jest-dom matchers in test files | one `types` entry in tsconfig |
-  | 23 | Storybook `Meta`/`StoryObj` imports | stale storybook types |
-  | 3 | other | triage individually |
+- **[corrected] Dead-code removal: 82 unreachable files, not 18.** The figure
+  came from grepping; walking the import graph from `main.jsx` with both
+  relative and `@/` resolution found 40 app files plus 42 vendored `ui/`.
+  Status 2026-08-23: **30 removed** (`e31d857`), read as evidence first —
+  several carried hardcoded 141/140, fabricated mock data, asserted status
+  literals, and English strings on a Lithuanian surface. **9 app components
+  retained**: Storybook stories document them and the a11y/design addons are
+  wired, so deleting the component deletes that documentation — a separate
+  call, not hygiene. **42 vendored `ui/` left in place.**
+  `utils/contextBand.ts` is shelved by design, not dead.
+  Lesson worth keeping: match dead files by *resolved import path*, never by
+  basename. `components/VotesListView.tsx` nearly survived because a story
+  imports a live `views/VotesListView.tsx` of the same name.
+- **[resolved] tsc errors: 104 → 11** (`84f7ac6`). They were three problems
+  needing three fixes, and were counted as one. The 11 that remain are all
+  vendored `ui/` (calendar, chart, resizable); 67 jest-dom matcher errors were
+  a single `types` entry in tsconfig, and the Storybook ones went with it.
 - Android deep-links: design note first, then implement.
 - Compare page: the context-band helper is built and shelved; the compare
   page is its home (≥10 comparable peers rule). Design note before code.
