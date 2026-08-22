@@ -263,3 +263,91 @@ the corrections-log entry `verdiktu-skelbimas`. Both are live.
   verdiktus apie konkrečius žmones. Tai buvo klaida" and says explicitly
   it was not a UI bug.
 - `CHANGELOG.md`: the breaking API changes, including the `STA` line.
+
+
+---
+
+# Post-merge defect: the schema that stripped provenance
+
+Found by the rendered-surface audit (§1.7) after the merge, not by any
+test or grep. Diagnosed read-only before any change.
+
+## The pairing rule held
+
+First hypothesis was a deploy-pairing miss — the wire rename landing with
+one side out of step would strand dials exactly as observed. Checked
+before touching code:
+
+| Check | Result |
+| --- | --- |
+| `bd51a34` in `main` | yes |
+| `3ca4a6b` in `main` | yes |
+| Deployed backend serves renamed keys | yes; no legacy `attributes` |
+| Deployed bundle carries renamed keys | yes; zero `STR`/`WIS`/`CHA` |
+
+**The pairing rule passed its first real test.** The coupling note in the
+merge message, the quiet hour, and the immediate verification all did
+their job. No process lesson to record there — the lesson is elsewhere.
+
+## What actually located it: two of three, not three of three
+
+`readMpDimension` gates `legislativeActivity` and `visibility` on
+`hasSource()`. It does **not** gate `experience`. The two that failed
+were exactly the two that consult provenance — which ruled out anything
+affecting `dimensions` as a whole and pointed straight at the provenance
+read path.
+
+Had all three failed, the pairing hypothesis would have survived longer.
+
+## Root cause
+
+The rename moved four things and missed a fifth:
+
+| Layer | Renamed? |
+| --- | --- |
+| Backend payload | ✅ |
+| Backend response model | ✅ |
+| Client `WIRE` constant | ✅ |
+| Client mapper | ✅ |
+| **Client zod schema** | ❌ still `STR/WIS/CHA/INT/STA` |
+
+`z.object()` strips undeclared keys silently:
+
+```
+wire  metrics_provenance: {legislative_activity: "direct", …}
+after zod parse         : {}
+```
+
+`hasSource()` read `undefined`, returned false, and two dials rendered
+„no data" for data the API had just sent. `dimensions` survived only
+because that sibling schema *was* updated in the same commit — one
+renamed, one not.
+
+## Why the tests did not catch it
+
+`mpLegacyDimensions.test.ts` builds its profile object by hand with the
+new keys, bypassing `parse` entirely. It was testing the layer *below*
+the broken one, and would have passed unchanged through this defect
+forever.
+
+The new `provenanceContract.test.ts` goes through `mpProfileSchema.parse`
+deliberately, and one case asserts the gate still hides a dimension the
+backend marks `unavailable` — so the fix cannot be "turn the gate off".
+
+## The rule this earned
+
+Added to the charter as §1.11: **schemas are wire contract**. Renaming a
+wire field means changing the payload, the response model, the client
+constant, the mapper *and* the schema — plus a test that goes through
+`parse`, not around it.
+
+The schema was also using a closed shape where an open one is correct.
+It is now `catchall(z.string())`: a new dimension should reach the client
+the moment the backend serves it, not one deploy later.
+
+## Severity
+
+This is the inverse of invariant 1 — not displaying what the data cannot
+support, but hiding what it can. Equally serious for the mission: an
+„unknown" on a metric we hold teaches a reader the coverage is thinner
+than it is, which is a false claim about the record.
