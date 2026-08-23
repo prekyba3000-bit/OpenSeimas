@@ -36,6 +36,13 @@ echo "[$(date -Is)] daily sync start"
 .venv/bin/python apply_migrations.py
 .venv/bin/python -m pipeline.ingest_seimas
 .venv/bin/python -m pipeline.ingest_votes_v2
+# bills_authored_count feeds the legislative_activity dimension, which sits on
+# the profile beside attendance and vote counts that refresh every day. It was
+# refreshed only by hand, so „direct" provenance was true about lineage and
+# silent about age. Non-fatal like tag_topics: a failed fetch keeps the previous
+# values, and /api/meta/freshness now reports how old they are, so staleness is
+# visible rather than silent.
+.venv/bin/python -m pipeline.ingest_authored_bills || echo "[$(date -Is)] ingest_authored_bills failed (non-fatal, values kept, age reported)"
 .venv/bin/python -m pipeline.cli tag_topics || echo "[$(date -Is)] tag_topics failed (non-fatal, same as workflow)"
 .venv/bin/python export_stats.py
 
