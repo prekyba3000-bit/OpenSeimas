@@ -13,6 +13,14 @@ export interface DimensionDialProps {
   value: number | null;
   /** „iš 93 posėdžių dienų" — the denominator, in words, when one is known. */
   coverage?: string | null;
+  /**
+   * Raw counts behind the percentage, shown inside the drawer.
+   *
+   * A single normalised percentage cannot distinguish a member who initiated
+   * twenty projects alone from one who co-signed twenty. A `null` value prints
+   * „Duomenų nėra" — never 0, which would read as "initiated nothing".
+   */
+  evidence?: Array<{ label: string; value: number | null }>;
 }
 
 /**
@@ -26,7 +34,7 @@ export interface DimensionDialProps {
  * A dimension with no populated source renders the established unknown state
  * — never 0.0, which in a row of percentages reads as "worst".
  */
-export function DimensionDial({ dimension, value, coverage }: DimensionDialProps) {
+export function DimensionDial({ dimension, value, coverage, evidence }: DimensionDialProps) {
   const [open, setOpen] = React.useState(false);
   const explainer = DIMENSION_EXPLAINERS[dimension];
   const known = typeof value === 'number';
@@ -70,6 +78,18 @@ export function DimensionDial({ dimension, value, coverage }: DimensionDialProps
       {open && (
         <div id={drawerId} className="text-sm text-muted-foreground space-y-2 leading-relaxed">
           <p>{explainer.formula}</p>
+          {evidence && evidence.length > 0 && (
+            <ul className="space-y-1 p-0 m-0 list-none">
+              {evidence.map((row) => (
+                <li key={row.label} className="flex gap-2">
+                  <span className="text-foreground">{row.label}:</span>
+                  <span>
+                    {typeof row.value === 'number' ? row.value : DIMENSION_UNAVAILABLE_LT}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
           <p>
             <span className="text-foreground">Vardiklis:</span> {explainer.denominator}
           </p>

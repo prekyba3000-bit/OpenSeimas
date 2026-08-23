@@ -269,6 +269,7 @@ export const MpProfileLayout = ({
                     dimension={dim}
                     value={readMpDimension(profile, dim)}
                     coverage={dimensionCoverage(dim, trajectory)}
+                    evidence={dimensionEvidence(dim, profile)}
                   />
                 ))}
               </div>
@@ -318,6 +319,33 @@ export const MpProfileLayout = ({
     </div>
   );
 };
+
+/**
+ * Raw counts shown inside a dial's „Kaip skaičiuojama?" drawer.
+ *
+ * Only legislativeActivity has any today. Its percentage is built from
+ * `kiekis_viso`, which counts co-signed projects, and on 2026-08-24 sixty-nine
+ * of 148 members had a total above zero with zero individual initiatives — so
+ * the percentage alone cannot tell those two situations apart. Both numbers are
+ * shown rather than one being chosen for the reader. A null prints the unknown
+ * state, never 0.
+ */
+// LT-COPY: needs native review
+function dimensionEvidence(
+  dim: MpCivicDimension,
+  profile: MpProfile,
+): Array<{ label: string; value: number | null }> | undefined {
+  if (dim !== 'legislativeActivity') return undefined;
+  const m = profile.metrics;
+  if (!m) return undefined;
+  const total = m.bills_initiated_total ?? null;
+  const individually = m.bills_initiated_individually ?? null;
+  if (total === null && individually === null) return undefined;
+  return [
+    { label: 'Iš viso projektų (su bendraautoryste)', value: total },
+    { label: 'Iš jų inicijuoti individualiai', value: individually },
+  ];
+}
 
 const MpProfileView = ({ mpId }: { mpId: string }) => {
   const [searchParams] = useSearchParams();

@@ -43,11 +43,13 @@ export const DIMENSION_EXPLAINERS: Record<MpCivicDimension, DimensionExplainer> 
       "Nerodo darbo kokybės — tik trukmę ir kiekį. Ilgai dirbantis narys nebūtinai dirba geriau.",
   },
   legislativeActivity: {
+    // LT-COPY: needs native review
     formula:
-      "Nario inicijuotų teisės aktų projektų ir vadovavimo komitetams skaičius, palyginti su aktyviausiu kadencijos nariu.",
+      "Teisės aktų projektų, kuriuos narys inicijavo arba prie kurių prisidėjo kaip bendraautoris, ir vadovavimo komitetams skaičius, palyginti su aktyviausiu kadencijos nariu.",
     denominator: "Didžiausia reikšmė tarp visų kadencijos narių",
+    // LT-COPY: needs native review
     notMeasuring:
-      "Nerodo, ar projektai buvo priimti, nei ar jie buvo naudingi. Skaičiuojame kiekį, ne poveikį.",
+      "Nerodo, ar projektai buvo priimti, nei ar jie buvo naudingi. Skaičiuojame kiekį, ne poveikį. Bendras skaičius neatskiria, ar narys projektą parengė vienas, ar pasirašė kartu su kitais — todėl rodome ir individualių iniciatyvų skaičių atskirai.",
   },
   visibility: {
     formula:

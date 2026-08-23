@@ -699,6 +699,13 @@ def _fetch_party_loyalty(mp_id: str, db_cursor) -> float:
 # same member.
 
 
+def _opt_float(value):
+    """None stays None. The point of shipping these two fields is the
+    distinction between "co-sponsored only" and "we never fetched this member",
+    and COALESCE(...,0) erases exactly that."""
+    return None if value is None else float(value)
+
+
 def score_legislative(bills_authored, max_bills, committee_leadership, max_committee):
     """Authored bills and committee leadership."""
     return (0.6 * _normalize(bills_authored, max_bills)) + (
@@ -890,6 +897,8 @@ def _fetch_mp_metrics(mp_id: str, db_cursor) -> Dict[str, Any] | None:
             p.mandate_start_date,
             p.mandate_end_date,
             COALESCE(p.bills_authored_count, 0) AS bills_authored_count,
+            p.bills_initiated_total,
+            p.bills_initiated_individually,
             COALESCE(s.total_votes_cast, 0) AS total_votes_cast,
             COALESCE(s.attendance_percentage, 0) AS attendance_percentage,
             COALESCE(s.amendments_proposed_count, 0) AS amendments_proposed_count,
@@ -960,6 +969,8 @@ def _fetch_metric_maxima(db_cursor) -> Dict[str, float]:
             SELECT
                 p.id,
                 COALESCE(p.bills_authored_count, 0) AS bills_authored_count,
+                p.bills_initiated_total,
+                p.bills_initiated_individually,
                 COALESCE(cr.committee_leadership_roles, 0) AS committee_leadership_roles,
                 COALESCE(sr.speeches_given, 0) AS speeches_given,
                 COALESCE(vr.votes_for_passed, 0) AS votes_for_passed,
@@ -1120,6 +1131,14 @@ def calculate_hero_profile(mp_id: str, db_cursor) -> Dict[str, Any]:
 
     metrics = {
         "bills_authored_count": bills_authored,
+        # The feed reports three numbers; bills_authored_count is `kiekis_viso`,
+        # which counts co-sponsored projects too. 69 of 148 members have a total
+        # above zero with zero individual initiatives, so "authored N" overstates
+        # what the source supports for nearly half the chamber. Both figures now
+        # cross the wire; neither is coalesced, because a member never fetched is
+        # unknown and 0 would read as "initiated nothing".
+        "bills_initiated_total": _opt_float(mp_row.get("bills_initiated_total")),
+        "bills_initiated_individually": _opt_float(mp_row.get("bills_initiated_individually")),
         "bills_passed": bills_passed,
         "committee_leadership": committee_leadership,
         "years_in_parliament": years_in_parliament,
@@ -1194,6 +1213,8 @@ def fetch_graph_mp_summaries(db_cursor, active_only: bool = True) -> List[Dict[s
             p.display_name,
             COALESCE(NULLIF(p.current_party, ''), 'Unknown') AS current_party,
             COALESCE(p.bills_authored_count, 0) AS bills_authored_count,
+            p.bills_initiated_total,
+            p.bills_initiated_individually,
             COALESCE(s.total_votes_cast, 0) AS total_votes_cast,
             COALESCE(s.attendance_percentage, 0) AS attendance_percentage,
             COALESCE(s.party_loyalty, 0) AS party_loyalty
@@ -1467,6 +1488,8 @@ def calculate_all_hero_profiles_fast(
 
         metrics = {
             "bills_authored_count": bills_authored,
+            "bills_initiated_total": _opt_float(row.get("bills_initiated_total")),
+            "bills_initiated_individually": _opt_float(row.get("bills_initiated_individually")),
             "bills_passed": bills_passed,
             "committee_leadership": committee_leadership,
             "years_in_parliament": years_in_parliament,
