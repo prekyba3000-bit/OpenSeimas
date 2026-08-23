@@ -86,3 +86,56 @@ number is already in the database.
 3. Decide whether `legislation` is wanted. If yes it needs a runner; if no,
    `ingest_legislation.py`, `graph.py`'s reads and the `tag_topics` legislation
    path are dead weight that currently compute from an empty table.
+
+---
+
+# Addendum — empty-pipeline recon (2026-08-23)
+
+Step one of the empty-matview task: *verify what the surfaces render*, before
+asking why the ingests fill nothing.
+
+## What renders today
+
+| table / view | rows | consumer | what a reader sees |
+| --- | ---: | --- | --- |
+| `faction_alignment` | 0 | `/api/forensics/loyalty` → `SkaidrumasHubView` | „Duomenų dar nėra…" — correct unknown state |
+| `assets` | 0 | `backend/graph.py` | graph still returns 225 nodes / 8090 edges from other sources |
+| `interests` | 0 | `backend/graph.py` | as above |
+
+`/api/forensics/loyalty` serves `{"alignment": [], "total_mps": 0}` and the hub
+guards on `alignment.length > 0`, so the empty state renders as an explicit
+„no data yet" rather than as zeros. **The trust floor holds on this surface.**
+Verified against production, not inferred from the code.
+
+## Two findings that are not about refresh schedules
+
+**1. The empty-state copy explains the absence wrongly.** It reads „lojalumo
+analizė bus paleista po balsavimų duomenų surinkimo" — the analysis will run
+once vote data is collected. Vote data *is* collected: 5,279 votes, 743,515
+per-member records. Whatever keeps `faction_alignment` empty, it is not that.
+The sentence is not a fabricated number, so it does not breach the trust floor,
+but it tells a reader something untrue about why they are seeing nothing.
+
+**2. A verdict-shaped surface is waiting behind the empty view.** The panel that
+renders when `faction_alignment` has rows colours each named member's
+`avg_alignment_30d`: red below 70, amber below 85, green above. That is a grade
+on a named person, delivered in colour rather than in a word, on a dimension
+called „lojalumas". Nothing renders it today only because the view is empty —
+so filling the view would ship the grading, and the fix would arrive disguised
+as a data improvement.
+
+Recording it per §4.6 rather than redesigning it here: **the ingest for
+`faction_alignment` should not be wired until that panel is evidence-first.**
+The order matters — data first, then the surface, means the verdict ships.
+
+## Also seen during the rendered audit
+
+The public landing page offers „Skaidrumo reitingas" — a *ranking* — as one of
+four things the platform provides. Whatever it links to, the word promises
+readers a league table of people. Flagged as copy, not code; it needs a
+decision, not a patch.
+
+## Not yet answered
+
+Why the three ingests fill nothing. That is the next step, and per the W3 rule
+it gets a feasibility note before any ingest code.
