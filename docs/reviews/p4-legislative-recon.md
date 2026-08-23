@@ -139,3 +139,69 @@ decision, not a patch.
 
 Why the three ingests fill nothing. That is the next step, and per the W3 rule
 it gets a feasibility note before any ingest code.
+
+---
+
+# Empty materialized views — full recon (2026-08-24)
+
+Measured against production, read-only. The earlier addendum checked what the
+surfaces render; this establishes *why* each is empty.
+
+| view / table | rows | source & population path | last refresh | verdict |
+| --- | ---: | --- | --- | --- |
+| `faction_alignment` | **0** | matview over `mp_votes` (743,515 rows) + `politicians` + `votes`; migration 004 | **never** | **bug** |
+| `assets` | 0 | table only; **no ingest writes to it anywhere in the repo** | n/a | **blocked** |
+| `interests` | 0 | table only; **no ingest writes to it anywhere in the repo** | n/a | **blocked** |
+
+## `faction_alignment` — a bug, and the interesting one
+
+A live recompute of the view's own definition returns **11,809 rows**. Its
+inputs have been populated all along. It was materialised in migration 004,
+before `mp_votes` was filled, and nothing has refreshed it since — the same
+defect as `mp_attendance_v2`, caught one step earlier because this one was
+born empty rather than going stale later.
+
+So the platform has been showing „Duomenų dar nėra — lojalumo analizė bus
+paleista po balsavimų duomenų surinkimo" for a computation it could have run
+at any time. That also explains the wrong empty-state copy noted earlier: the
+sentence was written to describe a pipeline that was waiting for data, and the
+data was never what it was waiting for.
+
+**Smallest safe fix is not "refresh it".** The panel that renders once this view
+has rows colours each named member's `avg_alignment_30d` red below 70, amber
+below 85, green above. Refreshing would populate 11,809 rows and switch on a
+red/amber/green grade for every member in one step, arriving disguised as a
+data improvement. The order has to be: make the panel evidence-first, then
+schedule the refresh. One line of ops work is gated behind one UI decision, and
+that is the right way round.
+
+Recorded in `UNREFRESHED_BY_DECISION` with that reason, so the guard stays green
+for a stated cause rather than by oversight. The previous reason there said
+refreshing "would only re-materialise nothing" — that was wrong, and is
+corrected.
+
+## `assets` and `interests` — blocked, correctly empty
+
+Neither table has any writer: no `INSERT INTO assets` or `INSERT INTO interests`
+exists anywhere in the repository. They were created by a migration and no
+ingest was ever written. Emptiness is therefore correct — the platform is not
+losing data it collected, it never collected any.
+
+`backend/graph.py` reads both, and the graph endpoint still returns 225 nodes
+and 8,090 edges from other sources, so nothing renders a hole. No surface claims
+declared-interest data exists.
+
+These are declared-interest and asset-declaration sources — the kind of data
+that most invites verdict-shaped presentation. Per the W3 rule they get a
+feasibility note before any ingest code, and on the evidence of
+`faction_alignment` that note should cover what the surface will do with the
+data *before* the data arrives.
+
+## Guards
+
+- `test_matview_refresh_paths.py` already asserts every matview has a refresher
+  or a written reason. `faction_alignment`'s reason is now accurate.
+- Worth adding when the loyalty panel is redesigned: a guard that a view moving
+  from exempt to scheduled has a surface test proving it renders evidence, not
+  a grade. Not added now — a guard for a decision not yet taken would be
+  guessing at its shape.
