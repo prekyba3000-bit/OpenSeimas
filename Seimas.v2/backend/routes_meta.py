@@ -209,3 +209,63 @@ def get_last_sitting_day():
         # client renders no outcome line at all rather than "0 priimta".
         "outcomes": None if decided == 0 else {"decided": decided},
     }
+
+
+@router.get("/api/meta/sessions")
+def get_sessions():
+    """Session boundaries as LRS publishes them.
+
+    `date_to` is null for a session that has not ended. It stays null across the
+    wire. The surface that consumed this previously carried its own hardcoded
+    table in which an unfinished session ended in 2099, which is how a spring
+    session that closed on 2026-07-14 went on collecting votes under the label
+    „dabar" through the summer recess.
+
+    `status` is derived from the dates and today, not from whether the chamber
+    happens to be voting: `sitting` means LRS records the session as begun and
+    not ended, which is a different claim from "the Seimas met today".
+    """
+    with get_db_conn() as conn:
+        if not conn:
+            raise HTTPException(status_code=500, detail="Database connection failed")
+        with conn.cursor() as cur:
+            cur.execute("SELECT to_regclass('public.sessions') AS t")
+            if cur.fetchone()["t"] is None:
+                return {"sessions": [], "source": None}
+            cur.execute(
+                """
+                SELECT seimas_session_id, number, name, date_from, date_to,
+                       MAX(last_synced_at) OVER () AS synced_at
+                FROM sessions
+                ORDER BY date_from DESC
+                """
+            )
+            rows = cur.fetchall()
+
+    today = datetime.date.today()
+    sessions = []
+    synced_at = None
+    for row in rows:
+        synced_at = row["synced_at"]
+        if row["date_from"] > today:
+            status = "upcoming"
+        elif row["date_to"] is None or row["date_to"] >= today:
+            status = "sitting"
+        else:
+            status = "ended"
+        sessions.append(
+            {
+                "id": row["seimas_session_id"],
+                "number": row["number"],
+                "name": row["name"],
+                "date_from": _iso(row["date_from"]),
+                "date_to": _iso(row["date_to"]),
+                "status": status,
+            }
+        )
+
+    return {
+        "sessions": sessions,
+        "source": "p2b.ad_seimo_sesijos",
+        "synced_at": _iso(synced_at),
+    }

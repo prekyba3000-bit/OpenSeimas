@@ -36,6 +36,10 @@ echo "[$(date -Is)] daily sync start"
 .venv/bin/python apply_migrations.py
 .venv/bin/python -m pipeline.ingest_seimas
 .venv/bin/python -m pipeline.ingest_votes_v2
+# Session boundaries. Cheap (one request) and the sessions page groups every
+# vote by them; session 146 opens 2026-08-25 and 145 on 2026-09-10, neither of
+# which existed in the hardcoded table this replaced.
+.venv/bin/python -m pipeline.ingest_sessions || echo "[$(date -Is)] ingest_sessions failed (non-fatal, previous boundaries kept)"
 # bills_authored_count feeds the legislative_activity dimension, which sits on
 # the profile beside attendance and vote counts that refresh every day. It was
 # refreshed only by hand, so „direct" provenance was true about lineage and
