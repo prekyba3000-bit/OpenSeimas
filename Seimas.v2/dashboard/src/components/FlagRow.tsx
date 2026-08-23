@@ -36,6 +36,13 @@ const SEVERITY_BADGE: Record<
     className:
       "bg-vote-for/15 text-vote-for",
   },
+  // Deliberately not a severity colour. „Žemas" in the platform's own palette
+  // said "we looked and found little"; the truth is that we did not look.
+  unknown: {
+    label: "Duomenų nėra",
+    className:
+      "bg-muted text-muted-foreground",
+  },
 };
 
 export type FlagRowProps = {

@@ -65,7 +65,7 @@ export type ForensicFlag = {
   status: ForensicStatus;
   title: string;
   description: string;
-  severity: "high" | "medium" | "low" | "none";
+  severity: "high" | "medium" | "low" | "none" | "unknown";
   /** Retained from API penalty field for transparency UI until WS2. */
   penalty: number;
   // TODO(v4): add methodologyAnchor: string once methodology page has anchors
@@ -284,11 +284,27 @@ const mpSearchResponseRawSchema = z.object({
   results: mpLeaderboardRawSchema,
 });
 
-function forensicSeverityFromStatus(status: ForensicStatus): ForensicFlag["severity"] {
+/**
+ * The one predicate that turns an engine status into a severity.
+ *
+ * It used to end in `return "low"`, so `unavailable` — which the backend sends
+ * with the explanation „table is unavailable" — rendered as „Žemas" next to a
+ * named member's name. Three of the five engines are unavailable in production
+ * today, so three low-severity findings were being asserted about people the
+ * platform knows nothing about. Not-measured and measured-and-fine are
+ * different facts and now map to different severities.
+ *
+ * Exported because a second copy of this function lived in
+ * utils/forensicBreakdownToFlags.ts and carried the identical bug. One
+ * predicate, so they cannot drift apart again.
+ */
+export function forensicSeverityFromStatus(status: ForensicStatus): ForensicFlag["severity"] {
   if (status === "flagged" || status === "critical") return "high";
   if (status === "warning") return "medium";
   if (status === "clean") return "none";
-  return "low";
+  if (status === "unavailable") return "unknown";
+  // An engine status we do not recognise is also something we cannot grade.
+  return "unknown";
 }
 
 function mapRawForensicEntry(

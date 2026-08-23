@@ -7,6 +7,8 @@ const SEVERITY_ORDER: Record<ForensicFlag["severity"], number> = {
   medium: 1,
   low: 2,
   none: 3,
+  // Last: what was not measured should never lead a list about a person.
+  unknown: 4,
 };
 
 export type FlagListProps = {
