@@ -1,11 +1,5 @@
-import type { ForensicBreakdown, ForensicFlag, ForensicStatus } from "../services/api";
-
-function severityFromStatus(status: ForensicStatus): ForensicFlag["severity"] {
-  if (status === "flagged" || status === "critical") return "high";
-  if (status === "warning") return "medium";
-  if (status === "clean") return "none";
-  return "low";
-}
+import type { ForensicBreakdown, ForensicFlag } from "../services/api";
+import { forensicSeverityFromStatus } from "../services/api";
 
 function pickFlag(entry: ForensicFlag): ForensicFlag {
   return {
@@ -31,7 +25,7 @@ export function forensicBreakdownToFlags(bd: ForensicBreakdown): ForensicFlag[] 
     status: bd.loyaltyBonus.status,
     title: "Partijos lojalumas",
     description: bd.loyaltyBonus.explanation,
-    severity: severityFromStatus(bd.loyaltyBonus.status),
+    severity: forensicSeverityFromStatus(bd.loyaltyBonus.status),
     penalty: bd.loyaltyBonus.bonus,
   };
 
