@@ -58,8 +58,11 @@ number is already in the database.
   migration 020; `refresh_stats.sh` refreshed only `mp_stats_summary` and
   `mp_leaderboard_metrics`. It matched a live recompute (0 of 148 rows differ)
   **only because the chamber has not voted since 2026-07-14**. Attendance v2
-  becomes the live methodology on 2026-08-26 and the autumn session opens
-  2026-09-10; from that date it would have frozen at 93 eligible days while
+  becomes the live methodology on 2026-08-26 and — per LRS, checked after this
+  was written — an extraordinary session opens **2026-08-25**, a day earlier,
+  with the autumn session following on 2026-09-10. The freeze would have begun
+  the day before v2 went live, not two weeks after; from then it would have
+  held at 93 eligible days while
   every surface presented it as current. **Fixed** — added to `refresh_stats.sh`
   with the `to_regclass` guard and `CONCURRENTLY` (the required unique index
   `idx_mp_attendance_v2_mp` exists). Ran once: clean.
