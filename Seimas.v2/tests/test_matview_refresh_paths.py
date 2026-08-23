@@ -33,10 +33,15 @@ REFRESH = re.compile(r"REFRESH\s+MATERIALIZED\s+VIEW\s+(?:CONCURRENTLY\s+)?([a-z
 # is expected to be deleted rather than to age in place.
 UNREFRESHED_BY_DECISION = {
     "faction_alignment": (
-        "0 rows in production and no refresher. An empty view is a question "
-        "about its inputs, not a refresh schedule — scheduling a refresh would "
-        "only re-materialise nothing on a timer. Under recon with the other "
-        "empty pipelines (assets, interests); see docs/reviews/p4-legislative-recon.md."
+        "0 rows stored, but a live recompute of its own definition returns "
+        "11,809 (measured 2026-08-24). It is not empty for want of inputs — it "
+        "was materialised before mp_votes was populated and nothing has "
+        "refreshed it since, the same defect as mp_attendance_v2 caught one "
+        "step earlier. It is deliberately NOT on the schedule yet: the panel "
+        "that renders once it has rows grades each named member's loyalty "
+        "red/amber/green, so refreshing would ship a verdict disguised as a "
+        "data fix. Wire the refresh only after that panel is evidence-first. "
+        "See docs/reviews/p4-legislative-recon.md."
     ),
 }
 
