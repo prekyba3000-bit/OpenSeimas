@@ -1,6 +1,8 @@
 import React from "react";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { DIMENSION_UNAVAILABLE_LT } from "../utils/mpLegacyDimensions";
 import { DimensionDial } from "./DimensionDial";
 import { AttendanceTrajectoryStrip } from "./AttendanceTrajectory";
 import type { AttendanceTrajectory } from "../services/api";
@@ -63,5 +65,45 @@ describe("the trajectory strip renders gaps as gaps", () => {
       { period: "2024-11", eligible_days: 0, days_present: 0, attendance: null },
     ]);
     expect(container).toBeEmptyDOMElement();
+  });
+});
+
+/**
+ * The legislative dial's percentage is built from a co-sponsorship-inclusive
+ * count. On 2026-08-24, 69 of 148 members had a total above zero and zero
+ * individual initiatives, so the percentage alone cannot separate "initiated
+ * twenty alone" from "co-signed twenty". Both counts are shown.
+ */
+describe("raw counts in the drawer", () => {
+  it("shows both figures once opened", async () => {
+    const user = userEvent.setup();
+    render(
+      <DimensionDial
+        dimension="legislativeActivity"
+        value={10.2}
+        evidence={[
+          { label: "Iš viso projektų (su bendraautoryste)", value: 16 },
+          { label: "Iš jų inicijuoti individualiai", value: 0 },
+        ]}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: /Kaip skaičiuojama/ }));
+    expect(screen.getByText("16")).toBeInTheDocument();
+    expect(screen.getByText("Iš jų inicijuoti individualiai:")).toBeInTheDocument();
+  });
+
+  it("prints the unknown state for a null count, never 0", async () => {
+    const user = userEvent.setup();
+    render(
+      <DimensionDial
+        dimension="legislativeActivity"
+        value={10.2}
+        evidence={[{ label: "Iš jų inicijuoti individualiai", value: null }]}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: /Kaip skaičiuojama/ }));
+    // A member never fetched is unknown. Printing 0 would say "initiated none".
+    expect(screen.queryByText("0")).not.toBeInTheDocument();
+    expect(screen.getByText(DIMENSION_UNAVAILABLE_LT)).toBeInTheDocument();
   });
 });

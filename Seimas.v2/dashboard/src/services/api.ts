@@ -117,6 +117,10 @@ export type MpProfile = {
 
 export type MpMetrics = {
   attendance_percentage?: number | null;
+  /** `kiekis_viso` — includes projects the member only co-signed. */
+  bills_initiated_total?: number | null;
+  /** `kiekis_individualiai` — initiated alone. Null means unknown, not zero. */
+  bills_initiated_individually?: number | null;
   party_loyalty?: number | null;
   total_votes_cast?: number | null;
   speeches_given?: number | null;
@@ -267,6 +271,11 @@ export const mpProfileSchema = z
         total_votes_cast: z.number().nullable().optional(),
         speeches_given: z.number().nullable().optional(),
         bills_authored_count: z.number().nullable().optional(),
+        // Declared, or z.object() drops them and the profile shows nothing
+        // while the API is serving both. That is exactly how metrics_provenance
+        // was silently emptied.
+        bills_initiated_total: z.number().nullable().optional(),
+        bills_initiated_individually: z.number().nullable().optional(),
         committee_leadership: z.number().nullable().optional(),
         years_in_parliament: z.number().nullable().optional(),
       })

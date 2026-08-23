@@ -28,7 +28,8 @@ export const CIVIC_DIMENSION_LABELS_LT: Record<MpCivicDimension, string> = {
   attendance: "Dalyvavimas",
   partyLoyalty: "Partijos lojalumas",
   experience: "Patirtis ir aktyvumas",
-  legislativeActivity: "Teisėkūros aktyvumas",
+  // LT-COPY: needs native review
+  legislativeActivity: "Inicijuoti ar prisidėta prie projektų",
   visibility: "Viešumas",
 };
 
