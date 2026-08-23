@@ -33,6 +33,60 @@ def _iso(value):
     return value.isoformat() if value is not None else None
 
 
+# Refreshes are performed by scripts/local-ops/refresh_stats.sh, a separate
+# process on a 30-minute timer, and recorded in source_fetches under this
+# prefix. The endpoint previously reported core._refresh_state — a dict living
+# in the API server's own memory, which that timer never touches. It published
+# "refresh_count: 0" while refreshes had been running every half hour: the
+# endpoint was reporting its own uptime and calling it the data's age.
+_MATVIEW_PREFIX = "matview:"
+
+
+def _matview_freshness(cur):
+    """Per-view last refresh, from the database rather than from this process."""
+    cur.execute("SELECT to_regclass('public.source_fetches') AS t")
+    if cur.fetchone()["t"] is None:
+        return {"last_refresh": None, "last_error": None, "refreshes_24h": 0, "views": {}}
+
+    cur.execute(
+        """
+        SELECT DISTINCT ON (source_name)
+               source_name, status, error, finished_at
+        FROM source_fetches
+        WHERE source_name LIKE %s
+        ORDER BY source_name, finished_at DESC NULLS LAST
+        """,
+        (_MATVIEW_PREFIX + "%",),
+    )
+    views = {}
+    for row in cur.fetchall():
+        views[row["source_name"][len(_MATVIEW_PREFIX):]] = {
+            "last_refresh": _iso(row["finished_at"]),
+            "status": row["status"],
+            "error": row["error"],
+        }
+
+    cur.execute(
+        """
+        SELECT COUNT(*) AS n FROM source_fetches
+        WHERE source_name LIKE %s AND finished_at > now() - interval '24 hours'
+        """,
+        (_MATVIEW_PREFIX + "%",),
+    )
+    refreshes_24h = cur.fetchone()["n"]
+
+    stamps = [v["last_refresh"] for v in views.values() if v["last_refresh"]]
+    errors = [v["error"] for v in views.values() if v["error"]]
+    return {
+        # The oldest view governs: one stale view makes the set stale, and
+        # reporting the newest would hide exactly the case this exists to catch.
+        "last_refresh": min(stamps) if stamps else None,
+        "last_error": errors[0] if errors else None,
+        "refreshes_24h": refreshes_24h,
+        "views": views,
+    }
+
+
 @router.get("/api/meta/freshness")
 def get_freshness():
     """Per-domain data freshness: row counts and latest available timestamps."""
@@ -54,14 +108,12 @@ def get_freshness():
                     "source_field": ts_col,
                 }
 
+            matviews = _matview_freshness(cur)
+
     return {
         "generated_at": datetime.datetime.utcnow().isoformat() + "Z",
         **domains,
-        "materialized_views": {
-            "last_refresh": core._refresh_state["last_refresh"],
-            "last_error": core._refresh_state["last_error"],
-            "refresh_count": core._refresh_state["refresh_count"],
-        },
+        "materialized_views": matviews,
     }
 
 

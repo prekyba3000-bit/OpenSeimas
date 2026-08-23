@@ -9,11 +9,26 @@ from httpx import AsyncClient, ASGITransport
 from backend.main import app
 
 
-def _fake_cursor(rows_by_table):
-    """Cursor mock: each freshness query 'FROM <table>' returns the queued row."""
+def _fake_cursor(rows_by_table, matviews=None, has_source_fetches=True):
+    """Cursor mock: each freshness query 'FROM <table>' returns the queued row.
+
+    Matview freshness reads source_fetches, so the fake answers those three
+    queries too — the `to_regclass` probe, the per-view DISTINCT ON, and the
+    24-hour count."""
     cur = MagicMock()
+    matviews = matviews or []
+    cur._current_rows = []
 
     def execute(sql, params=None):
+        if "to_regclass" in sql:
+            cur._current_row = {"t": "source_fetches" if has_source_fetches else None}
+            return
+        if "FROM source_fetches" in sql:
+            if "COUNT(*)" in sql:
+                cur._current_row = {"n": len(matviews)}
+            else:
+                cur._current_rows = matviews
+            return
         for table, row in rows_by_table.items():
             if f"FROM {table}" in sql:
                 cur._current_row = row
@@ -22,20 +37,29 @@ def _fake_cursor(rows_by_table):
 
     cur.execute.side_effect = execute
     cur.fetchone.side_effect = lambda: cur._current_row
+    cur.fetchall.side_effect = lambda: cur._current_rows
     return cur
 
 
-def _fake_db(rows_by_table):
+def _fake_db(rows_by_table, matviews=None, has_source_fetches=True):
     @contextmanager
     def fake_get_db():
         conn = MagicMock()
         cm = MagicMock()
-        cm.__enter__.return_value = _fake_cursor(rows_by_table)
+        cm.__enter__.return_value = _fake_cursor(rows_by_table, matviews, has_source_fetches)
         cm.__exit__.return_value = None
         conn.cursor.return_value = cm
         yield conn
 
     return fake_get_db
+
+
+_MATVIEWS = [
+    {"source_name": "matview:mp_attendance_v2", "status": "ok", "error": None,
+     "finished_at": datetime.datetime(2026, 7, 23, 9, 0, 0)},
+    {"source_name": "matview:mp_stats_summary", "status": "ok", "error": None,
+     "finished_at": datetime.datetime(2026, 7, 23, 9, 30, 0)},
+]
 
 
 _ROWS = {
@@ -53,12 +77,7 @@ async def test_freshness_ok(monkeypatch):
     """Freshness endpoint returns per-domain row counts and latest timestamps."""
     import backend.core as main_mod
 
-    monkeypatch.setattr(main_mod, "get_db_conn", _fake_db(_ROWS))
-    monkeypatch.setattr(
-        main_mod,
-        "_refresh_state",
-        {"last_refresh": "2026-07-23T09:00:00Z", "last_error": None, "refresh_count": 3},
-    )
+    monkeypatch.setattr(main_mod, "get_db_conn", _fake_db(_ROWS, _MATVIEWS))
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         response = await ac.get("/api/meta/freshness")
@@ -84,9 +103,17 @@ async def test_freshness_ok(monkeypatch):
     assert body["interests"]["row_count"] == 1200
     assert body["speeches"]["row_count"] == 300
 
-    assert body["materialized_views"]["last_refresh"] == "2026-07-23T09:00:00Z"
-    assert body["materialized_views"]["refresh_count"] == 3
-    assert body["materialized_views"]["last_error"] is None
+    mv = body["materialized_views"]
+    # The oldest view governs. Reporting the newest would let one frozen view
+    # hide behind a neighbour that refreshed a minute ago — which is exactly
+    # how mp_attendance_v2 stayed frozen next to two healthy views.
+    assert mv["last_refresh"] == "2026-07-23T09:00:00"
+    assert mv["last_error"] is None
+    assert mv["refreshes_24h"] == 2
+    assert mv["views"]["mp_attendance_v2"]["last_refresh"] == "2026-07-23T09:00:00"
+    assert mv["views"]["mp_stats_summary"]["status"] == "ok"
+    # The removed field reported the API process's own memory, never the data.
+    assert "refresh_count" not in mv
 
 
 @pytest.mark.asyncio
@@ -124,3 +151,41 @@ async def test_freshness_error_no_db(monkeypatch):
     body = response.json()
     assert body["status"] == 500
     assert body["instance"] == "/api/meta/freshness"
+
+
+@pytest.mark.asyncio
+async def test_matview_freshness_unknown_is_not_reported_as_fresh(monkeypatch):
+    """No recorded refresh must read as unknown, never as a plausible default.
+
+    The failure this replaces reported `refresh_count: 0, last_refresh: null`
+    while refreshes ran every 30 minutes — wrong in the safe direction. The
+    dangerous direction is the other one: a view nothing has ever refreshed
+    reporting a timestamp because some neighbour was refreshed.
+    """
+    import backend.core as main_mod
+
+    monkeypatch.setattr(main_mod, "get_db_conn", _fake_db(_ROWS, matviews=[]))
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        body = (await ac.get("/api/meta/freshness")).json()
+
+    mv = body["materialized_views"]
+    assert mv["last_refresh"] is None
+    assert mv["views"] == {}
+    assert mv["refreshes_24h"] == 0
+
+
+@pytest.mark.asyncio
+async def test_matview_freshness_survives_missing_source_fetches(monkeypatch):
+    """Before migration 017 the table does not exist. That is unknown, not 500."""
+    import backend.core as main_mod
+
+    monkeypatch.setattr(
+        main_mod, "get_db_conn", _fake_db(_ROWS, matviews=[], has_source_fetches=False)
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        response = await ac.get("/api/meta/freshness")
+
+    assert response.status_code == 200
+    assert response.json()["materialized_views"]["last_refresh"] is None
