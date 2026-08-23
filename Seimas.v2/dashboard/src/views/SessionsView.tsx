@@ -3,57 +3,92 @@ import { useQuery } from '@tanstack/react-query';
 import { Calendar, ChevronRight, AlertTriangle, Vote, Clock, BarChart3 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router';
-import { api, VoteSummary } from '../services/api';
+import { api, VoteSummary, SeimasSession } from '../services/api';
 import { Card } from '../components/Card';
 import { cn } from '../components/ui/utils';
 import { ProblemDetailsNotice } from '../components/ProblemDetailsNotice';
 
-interface SessionInfo {
-  id: number;
-  name: string;
-  period: string;
-  startDate: string;
-  endDate: string;
+// LT-COPY: needs native review
+export const UNKNOWN_SESSION_ID = -1;
+const UNKNOWN_SESSION_LABEL = 'Sesija nenustatyta';
+
+/**
+ * Which session a sitting date falls in, or UNKNOWN_SESSION_ID.
+ *
+ * Sessions overlap at the edges — an extraordinary session opens while the next
+ * ordinary session is already announced — so the latest session that has begun
+ * by `date` wins, not whichever comes first in array order. A date that matches
+ * nothing returns UNKNOWN and is rendered as unknown; the previous version
+ * dropped those votes silently, and gave its open session an end date of
+ * 2099-12-31 so that nothing ever failed to match.
+ */
+export function sessionIdForDate(sessions: SeimasSession[], date: string): number {
+  let best: SeimasSession | null = null;
+  for (const s of sessions) {
+    if (date < s.date_from) continue;
+    if (s.date_to && date > s.date_to) continue;
+    if (!best || s.date_from > best.date_from) best = s;
+  }
+  return best ? best.id : UNKNOWN_SESSION_ID;
 }
 
-const SESSIONS: SessionInfo[] = [
-  { id: 144, name: 'IV (Pavasario) sesija', period: '2026-03-10 → dabar', startDate: '2026-03-10', endDate: '2099-12-31' },
-  { id: 141, name: 'III (Rudens) sesija', period: '2025-09-10 → 2025-12-23', startDate: '2025-09-10', endDate: '2025-12-23' },
-  { id: 143, name: 'Neeilinė sesija', period: '2025-08-21 → 2025-08-26', startDate: '2025-08-21', endDate: '2025-08-26' },
-  { id: 140, name: 'II (Pavasario) sesija', period: '2025-03-10 → 2025-06-30', startDate: '2025-03-10', endDate: '2025-06-30' },
-  { id: 139, name: 'I (Rudens) sesija', period: '2024-11-14 → 2025-01-14', startDate: '2024-11-14', endDate: '2025-01-14' },
-];
+// LT-COPY: needs native review
+export function periodLabel(s: SeimasSession): string {
+  if (s.status === 'upcoming') return `nuo ${s.date_from}`;
+  // No end date means LRS has not recorded one, not that the session runs
+  // forever. „vyksta" says the session is open; it does not claim the Seimas
+  // met today.
+  if (!s.date_to) return `${s.date_from} → vyksta`;
+  return `${s.date_from} → ${s.date_to}`;
+}
 
 const SessionsView = () => {
   const navigate = useNavigate();
   const {
     data: votes = [],
-    isLoading: loading,
+    isLoading: loadingVotes,
     error,
   } = useQuery({
     queryKey: ['votes', 'sessions', 2600],
     queryFn: () => api.getVotes(2600, 0),
   });
-  const [expandedSession, setExpandedSession] = useState<number | null>(141);
+  const {
+    data: sessionData,
+    isLoading: loadingSessions,
+    error: sessionsError,
+  } = useQuery({
+    queryKey: ['meta', 'sessions'],
+    queryFn: () => api.getSessions(),
+  });
+  const loading = loadingVotes || loadingSessions;
+  const SESSIONS = useMemo(() => sessionData?.sessions ?? [], [sessionData]);
+  const [expandedSession, setExpandedSession] = useState<number | null>(null);
 
   const sessionVotes = useMemo(() => {
     const grouped: Record<number, { votes: VoteSummary[]; byDate: Record<string, VoteSummary[]> }> = {};
     SESSIONS.forEach(s => { grouped[s.id] = { votes: [], byDate: {} }; });
+    grouped[UNKNOWN_SESSION_ID] = { votes: [], byDate: {} };
 
     votes.forEach(v => {
       const d = v.date;
-      for (const s of SESSIONS) {
-        if (d >= s.startDate && d <= s.endDate) {
-          grouped[s.id].votes.push(v);
-          if (!grouped[s.id].byDate[d]) grouped[s.id].byDate[d] = [];
-          grouped[s.id].byDate[d].push(v);
-          break;
-        }
-      }
+      const id = sessionIdForDate(SESSIONS, d);
+      const bucket = grouped[id] ?? grouped[UNKNOWN_SESSION_ID];
+      bucket.votes.push(v);
+      if (!bucket.byDate[d]) bucket.byDate[d] = [];
+      bucket.byDate[d].push(v);
     });
 
     return grouped;
-  }, [votes]);
+  }, [votes, SESSIONS]);
+
+  // Only shown when it has contents. An empty bucket is not a finding.
+  const unknownCount = sessionVotes[UNKNOWN_SESSION_ID]?.votes.length ?? 0;
+
+  // No session list is a different fact from "these votes belong to no
+  // session". Without this, an unreachable endpoint would file every vote
+  // under „Sesija nenustatyta" and state, in confident Lithuanian, something
+  // untrue about the data rather than about the request.
+  const sessionsUnavailable = !loadingSessions && SESSIONS.length === 0;
 
   if (loading) {
     return (
@@ -89,7 +124,7 @@ const SessionsView = () => {
           {SESSIONS.slice().reverse().map(s => {
             const count = sessionVotes[s.id]?.votes.length ?? 0;
             const maxCount = Math.max(...SESSIONS.map(ss => sessionVotes[ss.id]?.votes.length ?? 0), 1);
-            const isCurrent = s.id === 144;
+            const isCurrent = s.status === 'sitting';
             return (
               <div
                 key={s.id}
@@ -118,10 +153,44 @@ const SessionsView = () => {
 
       {/* Session cards */}
       <div className="flex flex-col gap-4">
+        {/* Votes whose sitting date falls in no session LRS publishes. The
+            previous version could not produce this card: its open session ran
+            to 2099, so every vote matched something. Silence here was not
+            evidence of agreement. */}
+        {sessionsUnavailable && (
+          <Card className="p-5 border-dashed">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="w-5 h-5 shrink-0 text-muted-foreground" />
+              <div>
+                {/* LT-COPY: needs native review */}
+                <h3 className="font-bold text-foreground">Sesijų sąrašas nepasiekiamas</h3>
+                <p className="text-xs text-muted-foreground">
+                  Balsavimų pagal sesijas kol kas neskirstome. Tai duomenų šaltinio
+                  problema, ne teiginys apie balsavimus.
+                </p>
+              </div>
+            </div>
+          </Card>
+        )}
+        {!sessionsUnavailable && unknownCount > 0 && (
+          <Card className="p-5 border-dashed">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="w-5 h-5 shrink-0 text-muted-foreground" />
+              <div>
+                {/* LT-COPY: needs native review */}
+                <h3 className="font-bold text-foreground">{UNKNOWN_SESSION_LABEL}</h3>
+                <p className="text-xs text-muted-foreground">
+                  {unknownCount} balsavimų, kurių posėdžio data nepatenka į jokią
+                  paskelbtą sesiją. Rodome atskirai, o ne priskiriame spėjant.
+                </p>
+              </div>
+            </div>
+          </Card>
+        )}
         {SESSIONS.map(session => {
           const data = sessionVotes[session.id];
           const isExpanded = expandedSession === session.id;
-          const isCurrent = session.id === 144;
+          const isCurrent = session.status === 'sitting';
           const dates = Object.keys(data?.byDate ?? {}).sort().reverse();
 
           return (
@@ -144,7 +213,10 @@ const SessionsView = () => {
                     {isCurrent ? (
                       <div className="flex items-center gap-1">
                         <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                        <span>IV</span>
+                        {/* The badge used to read a literal „IV" on whichever
+                            card was pinned as current. It now shows the session
+                            number LRS gives, or nothing if it gives none. */}
+                        <span>{session.number ?? ''}</span>
                       </div>
                     ) : (
                       <Calendar className="w-5 h-5" />
@@ -152,7 +224,7 @@ const SessionsView = () => {
                   </div>
                   <div>
                     <h3 className="font-bold text-foreground">{session.name}</h3>
-                    <p className="text-xs text-muted-foreground">{session.period}</p>
+                    <p className="text-xs text-muted-foreground">{periodLabel(session)}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-6">

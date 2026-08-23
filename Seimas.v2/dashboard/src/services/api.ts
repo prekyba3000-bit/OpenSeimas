@@ -628,6 +628,27 @@ export interface AttendanceTrajectory {
   }>;
 }
 
+/**
+ * Session boundaries as LRS publishes them. `date_to` is null while a session
+ * has not ended — it must stay null. The view that consumes this used to carry
+ * its own table in which an unfinished session ended in 2099, so a session that
+ * closed on 2026-07-14 kept collecting votes under the label „dabar".
+ */
+export interface SeimasSession {
+  id: number;
+  number: number | null;
+  name: string;
+  date_from: string;
+  date_to: string | null;
+  status: "ended" | "sitting" | "upcoming";
+}
+
+export interface SessionsResponse {
+  sessions: SeimasSession[];
+  source: string | null;
+  synced_at?: string | null;
+}
+
 export interface LastSittingDay {
   sitting_date: string | null;
   vote_count: number;
@@ -677,6 +698,8 @@ export const api = {
   getLastSittingDay: () => request<LastSittingDay>("/meta/last-sitting-day"),
 
   getFreshness: () => request<Freshness>("/meta/freshness"),
+
+  getSessions: () => request<SessionsResponse>("/meta/sessions"),
 
   getVote: (id: string) => request<VoteDetail>(`/votes/${id}`),
 
