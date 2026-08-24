@@ -48,6 +48,11 @@ echo "[$(date -Is)] daily sync start"
 # visible rather than silent.
 .venv/bin/python -m pipeline.ingest_authored_bills || echo "[$(date -Is)] ingest_authored_bills failed (non-fatal, values kept, age reported)"
 .venv/bin/python -m pipeline.cli tag_topics || echo "[$(date -Is)] tag_topics failed (non-fatal, same as workflow)"
+# Data-quality gate. Runs after ingestion, before anything downstream trusts
+# the data. A block_publish failure exits non-zero and the refresh job will
+# hold, leaving the last-good data served.
+.venv/bin/python scripts/dq_check_runner.py || echo "[$(date -Is)] dq checks reported a blocking failure"
+
 .venv/bin/python export_stats.py
 
 # Mirror the workflow's data commit; --no-verify skips the pre-push quality gate
@@ -66,6 +71,14 @@ if ! git diff --quiet "$DATA_FILE"; then
   git pull --rebase origin main && git push --no-verify origin main \
     || echo "[$(date -Is)] push failed — data commit left local"
 fi
+# Dead-man's switch. Pings only if a URL is configured; no account is created
+# by this repo. An unconfigured ping is silence, not a false green.
+if [ -n "${HEALTHCHECK_SYNC_URL:-}" ]; then
+  curl -fsS -m 10 --retry 3 "$HEALTHCHECK_SYNC_URL" >/dev/null \
+    && echo "[$(date -Is)] healthcheck pinged" \
+    || echo "[$(date -Is)] healthcheck ping failed (sync itself succeeded)"
+fi
+
 echo "[$(date -Is)] daily sync done"
 
 mark_success "$JOB"

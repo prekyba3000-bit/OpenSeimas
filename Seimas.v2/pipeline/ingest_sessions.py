@@ -16,8 +16,13 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import psycopg2  # noqa: E402
 
-from pipeline.common import record_fetch, setup_logging  # noqa: E402
-from pipeline.ingest_floor_speeches import fetch_sessions  # noqa: E402
+from pipeline.common import (  # noqa: E402
+    SNAPSHOT_PARSER_VERSION,
+    record_fetch,
+    record_snapshot,
+    setup_logging,
+)
+from pipeline.ingest_floor_speeches import fetch_with_retry, parse_sessions_xml  # noqa: E402
 
 SOURCE_NAME = "seimas_sessions"
 SOURCE_URL = "https://apps.lrs.lt/sip/p2b.ad_seimo_sesijos"
@@ -38,15 +43,31 @@ def run():
         print("ERROR: DB_DSN not set", file=sys.stderr)
         return 1
 
-    sessions = fetch_sessions(TERM_ID)
-    if not sessions:
-        print(f"No sessions returned for term {TERM_ID} — leaving existing rows alone.")
-        return 1
+    # Raw bytes first, hashed and recorded before anything parses them. A
+    # parser change must be re-runnable against exactly what the source sent,
+    # and a parse that mangles the feed must not be the only surviving record
+    # of it.
+    response = fetch_with_retry(SOURCE_URL, timeout=60)
+    payload = response.content
 
     conn = psycopg2.connect(dsn)
     try:
+        manifest_id, digest, unchanged = record_snapshot(
+            conn, SOURCE_NAME, SOURCE_URL, payload,
+            parser_version=SNAPSHOT_PARSER_VERSION,
+        )
+        print(f"snapshot {digest[:12]}… {len(payload)} bytes"
+              f"{' (unchanged since last fetch)' if unchanged else ''}")
+
+        sessions = parse_sessions_xml(payload, TERM_ID)
+        if not sessions:
+            print(f"No sessions returned for term {TERM_ID} — leaving existing rows alone.")
+            return 1
+
         with conn, conn.cursor() as cur:
             with record_fetch(conn, SOURCE_NAME, SOURCE_URL) as fetch:
+                fetch["manifest_id"] = manifest_id
+                fetch["parsed"] = len(sessions)
                 for s in sessions:
                     cur.execute(
                         """
@@ -72,6 +93,7 @@ def run():
                         ),
                     )
                 fetch["rows"] = len(sessions)
+                fetch["inserted"] = len(sessions)
         print(f"Upserted {len(sessions)} sessions for term {TERM_ID}.")
         return 0
     finally:

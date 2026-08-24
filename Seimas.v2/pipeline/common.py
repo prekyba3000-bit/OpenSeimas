@@ -116,8 +116,109 @@ def record_fetch(conn, source_name: str, source_url: Optional[str] = None):
         )
         conn.commit()
         raise
+    # parsed/inserted/manifest are optional: a caller that does not set them
+    # leaves NULL, and the reconciliation check skips NULL rather than reading
+    # an unmeasured run as a mismatch.
     cur.execute(
-        "UPDATE source_fetches SET status='ok', rows_affected=%s, finished_at=NOW() WHERE id=%s",
-        (result.get("rows", 0), fetch_id),
+        """
+        UPDATE source_fetches
+        SET status='ok', rows_affected=%s, finished_at=NOW(),
+            parsed_count = COALESCE(%s, parsed_count),
+            inserted_count = COALESCE(%s, inserted_count),
+            manifest_id = COALESCE(%s, manifest_id),
+            reconciliation_note = COALESCE(%s, reconciliation_note)
+        WHERE id=%s
+        """,
+        (result.get("rows", 0), result.get("parsed"), result.get("inserted"),
+         result.get("manifest_id"), result.get("note"), fetch_id),
     )
     conn.commit()
+
+# ─── Source snapshots ────────────────────────────────────────────────────────
+# Every fetch is hashed before it is parsed. lrs.lt sends neither ETag nor
+# Last-Modified, so "has this feed changed" has no server-side answer — the
+# only available one is a hash of the bytes we received, compared to the last
+# hash we recorded.
+#
+# The manifest row is the durable artifact. Payload bytes are NOT written here:
+# Render's disk is ephemeral, and the storage layout is proposed in
+# docs/reviews/wave1-data-health.md for review before anything writes files.
+# `snapshot_path()` returns where a payload WOULD go, so the layout is fixed in
+# one place when that is approved.
+
+SNAPSHOT_PARSER_VERSION = "1"
+
+
+def sha256_bytes(payload: bytes) -> str:
+    import hashlib
+    return hashlib.sha256(payload).hexdigest()
+
+
+# The p2b feeds stamp their own generation time into the root element:
+#   <SeimoInformacija ... suformavimo_laikas="2026-08-24 04:54:36" ...>
+# Two fetches seconds apart are byte-identical except for those digits, so a
+# raw hash answers "did this change" with yes, always. Verified against
+# p2b.ad_seimo_sesijos: two 1048-byte payloads differing at one offset.
+_VOLATILE_ATTRS = (rb'suformavimo_laikas="[^"]*"',)
+
+
+def canonical_bytes(payload: bytes) -> bytes:
+    """Payload with feed-generation noise removed, for change detection."""
+    import re
+    out = payload
+    for pattern in _VOLATILE_ATTRS:
+        out = re.sub(pattern, b'suformavimo_laikas=""', out)
+    return out
+
+
+def content_sha256(payload: bytes) -> str:
+    return sha256_bytes(canonical_bytes(payload))
+
+
+def snapshot_path(source: str, digest: str, suffix: str = ".xml") -> str:
+    """Content-addressed location for a payload. Nothing writes this yet."""
+    # Sharded by the first two hex characters: a flat directory of tens of
+    # thousands of files is slow to list and unpleasant in git tooling.
+    return f"snapshots/{source}/{digest[:2]}/{digest}{suffix}"
+
+
+def record_snapshot(conn, source: str, url: str, payload: bytes,
+                    parser_version: str = SNAPSHOT_PARSER_VERSION,
+                    fetch_status: str = "ok", error: Optional[str] = None):
+    """Append a manifest row for one fetch. Returns (manifest_id, digest, unchanged).
+
+    `unchanged` is True when this exact byte-sequence was already recorded for
+    this source — the client-side replacement for a 304.
+
+    Degrades to a no-op when the table is absent (migration 027 not yet applied)
+    so ingestion keeps working rather than failing on provenance.
+    """
+    log = logging.getLogger("pipeline.provenance")
+    digest = sha256_bytes(payload)
+    content_digest = content_sha256(payload)
+    cur = conn.cursor()
+    cur.execute("SELECT to_regclass('public.snapshot_manifest')")
+    if _scalar(cur.fetchone()) is None:
+        log.warning("snapshot_manifest missing — snapshot not recorded for %s", source)
+        return None, digest, False
+
+    # Compared on the canonical hash: the raw one differs on every fetch.
+    cur.execute(
+        "SELECT 1 FROM snapshot_manifest WHERE source = %s AND content_sha256 = %s LIMIT 1",
+        (source, content_digest),
+    )
+    unchanged = cur.fetchone() is not None
+
+    cur.execute(
+        """
+        INSERT INTO snapshot_manifest
+            (source, url, sha256, content_sha256, byte_count, parser_version, fetch_status, error)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        RETURNING id
+        """,
+        (source, url, digest, content_digest, len(payload), parser_version,
+         "unchanged" if unchanged and fetch_status == "ok" else fetch_status, error),
+    )
+    manifest_id = _scalar(cur.fetchone())
+    conn.commit()
+    return manifest_id, digest, unchanged

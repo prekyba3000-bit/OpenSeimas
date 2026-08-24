@@ -87,6 +87,55 @@ def _matview_freshness(cur):
     }
 
 
+# Four states, and `unknown` is not a flavour of `stale`.
+#
+#   fresh    a successful fetch inside the window
+#   stale    a successful fetch, too long ago
+#   broken   the last attempt failed
+#   unknown  no record at all — we have never observed this source
+#
+# Collapsing unknown into stale would claim we once had this data and it aged.
+# For a source that has never been fetched, that is a statement about a fetch
+# that never happened.
+FRESH_WINDOW_HOURS = 26
+STALE_LIMIT_HOURS = 50
+
+
+def _source_states(cur):
+    cur.execute("SELECT to_regclass('public.source_fetches') AS t")
+    if cur.fetchone()["t"] is None:
+        return {}
+    cur.execute(
+        """
+        SELECT DISTINCT ON (source_name)
+               source_name, status, finished_at, error,
+               EXTRACT(EPOCH FROM (now() - finished_at)) / 3600.0 AS age_hours
+        FROM source_fetches
+        WHERE source_name NOT LIKE 'matview:%'
+        ORDER BY source_name, finished_at DESC NULLS LAST
+        """
+    )
+    out = {}
+    for row in cur.fetchall():
+        age = row["age_hours"]
+        if row["status"] == "error":
+            state = "broken"
+        elif age is None:
+            state = "unknown"
+        elif age <= FRESH_WINDOW_HOURS:
+            state = "fresh"
+        else:
+            state = "stale"
+        out[row["source_name"]] = {
+            "state": state,
+            "last_success": _iso(row["finished_at"]),
+            "age_hours": round(age, 1) if age is not None else None,
+            "error": row["error"],
+            "beyond_stale_limit": bool(age is not None and age > STALE_LIMIT_HOURS),
+        }
+    return out
+
+
 @router.get("/api/meta/freshness")
 def get_freshness():
     """Per-domain data freshness: row counts and latest available timestamps."""
@@ -109,11 +158,13 @@ def get_freshness():
                 }
 
             matviews = _matview_freshness(cur)
+            sources = _source_states(cur)
 
     return {
         "generated_at": datetime.datetime.utcnow().isoformat() + "Z",
         **domains,
         "materialized_views": matviews,
+        "sources": sources,
     }
 
 
