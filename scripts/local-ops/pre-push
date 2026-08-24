@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Local CI stand-in while GitHub Actions is locked: backend pytest against a
-# fresh throwaway DB + dashboard production build, on every push.
+# fresh throwaway DB, the dashboard vitest suite, and a dashboard production
+# build, on every push.
 # Install: cp scripts/local-ops/pre-push .git/hooks/pre-push && chmod +x .git/hooks/pre-push
 # Data-only cron pushes bypass this via `git push --no-verify` (see daily_sync.sh).
 set -euo pipefail
@@ -18,8 +19,14 @@ DB_DSN="$SCRATCH_DSN" .venv/bin/python apply_migrations.py > /dev/null
 DB_DSN="$SCRATCH_DSN" PYTHONPATH=. .venv/bin/python -m pytest tests -q
 psql -U julio -h localhost -d postgres -q -c "DROP DATABASE $SCRATCH_DB;"
 
-echo "pre-push: dashboard build..."
+echo "pre-push: dashboard tests..."
 cd dashboard
+# The dashboard suite was never gated: the hook ran pytest and a production
+# build, and a build succeeds with every test in the repo failing. That is how
+# VoteDetailView.noChoices could flake for weeks without ever blocking a push.
+npx vitest run --reporter=dot
+
+echo "pre-push: dashboard build..."
 VITE_API_URL="${VITE_API_URL:-https://seimas-api.onrender.com}" npx vite build > /dev/null
 
 echo "pre-push: all green"

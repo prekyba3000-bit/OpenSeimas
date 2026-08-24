@@ -35,11 +35,17 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     // Reset mock state between tests rather than trusting each file to do it.
-    // VoteDetailView.noChoices.test.tsx vi.mock()s ../services/api while
-    // provenanceContract.test.ts imports the real module from it; with mock
-    // state persisting, the suite failed about one run in three — and passed
-    // 3/3 with that one file excluded, which is what identified the pair.
-    // A flaky guard teaches people to re-run instead of look.
+    //
+    // These were added on the theory that mock state leaked between
+    // VoteDetailView.noChoices.test.tsx and provenanceContract.test.ts. That
+    // theory is probably wrong: vitest isolates the module registry per file
+    // by default, and nothing here overrides `isolate` or `pool`. The evidence
+    // for it was a clean run after the change, which later turned out to be
+    // luck — the failure came back.
+    //
+    // They are kept because resetting mock state between tests is right on its
+    // own terms, not because they are known to fix anything. The race actually
+    // addressed was an assertion landing between React commits; see that file.
     restoreMocks: true,
     mockReset: true,
     setupFiles: './src/tests/setup.js',
