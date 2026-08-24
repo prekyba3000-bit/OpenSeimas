@@ -428,17 +428,35 @@ export interface BenfordResponse {
   items: BenfordItem[];
 }
 
+export interface LoyaltyDay {
+  date: string;
+  /** Null when the day yielded no comparable votes. Never a stand-in number. */
+  alignment: number | null;
+  aligned_votes: number | null;
+  votes_on_day: number | null;
+}
+
 export interface LoyaltyMp {
   mp_id: string;
   name: string;
   party: string;
-  avg_alignment_30d: number;
-  trend: { date: string; alignment: number }[];
+  /**
+   * Numerator and denominator, so a surface can show why the percentage is
+   * what it is. `alignment_pct` is computed from these sums, not as a mean of
+   * daily percentages — a sitting day carries 1 to 124 votes, and averaging
+   * the daily figures weighs those equally.
+   */
+  aligned_votes: number;
+  comparable_votes: number;
+  alignment_pct: number | null;
+  sitting_days: number;
+  daily: LoyaltyDay[];
 }
 
 export interface LoyaltyResponse {
   alignment: LoyaltyMp[];
   total_mps: number;
+  source?: string | null;
 }
 
 export interface PhantomItem {
