@@ -1,5 +1,14 @@
 # Evidence-first profiles — §2.1 recon
 
+> **SUPERSEDED (CZ-2, 2026-08-24).** The two mentions of *four dials* below are
+> from before the five-dial decision. The controlling set is five — attendance,
+> partyLoyalty, experience, legislativeActivity, visibility — asserted by
+> `i18n/noVerdictsOnSurfaces.test.ts` and rendered on the profile as
+> „Penki atskiri rodikliai". The lines are left exactly as written: a review
+> document that silently agrees with the present stops being a record of how
+> the decision was reached.
+
+
 **Status: decisions received; implementation in progress.**
 
 | | |
