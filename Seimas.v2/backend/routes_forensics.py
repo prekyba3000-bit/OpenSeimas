@@ -158,7 +158,25 @@ def get_benford_results(limit: int = 50):
 
 @router.get("/api/forensics/loyalty")
 def get_loyalty_graph():
-    """Engine 03: Faction alignment and community detection results."""
+    """Per-sitting-day alignment between a member's votes and their party's position.
+
+    This endpoint used to do three things it should not have.
+
+    It sorted members by alignment ascending and returned the lowest fifty. That
+    is a least-loyal league table of named people — the shape retired with
+    heroes-villains, published under a different heading.
+
+    It coerced a missing or zero percentage to 100 with
+    `float(x) if x else 100`. Zero is falsy in Python, so a member who voted
+    against their party on every vote of a sitting day was published as
+    perfectly aligned. 28 of 11,809 rows are affected.
+
+    It returned percentages with no counts, so nothing downstream could show a
+    reader why a number was what it is.
+
+    Now: every member, ordered by name, each row carrying its own numerator and
+    denominator. No ranking, no coercion, no truncation of the window.
+    """
     with get_db_conn() as conn:
         if not conn:
             raise HTTPException(status_code=500, detail="Database connection failed")
@@ -169,44 +187,66 @@ def get_loyalty_graph():
             if has_matview:
                 cur.execute("""
                     SELECT mp_id::text, display_name, current_party, sitting_date,
-                           alignment_pct
+                           alignment_pct, aligned_votes, votes_on_day
                     FROM faction_alignment
-                    ORDER BY sitting_date DESC
-                    LIMIT 5000
+                    ORDER BY display_name ASC, sitting_date ASC
                 """)
                 rows = cur.fetchall()
             else:
                 rows = []
 
-            # Group by MP for rolling alignment
-            mp_data: dict = defaultdict(lambda: {"name": "", "party": "", "daily": []})
+            mp_data: dict = defaultdict(
+                lambda: {"name": "", "party": "", "daily": []}
+            )
             for r in rows:
                 mp_id = r["mp_id"]
                 mp_data[mp_id]["name"] = r["display_name"]
                 mp_data[mp_id]["party"] = r["current_party"]
                 mp_data[mp_id]["daily"].append({
                     "date": str(r["sitting_date"]),
-                    "alignment": float(r["alignment_pct"]) if r["alignment_pct"] else 100,
+                    # None stays None. The previous default of 100 turned the
+                    # strongest possible disagreement into the strongest
+                    # possible agreement.
+                    "alignment": (
+                        float(r["alignment_pct"])
+                        if r["alignment_pct"] is not None
+                        else None
+                    ),
+                    "aligned_votes": r["aligned_votes"],
+                    "votes_on_day": r["votes_on_day"],
                 })
 
             alignment_summary = []
             for mp_id, data in mp_data.items():
                 daily = sorted(data["daily"], key=lambda x: x["date"])
-                recent = daily[-30:] if len(daily) > 30 else daily
-                avg = sum(d["alignment"] for d in recent) / len(recent) if recent else 100
+                # Sum the counts rather than averaging the daily percentages.
+                # A sitting day carries between 1 and 124 votes, so a mean of
+                # daily percentages weighs a one-vote day as heavily as a
+                # hundred-vote one; the two differ by up to 4.1 points in this
+                # data.
+                aligned = sum(d["aligned_votes"] or 0 for d in daily)
+                comparable = sum(d["votes_on_day"] or 0 for d in daily)
                 alignment_summary.append({
                     "mp_id": mp_id,
                     "name": data["name"],
                     "party": data["party"],
-                    "avg_alignment_30d": round(avg, 1),
-                    "trend": daily[-10:],
+                    "aligned_votes": aligned,
+                    "comparable_votes": comparable,
+                    "alignment_pct": (
+                        round(aligned / comparable * 100, 2) if comparable else None
+                    ),
+                    "sitting_days": len(daily),
+                    "daily": daily,
                 })
 
-            alignment_summary.sort(key=lambda x: x["avg_alignment_30d"])
+            # By name. Ordering by the metric would rank people, and the order
+            # of a list is itself a claim.
+            alignment_summary.sort(key=lambda x: (x["name"] or "").lower())
 
             return {
-                "alignment": alignment_summary[:50],
+                "alignment": alignment_summary,
                 "total_mps": len(mp_data),
+                "source": "faction_alignment",
             }
 
 

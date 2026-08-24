@@ -73,14 +73,50 @@ async def test_heroes_villains_is_gone():
 
 
 def test_no_route_file_still_computes_the_heroes_composite():
-    """Comments are stripped first — the tombstone explaining the retirement
-    names the endpoint, and that mention is documentation, not a route."""
+    """A route is a decorator argument, not a substring.
+
+    The first version matched the text "heroes-villains" anywhere outside a `#`
+    comment. That is the right intent expressed the wrong way: the tombstone
+    explaining the retirement, and any docstring describing what a replacement
+    endpoint no longer does, both name it as documentation. Prose about a
+    retired verdict is how a project remembers why it retired it, and a guard
+    that forbids writing it down pushes toward silence.
+
+    So the path is read from the route decorators themselves, and the formula
+    check runs against source with comments *and* docstrings stripped.
+    """
+    import ast
     import re
 
+    def registered_paths(tree):
+        for node in ast.walk(tree):
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            for dec in node.decorator_list:
+                if not isinstance(dec, ast.Call):
+                    continue
+                for arg in dec.args:
+                    if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
+                        yield arg.value
+
+    def strip_docstrings(tree):
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
+                if (node.body and isinstance(node.body[0], ast.Expr)
+                        and isinstance(node.body[0].value, ast.Constant)
+                        and isinstance(node.body[0].value.value, str)):
+                    node.body[0].value.value = ""
+        return ast.unparse(tree)
+
     for path in BACKEND.glob("routes_*.py"):
-        code = re.sub(r"^\s*#.*$", "", path.read_text(), flags=re.M)
+        source = path.read_text()
+        tree = ast.parse(source)
+
+        for route in registered_paths(tree):
+            assert "heroes-villains" not in route, f"{path.name} still routes {route}"
+
+        code = re.sub(r"^\s*#.*$", "", strip_docstrings(ast.parse(source)), flags=re.M)
         assert "100 - risk_score" not in code, f"{path.name} still computes the verdict"
-        assert "heroes-villains" not in code, f"{path.name} still routes it"
 
 
 def test_the_leaderboard_is_not_ranked_by_an_aggregate():

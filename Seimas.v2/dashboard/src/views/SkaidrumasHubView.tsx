@@ -1,4 +1,5 @@
 import React from 'react';
+import { DIMENSION_UNAVAILABLE_LT } from '../utils/mpLegacyDimensions';
 import { useQueries } from '@tanstack/react-query';
 import { useNavigate, NavLink } from 'react-router';
 import {
@@ -600,68 +601,47 @@ export default function SkaidrumasHubView() {
         </div>
 
         {(loyalty?.alignment?.length ?? 0) > 0 ? (
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-            <div className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart margin={{ top: 10, right: 10, bottom: 20, left: 10 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-                  <XAxis dataKey="date" tick={{ fontSize: 9 }} />
-                  <YAxis domain={[0, 100]} tick={{ fontSize: 10 }} unit="%" />
-                  <Tooltip
-                    content={({ payload }) => {
-                      if (!payload?.[0]) return null;
-                      const d = payload[0].payload;
-                      return (
-                        <div className="rounded border border-border bg-popover p-2 text-xs shadow">
-                          <div>{d.date}</div>
-                          <div>Sutapimas: {d.alignment?.toFixed(1)}%</div>
-                        </div>
-                      );
-                    }}
-                  />
-                  {loyalty!.alignment.slice(0, 5).map((mp, idx) => (
-                    <Line
-                      key={mp.mp_id}
-                      data={mp.trend}
-                      dataKey="alignment"
-                      name={mp.name}
-                      stroke={SERIES_COLORS[idx % SERIES_COLORS.length]}
-                      dot={false}
-                      strokeWidth={2}
-                    />
-                  ))}
-                  <Legend wrapperStyle={{ fontSize: 11 }} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-
-            <div className="space-y-2 max-h-72 overflow-y-auto">
-              {loyalty!.alignment.slice(0, 15).map((mp) => (
-                <button
-                  key={mp.mp_id}
-                  type="button"
-                  onClick={() => goToMpForensicFlag(mp.mp_id, 'loyalty')}
-                  className="w-full text-left rounded-md border border-border p-3 cursor-pointer hover:bg-muted/50 transition-colors"
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="text-sm font-semibold">{mp.name}</span>
-                      <span className="text-xs text-muted-foreground ml-2">{mp.party}</span>
-                    </div>
-                    <span className={`text-sm font-mono ${
-                      mp.avg_alignment_30d < 70 ? 'text-destructive'
-                        : mp.avg_alignment_30d < 85 ? 'text-vote-abstain'
-                          : 'text-vote-for'
-                    }`}>
-                      {mp.avg_alignment_30d}%
-                    </span>
+          <div className="space-y-2 max-h-72 overflow-y-auto">
+            {/* Alphabetical, never by the metric: the order of a list is
+                itself a claim, and this list used to be ordered worst-first.
+                No colour grading either — red/amber/green on a person is a
+                verdict wearing a palette. Each row carries its own counts.
+                The chamber distribution and per-vote drill-in replace this
+                interim rendering. */}
+            {loyalty!.alignment.map((mp) => (
+              <button
+                key={mp.mp_id}
+                type="button"
+                onClick={() => goToMpForensicFlag(mp.mp_id, 'loyalty')}
+                className="w-full text-left rounded-md border border-border p-3 cursor-pointer hover:bg-muted/50 transition-colors"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <span className="text-sm font-semibold">{mp.name}</span>
+                    <span className="text-xs text-muted-foreground ml-2">{mp.party}</span>
                   </div>
-                </button>
-              ))}
-            </div>
+                  <span className="text-sm font-mono text-foreground shrink-0">
+                    {mp.alignment_pct === null
+                      ? DIMENSION_UNAVAILABLE_LT
+                      : `${mp.alignment_pct}%`}
+                  </span>
+                </div>
+                {/* LT-COPY: needs native review */}
+                <div className="text-xs text-muted-foreground mt-1">
+                  {mp.aligned_votes} iš {mp.comparable_votes} balsavimų, kuriuose
+                  frakcijos pozicija nustatyta · {mp.sitting_days} posėdžių dienų
+                </div>
+              </button>
+            ))}
           </div>
         ) : (
-          <p className="text-sm text-muted-foreground">Duomenų dar nėra — lojalumo analizė bus paleista po balsavimų duomenų surinkimo.</p>
+          /* LT-COPY: needs native review */
+          <p className="text-sm text-muted-foreground">
+            Duomenų dar nėra. Balsavimų duomenys surinkti, tačiau frakcijos
+            pozicijos skaičiavimas dar neįjungtas — įjungsime tada, kai
+            puslapis rodys ne tik suvestinį skaičių, bet ir konkrečius
+            balsavimus, iš kurių jis susideda.
+          </p>
         )}
       </section>
 
