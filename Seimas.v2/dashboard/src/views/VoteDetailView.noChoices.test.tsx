@@ -89,6 +89,11 @@ describe("a vote whose per-member choices were never published", () => {
 
   it("renders zero member rows", async () => {
     await renderVote(unpublished);
+    // Anchor on the marker that proves the unpublished branch actually
+    // rendered. Awaiting only the title proves the page mounted, not which
+    // branch it took — and an absence assertion against a tree that has not
+    // reached that branch yet passes for the wrong reason.
+    await screen.findByText("Nėra duomenų apie pavienius balsus");
     // Not one of the 140 names, and not the list's own furniture either — a
     // search box over an empty list invites a hunt for data that never existed.
     expect(screen.queryByText("Narys 0")).not.toBeInTheDocument();
@@ -99,12 +104,18 @@ describe("a vote whose per-member choices were never published", () => {
     // `stats` is `{ null: 140 }`; summing it gave „140 balsų" for a vote where
     // nobody is recorded as having voted.
     await renderVote(unpublished);
+    await screen.findByText("Nėra duomenų apie pavienius balsus");
     expect(screen.queryByText(/140 balsų/)).not.toBeInTheDocument();
   });
 
   it("still shows the member list when choices do exist", async () => {
     await renderVote(published);
-    expect(screen.getByText("Individualūs balsai")).toBeInTheDocument();
+    // `findBy`, not `getBy`. The title and the member list are in one tree but
+    // not necessarily in one commit — React may yield between them, and under
+    // parallel load a synchronous assertion can land in that gap. This is the
+    // assertion that failed intermittently; a retrying query removes the race
+    // whatever the scheduling.
+    expect(await screen.findByText("Individualūs balsai")).toBeInTheDocument();
     expect(screen.queryByText("Nėra duomenų apie pavienius balsus")).not.toBeInTheDocument();
   });
 });
