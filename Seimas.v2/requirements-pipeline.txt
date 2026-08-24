@@ -1,0 +1,10 @@
+# Local ingestion-only dependencies. NOT installed on Render.
+#
+# requirements.txt carries the comment "pandas - removed to save build size on
+# Render", a deliberate earlier decision. Pandera requires pandas, and boundary
+# validation runs in the local systemd ingestion path, never in the web process
+# — so it belongs here rather than reversing that decision.
+#
+# Install:  .venv/bin/pip install -r requirements-pipeline.txt
+pandera==0.32.1
+pandas==2.3.3

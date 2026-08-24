@@ -18,6 +18,34 @@ ENV_FILE="$HOME/.config/openseimas/prod.env"
 set -a; . "$ENV_FILE"; set +a
 cd "$HOME/Documents/OpenSeimas/Seimas.v2"
 
+# Publish gate: if a block_publish check is failing, do not refresh. The views
+# keep serving the last-good data rather than materialising something a check
+# has just called wrong. An unknown check counts as blocking — a check that
+# could not run has not cleared anything.
+# Exit codes are distinguished on purpose:
+#   0 — clear, refresh
+#   1 — a block_publish check failed: HOLD, keep serving last-good views
+#   2 — the runner could not run at all (dq_checks not installed here yet):
+#       warn and proceed. Treating "not installed" as "blocking" would have
+#       frozen every matview refresh in production the moment this shipped,
+#       including mp_attendance_v2, two days before attendance v2 takes effect.
+if [ -f scripts/dq_check_runner.py ]; then
+  # An `if` condition is the form exempt from both errexit and the ERR trap.
+  # `set +e` alone is not: the trap still fired and killed the job, which would
+  # have stopped every matview refresh rather than gating one publish.
+  if .venv/bin/python scripts/dq_check_runner.py --gate; then
+    gate_rc=0
+  else
+    gate_rc=$?
+  fi
+  case "$gate_rc" in
+    0) ;;
+    1) echo "[$(date -Is)] refresh HELD — blocking data-quality failure; last-good views stay served"
+       exit 0 ;;
+    *) echo "[$(date -Is)] dq gate unavailable (rc=$gate_rc) — refreshing anyway, checks not installed here" ;;
+  esac
+fi
+
 .venv/bin/python - << 'EOF'
 import os, psycopg2, datetime
 conn = psycopg2.connect(os.environ["DB_DSN"])

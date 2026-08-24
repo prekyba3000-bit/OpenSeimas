@@ -9,7 +9,7 @@ from httpx import AsyncClient, ASGITransport
 from backend.main import app
 
 
-def _fake_cursor(rows_by_table, matviews=None, has_source_fetches=True):
+def _fake_cursor(rows_by_table, matviews=None, has_source_fetches=True, sources=None):
     """Cursor mock: each freshness query 'FROM <table>' returns the queued row.
 
     Matview freshness reads source_fetches, so the fake answers those three
@@ -17,6 +17,7 @@ def _fake_cursor(rows_by_table, matviews=None, has_source_fetches=True):
     24-hour count."""
     cur = MagicMock()
     matviews = matviews or []
+    sources = sources if sources is not None else _SOURCES
     cur._current_rows = []
 
     def execute(sql, params=None):
@@ -24,7 +25,11 @@ def _fake_cursor(rows_by_table, matviews=None, has_source_fetches=True):
             cur._current_row = {"t": "source_fetches" if has_source_fetches else None}
             return
         if "FROM source_fetches" in sql:
-            if "COUNT(*)" in sql:
+            # Two different queries read this table: the matview freshness
+            # block, and the per-source state block which excludes matview:%.
+            if "NOT LIKE" in sql:
+                cur._current_rows = sources
+            elif "COUNT(*)" in sql:
                 cur._current_row = {"n": len(matviews)}
             else:
                 cur._current_rows = matviews
@@ -41,18 +46,28 @@ def _fake_cursor(rows_by_table, matviews=None, has_source_fetches=True):
     return cur
 
 
-def _fake_db(rows_by_table, matviews=None, has_source_fetches=True):
+def _fake_db(rows_by_table, matviews=None, has_source_fetches=True, sources=None):
     @contextmanager
     def fake_get_db():
         conn = MagicMock()
         cm = MagicMock()
-        cm.__enter__.return_value = _fake_cursor(rows_by_table, matviews, has_source_fetches)
+        cm.__enter__.return_value = _fake_cursor(rows_by_table, matviews, has_source_fetches, sources)
         cm.__exit__.return_value = None
         conn.cursor.return_value = cm
         yield conn
 
     return fake_get_db
 
+
+# Four states, and unknown is not a flavour of stale.
+_SOURCES = [
+    {"source_name": "seimas_votes", "status": "ok", "error": None,
+     "finished_at": datetime.datetime(2026, 7, 23, 9, 0, 0), "age_hours": 2.0},
+    {"source_name": "seimas_speeches", "status": "ok", "error": None,
+     "finished_at": datetime.datetime(2026, 7, 1, 9, 0, 0), "age_hours": 300.0},
+    {"source_name": "seimas_broken", "status": "error", "error": "boom",
+     "finished_at": datetime.datetime(2026, 7, 23, 9, 0, 0), "age_hours": 2.0},
+]
 
 _MATVIEWS = [
     {"source_name": "matview:mp_attendance_v2", "status": "ok", "error": None,
@@ -189,3 +204,30 @@ async def test_matview_freshness_survives_missing_source_fetches(monkeypatch):
 
     assert response.status_code == 200
     assert response.json()["materialized_views"]["last_refresh"] is None
+
+
+@pytest.mark.asyncio
+async def test_source_states_distinguish_broken_from_stale(monkeypatch):
+    """`broken` and `stale` are different facts: one failed, one aged."""
+    import backend.core as main_mod
+    monkeypatch.setattr(main_mod, "get_db_conn", _fake_db(_ROWS, _MATVIEWS))
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        body = (await ac.get("/api/meta/freshness")).json()
+
+    states = {k: v["state"] for k, v in body["sources"].items()}
+    assert states["seimas_votes"] == "fresh"
+    assert states["seimas_speeches"] == "stale"
+    assert states["seimas_broken"] == "broken"
+    assert body["sources"]["seimas_speeches"]["beyond_stale_limit"] is True
+
+
+@pytest.mark.asyncio
+async def test_a_source_never_fetched_is_absent_not_stale(monkeypatch):
+    """A source with no record at all must not be reported as stale — that
+    would claim we once had the data and it aged."""
+    import backend.core as main_mod
+    monkeypatch.setattr(main_mod, "get_db_conn", _fake_db(_ROWS, _MATVIEWS, sources=[]))
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        body = (await ac.get("/api/meta/freshness")).json()
+    assert body["sources"] == {}
+    assert "stale" not in str(body["sources"])

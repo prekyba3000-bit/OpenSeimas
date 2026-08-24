@@ -79,9 +79,24 @@ def fetch_xml(url):
     return ET.fromstring(response.content)
 
 
+def parse_sessions_xml(payload: bytes, kadencijos_id):
+    """Parse the sessions feed from raw bytes.
+
+    Split out from fetch_sessions so a caller can hash and record the payload
+    before anything parses it. Same logic, different input: bytes rather than a
+    URL fetch performed inside the function.
+    """
+    root = ET.fromstring(payload)
+    return _sessions_from_root(root, kadencijos_id)
+
+
 def fetch_sessions(kadencijos_id):
     """Return list of sesijos_id strings for the given term."""
     root = fetch_xml(SESIJOS_URL)
+    return _sessions_from_root(root, kadencijos_id)
+
+
+def _sessions_from_root(root, kadencijos_id):
     sessions = []
     for kad in root.findall("SeimoKadencija"):
         if kad.get("kadencijos_id") != str(kadencijos_id):
