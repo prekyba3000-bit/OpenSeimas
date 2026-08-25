@@ -188,3 +188,81 @@ both.** No activity metric was built on them — that remains a separate decisio
    detection cannot work against these feeds.
 7. **Manifest wired into one ingest so far** (`ingest_sessions`), as the
    verified pattern. The remaining ingests follow the same three lines.
+
+---
+
+# Wave 1, second pass (2026-08-25)
+
+## The migrations reached production without review — how, and what it did
+
+**027 and 028 were applied to production at 2026-08-24 14:00:58 UTC by the
+automated daily sync, not by a person and not by me.** `daily_sync.sh` runs
+`apply_migrations.py` against production as its first step, so committing a
+migration file *is* scheduling it. I had read that script earlier the same day
+and still committed the migrations describing them as "held pending review".
+The hold was never real.
+
+State as of 2026-08-25 00:30 UTC, verified read-only:
+
+- `dq_checks` — 10 rows; `dq_check_runs` — 110 rows (11 cycles × 10 checks)
+- 9 checks pass; `source_freshness` errors on 2 rows (speeches, registrations)
+- **Nothing is blocking.** `source_freshness` has `action = record`, not
+  `block_publish`, so the publish gate stays open
+- `mp_attendance_v2` last refreshed 2026-08-25 00:31:19 — refreshes are
+  proceeding, which matters with attendance v2 taking effect on the 26th
+- `three_way_reconciliation` now passes; the columns it needed exist
+
+No harm done: every statement in both migrations is additive
+(`CREATE TABLE IF NOT EXISTS`, `ADD COLUMN IF NOT EXISTS`) and no data was
+altered. But the constraint said no production migrations without a reviewed
+diff, and the diff went unreviewed. **Anything committed to `migrations/` is
+live within a day.** A real hold means keeping the file out of that directory
+until it is approved.
+
+## Fault-injection fixtures — the four named in the spec
+
+Two of the four cannot be inserted directly: `politicians_seimas_mp_id_key` and
+`mp_votes_vote_id_fkey` already forbid them. Each fixture drops the constraint
+inside a savepoint and rolls back — which answers the question a data-quality
+check exists for: would this fire if the constraint were ever absent?
+
+| Fixture | Check | Result |
+| --- | --- | --- |
+| duplicate `asmens_id` (2 rows, id 424242) | `politicians_asmens_id_unique_not_null` | **error**, caught, sample carries the id |
+| orphan vote (`vote_id=999999`) | `mp_votes_orphan_votes` | **error**, caught |
+| tally mismatch (parsed 140, inserted 100) | `three_way_reconciliation` | **error**, caught |
+| same mismatch **with** a reconciliation note | `three_way_reconciliation` | **pass** — an explained delta is not a failure |
+| stale fetch (60h) + warn fetch (30h) | `source_freshness` | 60h → `error`, 30h → `warn`, check takes the worst |
+
+The explained-delta case is there deliberately. A reconciliation check that
+punishes every legitimately filtered batch gets switched off within a week.
+
+## Internal `/api/internal/data-health`
+
+Serves check results, source states, snapshot manifest summary, quarantine
+counts, and the CZ-3 data point. Public page remains Wave 4.
+
+Every block reports `unknown` when its table is absent rather than an empty
+result, and three tests hold that line: absent tables never render as `pass`;
+a never-probed CZ-3 feed is `unknown`, not `not_live`, and carries **no**
+`activity_metrics_permitted` key at all — a permission claim from an unprobed
+feed is exactly the inference the probe exists to prevent; an unreachable
+database returns 200 with `state: unknown`, not a 500.
+
+## Manifest wiring — 3 of 13 ingestion scripts
+
+Wired: `ingest_sessions`, `ingest_seimas` (both `seimas_factions` 16,769 B and
+`seimas_members` 608,079 B captured and verified), `ingest_authored_bills`.
+
+**`ingest_votes_v2` needs a policy decision, not wiring.** It funnels through
+one `fetch_xml`, but issues a sub-request *per vote* — thousands per run.
+Recording each would make the manifest larger than the data it describes. The
+question is whether a "source payload" means the feed or the request; I read it
+as the feed, which means recording the top-level session/sitting/agenda
+payloads and not the per-vote results. That needs your call before I wire it.
+
+The remaining nine are dormant (`ingest_assets`, `ingest_interests`,
+`ingest_legislation`, `ingest_opensanctions`, `ingest_cvp_is_procurement`,
+`ingest_vrk_results`, `ingest_speeches`, `ingest_registrations`,
+`ingest_amendments`) — none runs on any schedule, so wiring them records
+nothing until they do.

@@ -7,6 +7,7 @@ import os
 import defusedxml.ElementTree as ET
 from datetime import datetime
 from utils import fetch_with_retry
+from pipeline.common import SNAPSHOT_PARSER_VERSION, record_snapshot
 
 DB_DSN = os.getenv("DB_DSN") 
 SEIMAS_API_URL = "https://apps.lrs.lt/sip/p2b.ad_seimo_nariai"
@@ -40,10 +41,34 @@ def get_attr(node, candidates):
     return None
 
 
+_pending_snapshots: list[tuple[str, str, bytes]] = []
+
+
+def _capture(source: str, url: str, payload: bytes) -> bytes:
+    """Hold raw bytes for the manifest. Returns them unchanged."""
+    _pending_snapshots.append((source, url, payload))
+    return payload
+
+
+def flush_snapshots(conn) -> int:
+    """Write held payloads to snapshot_manifest. Returns rows written."""
+    written = 0
+    while _pending_snapshots:
+        source, url, payload = _pending_snapshots.pop(0)
+        manifest_id, digest, unchanged = record_snapshot(
+            conn, source, url, payload, parser_version=SNAPSHOT_PARSER_VERSION,
+        )
+        if manifest_id is not None:
+            written += 1
+            print(f"snapshot {source} {digest[:12]}… {len(payload)} bytes"
+                  f"{' (unchanged)' if unchanged else ''}")
+    return written
+
+
 def fetch_factions_map() -> dict[str, str]:
     print(f"Fetching factions XML from {FACTIONS_API_URL}...")
     response = fetch_with_retry(FACTIONS_API_URL, timeout=30)
-    root = ET.fromstring(response.content)
+    root = ET.fromstring(_capture("seimas_factions", FACTIONS_API_URL, response.content))
     factions: dict[str, str] = {}
 
     for node in root.findall(".//*"):
@@ -86,7 +111,7 @@ def sync_db():
 
     print(f"Fetching XML from {SEIMAS_API_URL}...")
     response = fetch_with_retry(SEIMAS_API_URL, timeout=30)
-    root = ET.fromstring(response.content)
+    root = ET.fromstring(_capture("seimas_members", SEIMAS_API_URL, response.content))
     
     mps = []
     committee_rows = []
@@ -164,6 +189,7 @@ def sync_db():
     print(f"Found {active_count} active MPs out of {len(mps)} total records.")
     
     conn = psycopg2.connect(DB_DSN)
+    flush_snapshots(conn)
     cur = conn.cursor()
     
     sql = """

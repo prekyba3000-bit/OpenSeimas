@@ -43,6 +43,7 @@ from backend.routes_forensics import router as forensics_router
 from backend.routes_admin import router as admin_router
 from backend.routes_meta import router as meta_router
 from backend.routes_trust import router as trust_router
+from backend.routes_data_health import router as data_health_router
 
 
 @asynccontextmanager
@@ -147,4 +148,5 @@ app.include_router(heroes_router)
 app.include_router(forensics_router)
 app.include_router(admin_router)
 app.include_router(meta_router)
+app.include_router(data_health_router)
 app.include_router(trust_router)
