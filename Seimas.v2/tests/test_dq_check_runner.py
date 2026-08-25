@@ -155,3 +155,122 @@ def test_a_null_choice_is_not_a_violation(conn):
         check = dict(cur.fetchone())
     r = runner.run_check(conn, check)
     assert not any(row.get("vote_choice") is None for row in (r["sample_rows"] or []))
+
+
+# ─── Named fault-injection fixtures ─────────────────────────────────────────
+# Two of the four cannot simply be inserted: the schema already forbids them
+# (politicians_seimas_mp_id_key, mp_votes_vote_id_fkey). Dropping the constraint
+# inside a savepoint is the honest way to prove the check catches the condition
+# — it answers "would this check fire if the constraint were ever absent",
+# which is exactly the case a data-quality check exists for. Every fixture is
+# rolled back.
+
+def _run_named(conn, key):
+    with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+        cur.execute("SELECT check_key, sql, severity, action FROM dq_checks WHERE check_key = %s", (key,))
+        row = cur.fetchone()
+    assert row, f"check {key} is not seeded"
+    return runner.run_check(conn, dict(row))
+
+
+def test_fixture_duplicate_asmens_id(conn):
+    key = "politicians_asmens_id_unique_not_null"
+    assert _run_named(conn, key)["status"] == "pass", "clean before injection"
+    with conn.cursor() as cur:
+        cur.execute("SAVEPOINT inject")
+        cur.execute("ALTER TABLE politicians DROP CONSTRAINT politicians_seimas_mp_id_key")
+        for name in ("Dubl A", "Dubl B"):
+            cur.execute(
+                "INSERT INTO politicians (id, display_name, full_name_normalized, seimas_mp_id, is_active) "
+                "VALUES (uuid_generate_v4(), %s, %s, 424242, true)", (name, name.lower()),
+            )
+    result = _run_named(conn, key)
+    with conn.cursor() as cur:
+        cur.execute("ROLLBACK TO SAVEPOINT inject")
+    assert result["status"] == "error"
+    assert result["failing_row_count"] >= 1
+    assert any(str(r.get("seimas_mp_id")) == "424242" for r in result["sample_rows"])
+
+
+def test_fixture_orphan_vote(conn):
+    key = "mp_votes_orphan_votes"
+    assert _run_named(conn, key)["status"] == "pass", "clean before injection"
+    with conn.cursor() as cur:
+        cur.execute("SAVEPOINT inject")
+        cur.execute(
+            "INSERT INTO politicians (id, display_name, full_name_normalized, seimas_mp_id, is_active) "
+            "VALUES (uuid_generate_v4(), 'Orphan', 'orphan', 424243, true) RETURNING id"
+        )
+        pid = cur.fetchone()[0]
+        cur.execute("ALTER TABLE mp_votes DROP CONSTRAINT mp_votes_vote_id_fkey")
+        # 999999 exists in no votes row.
+        cur.execute("INSERT INTO mp_votes (id, vote_id, politician_id, vote_choice) "
+                    "VALUES (uuid_generate_v4(), 999999, %s, 'Už')", (pid,))
+    result = _run_named(conn, key)
+    with conn.cursor() as cur:
+        cur.execute("ROLLBACK TO SAVEPOINT inject")
+    assert result["status"] == "error"
+    assert any(str(r.get("vote_id")) == "999999" for r in result["sample_rows"])
+
+
+def test_fixture_tally_mismatch(conn):
+    """The three-way reconciliation: parsed vs rows_affected vs inserted.
+    A parser that silently drops records shows up here and nowhere else."""
+    key = "three_way_reconciliation"
+    assert _run_named(conn, key)["status"] == "pass", "clean before injection"
+    with conn.cursor() as cur:
+        cur.execute("SAVEPOINT inject")
+        cur.execute(
+            """INSERT INTO source_fetches
+               (source_name, source_url, job_id, status, rows_affected,
+                parsed_count, inserted_count, started_at, finished_at)
+               VALUES ('fixture_tally', 'http://x', 'j', 'ok', 100, 140, 100, NOW(), NOW())"""
+        )
+    result = _run_named(conn, key)
+    with conn.cursor() as cur:
+        cur.execute("ROLLBACK TO SAVEPOINT inject")
+    assert result["status"] == "error", "140 parsed but 100 inserted is an unexplained delta"
+    assert any(r.get("source_name") == "fixture_tally" for r in result["sample_rows"])
+
+
+def test_fixture_tally_mismatch_with_a_note_is_explained(conn):
+    """An explained delta is not a failure. Without this the check would punish
+    every legitimately filtered batch and be switched off within a week."""
+    with conn.cursor() as cur:
+        cur.execute("SAVEPOINT inject")
+        cur.execute(
+            """INSERT INTO source_fetches
+               (source_name, source_url, job_id, status, rows_affected,
+                parsed_count, inserted_count, reconciliation_note, started_at, finished_at)
+               VALUES ('fixture_explained', 'http://x', 'j', 'ok', 100, 140, 100,
+                       '40 records belong to a prior term', NOW(), NOW())"""
+        )
+    result = _run_named(conn, "three_way_reconciliation")
+    with conn.cursor() as cur:
+        cur.execute("ROLLBACK TO SAVEPOINT inject")
+    assert result["status"] == "pass"
+
+
+def test_fixture_stale_fetch(conn):
+    key = "source_freshness"
+    with conn.cursor() as cur:
+        cur.execute("SAVEPOINT inject")
+        cur.execute(
+            """INSERT INTO source_fetches
+               (source_name, source_url, job_id, status, rows_affected, started_at, finished_at)
+               VALUES ('fixture_stale', 'http://x', 'j', 'ok', 5,
+                       NOW() - interval '60 hours', NOW() - interval '60 hours')"""
+        )
+        cur.execute(
+            """INSERT INTO source_fetches
+               (source_name, source_url, job_id, status, rows_affected, started_at, finished_at)
+               VALUES ('fixture_warn', 'http://x', 'j', 'ok', 5,
+                       NOW() - interval '30 hours', NOW() - interval '30 hours')"""
+        )
+    result = _run_named(conn, key)
+    with conn.cursor() as cur:
+        cur.execute("ROLLBACK TO SAVEPOINT inject")
+    by_source = {r["source_name"]: r["severity"] for r in result["sample_rows"]}
+    assert by_source.get("fixture_stale") == "error", "60h is past the 50h error limit"
+    assert by_source.get("fixture_warn") == "warn", "30h is past 26h but inside 50h"
+    assert result["status"] == "error", "the worst row governs the check"
