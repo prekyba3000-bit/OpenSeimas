@@ -47,6 +47,10 @@ echo "[$(date -Is)] daily sync start"
 # values, and /api/meta/freshness now reports how old they are, so staleness is
 # visible rather than silent.
 .venv/bin/python -m pipeline.ingest_authored_bills || echo "[$(date -Is)] ingest_authored_bills failed (non-fatal, values kept, age reported)"
+
+# Press releases. The script was correct all along and simply had no runner;
+# its historical failure was migration 008's column mismatch, fixed in 008.
+.venv/bin/python -m pipeline.ingest_speeches || echo "[$(date -Is)] press-release ingest failed (non-fatal, previous rows kept)"
 .venv/bin/python -m pipeline.cli tag_topics || echo "[$(date -Is)] tag_topics failed (non-fatal, same as workflow)"
 # Data-quality gate. Runs after ingestion, before anything downstream trusts
 # the data. A block_publish failure exits non-zero and the refresh job will
