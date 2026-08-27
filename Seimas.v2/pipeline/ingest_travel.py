@@ -124,6 +124,8 @@ def main() -> int:
             offered = total - feed_dupes
             already = offered - inserted
             notes = []
+            if dry:
+                notes.append("dry run: fetched but wrote nothing by design")
             if feed_dupes:
                 notes.append(f"{feed_dupes} verbatim duplicates within the feed")
             if already:

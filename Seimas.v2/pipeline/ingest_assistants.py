@@ -98,7 +98,12 @@ def main() -> int:
             fetch["parsed"] = parsed
             fetch["inserted"] = inserted
             notes = []
-            if parsed != inserted and not dry:
+            if dry:
+                # A dry run fetches and deliberately writes nothing. Without
+                # saying so it looks identical to a parser that dropped every
+                # record, and three_way_reconciliation blocks the publish on it.
+                notes.append("dry run: fetched but wrote nothing by design")
+            elif parsed != inserted:
                 notes.append(f"{parsed - inserted} already stored (idempotent re-run)")
             if failures:
                 notes.append(f"{failures} members unreadable; their rows unchanged")
