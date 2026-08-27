@@ -286,6 +286,40 @@ export const mpProfileSchema = z
     [WIRE_MP_HIGHLIGHT_EVIDENCE]: z.array(z.string()).optional().default([]),
   });
 
+
+// Wire contract. z.object() strips undeclared keys silently, so any field the
+// API starts sending must be declared here too — that omission once emptied
+// metrics_provenance and hid three dials in production.
+export const mpActivitySchema = z.object({
+  // null means the table is absent in this database: we cannot tell. [] means
+  // we looked and found none. The surface renders those differently.
+  travel: z
+    .array(
+      z.object({
+        date_from: z.string(),
+        date_to: z.string().nullable(),
+        title: z.string(),
+        title_truncated: z.boolean(),
+      }),
+    )
+    .nullable(),
+  // Whether the list was cut at the limit. Not a total: a total would be a
+  // comparable number beside a name, which is the thing these lists refuse to
+  // publish. This only says "there is more", so nothing is shown as complete
+  // when it is not.
+  travel_has_more: z.boolean().nullable(),
+  press_releases: z.array(
+    z.object({
+      date: z.string(),
+      title: z.string(),
+      url: z.string().nullable(),
+    }),
+  ),
+  press_has_more: z.boolean(),
+});
+
+export type MpActivity = z.infer<typeof mpActivitySchema>;
+
 const mpLeaderboardRawSchema = z.array(mpProfileSchema);
 const mpSearchResponseRawSchema = z.object({
   query: z.string(),
@@ -734,6 +768,12 @@ export const api = {
 
   getVotes: (limit = 50, offset = 0) =>
     request<VoteSummary[]>(`/votes?limit=${limit}&offset=${offset}`),
+
+  getMpActivity: (id: string, options?: RequestOptions<MpActivity>) =>
+    request<MpActivity>(`/mps/${id}/activity`, {
+      ...options,
+      parse: (data) => mpActivitySchema.parse(data),
+    }),
 
   getAttendanceTrajectory: (id: string) =>
     request<AttendanceTrajectory>(`/mps/${id}/attendance-trajectory`),

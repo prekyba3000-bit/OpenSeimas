@@ -9,6 +9,7 @@ import { WikiPanel } from '../components/WikiPanel';
 import { MpReplies } from '../components/MpReplies';
 import { DimensionDial } from '../components/DimensionDial';
 import { AttendanceTrajectoryStrip } from '../components/AttendanceTrajectory';
+import { MpActivityPanel } from '../components/MpActivityPanel';
 import {
   CIVIC_DIMENSION_ORDER,
   type MpCivicDimension,
@@ -20,6 +21,7 @@ import {
   ApiError,
   api,
   type AttendanceTrajectory,
+  type MpActivity,
   type ForensicFlag,
   MpProfile,
   MpVoteRecord,
@@ -96,6 +98,7 @@ const TAB_LABELS: Record<ProfileTab, string> = {
 
 interface MpProfileLayoutProps {
   trajectory?: AttendanceTrajectory | null;
+  activity?: MpActivity | null;
   profile: MpProfile | null;
   votes: MpVoteRecord[];
   votesLoading: boolean;
@@ -109,6 +112,7 @@ interface MpProfileLayoutProps {
 export const MpProfileLayout = ({
   profile,
   trajectory = null,
+  activity = null,
   votes,
   votesLoading,
   loading = false,
@@ -277,6 +281,8 @@ export const MpProfileLayout = ({
 
             <AttendanceTrajectoryStrip data={trajectory} />
 
+              <MpActivityPanel data={activity} />
+
             <MpReplies mpId={profile.mp.id} />
           </div>
         )}
@@ -373,6 +379,14 @@ const MpProfileView = ({ mpId }: { mpId: string }) => {
     enabled: Boolean(mpId) && profileQuery.isSuccess,
   });
 
+  // Additive, like the trajectory: travel and press releases enrich the page
+  // and must never be able to blank it.
+  const activityQuery = useQuery({
+    queryKey: ['mps', mpId, 'activity'],
+    queryFn: () => api.getMpActivity(mpId),
+    enabled: Boolean(mpId) && profileQuery.isSuccess,
+  });
+
   const profile = profileQuery.data ?? null;
   const votes = votesQuery.data ?? [];
   const votesLoading = votesQuery.isFetching;
@@ -410,6 +424,7 @@ const MpProfileView = ({ mpId }: { mpId: string }) => {
     <MpProfileLayout
       profile={profile}
       trajectory={trajectoryQuery.data ?? null}
+      activity={activityQuery.data ?? null}
       votes={votes}
       votesLoading={votesLoading}
       loading={loading}

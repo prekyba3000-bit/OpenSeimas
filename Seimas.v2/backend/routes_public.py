@@ -434,6 +434,81 @@ def get_mp_votes(mp_id: str, limit: int = 20):
             ]
 
 
+@router.get("/api/mps/{mp_id}/activity")
+def get_mp_activity(mp_id: str, travel_limit: int = 100, press_limit: int = 100):
+    """Official travel and press releases for one member.
+
+    Evidence, not a metric. Neither list feeds a dial, and neither carries a
+    headline count: trip and release frequency track office and committee role,
+    so a number beside a name would be read as diligence. See
+    docs/reviews/mp-diary-design-note.md.
+
+    Titles arrive clipped at exactly 200 characters by LRS on 13.5% of trips.
+    `title_truncated` travels with the row so no surface presents half a
+    sentence as a whole one.
+    """
+    with get_db_conn() as conn:
+        if not conn:
+            raise HTTPException(status_code=500, detail="Database connection failed")
+
+        with conn.cursor() as cur:
+            cur.execute("SELECT to_regclass('public.mp_travel') AS t")
+            has_travel = cur.fetchone()["t"] is not None
+
+            travel = []
+            if has_travel:
+                cur.execute(
+                    """
+                    SELECT date_from, date_to, title, title_truncated
+                    FROM mp_travel WHERE mp_id = %s::uuid
+                    ORDER BY date_from DESC LIMIT %s
+                    """,
+                    # One extra row answers "is there more" without publishing a
+                    # total. A list cut at the limit and shown as complete is the
+                    # same lie as a clipped title displayed as a whole sentence.
+                    (mp_id, travel_limit + 1),
+                )
+                travel = [
+                    {
+                        "date_from": str(r["date_from"]),
+                        "date_to": str(r["date_to"]) if r["date_to"] else None,
+                        "title": r["title"],
+                        "title_truncated": bool(r["title_truncated"]),
+                    }
+                    for r in cur.fetchall()
+                ]
+
+            cur.execute(
+                """
+                SELECT speech_date, speech_title, speech_url
+                FROM speeches
+                WHERE mp_id = %s::uuid AND speech_type = 'press_release'
+                ORDER BY speech_date DESC LIMIT %s
+                """,
+                (mp_id, press_limit + 1),
+            )
+            press = [
+                {
+                    "date": str(r["speech_date"]),
+                    "title": r["speech_title"],
+                    "url": r["speech_url"],
+                }
+                for r in cur.fetchall()
+            ]
+
+            travel_more = len(travel) > travel_limit
+            press_more = len(press) > press_limit
+            return {
+                # None, not [], when the table does not exist in this database:
+                # "we cannot tell" and "there were none" are different facts and
+                # the client renders them differently.
+                "travel": travel[:travel_limit] if has_travel else None,
+                "travel_has_more": travel_more if has_travel else None,
+                "press_releases": press[:press_limit],
+                "press_has_more": press_more,
+            }
+
+
 # Same floor as the aggregate figure. Invariant: the thin-data suppression rule
 # holds on every surface, and a month with one or two sitting days yields 0%,
 # 50% or 100% — noise wearing a percentage sign.
