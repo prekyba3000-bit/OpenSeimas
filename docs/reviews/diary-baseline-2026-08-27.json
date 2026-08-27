@@ -1,0 +1,987 @@
+{
+ "captured_at": "2026-08-27T20:57:40.474317+00:00",
+ "members": {
+  "12253": {
+   "events": 356,
+   "full_sha256": "78e50674f3f56aa48b1f09dc397dad3d72d4c19a4583e60499c8ae32f465f837",
+   "name": "Jaroslav Narkevič",
+   "settled_events": 351,
+   "settled_sha256": "c289f8b798571c5f68578cc3c03c0dd282c9db8016f3ba68471b04897c2fc34f"
+  },
+  "146": {
+   "events": 4024,
+   "full_sha256": "3b418c15d2242971d5e1b0b0b1d323f18d99859a7b161afbd2b285416805246b",
+   "name": "Eugenijus Gentvilas",
+   "settled_events": 2297,
+   "settled_sha256": "24db7de119fa59b592d878de8a06b88cab5db9578e6095030c117c92737bd10c"
+  },
+  "15266": {
+   "events": 1124,
+   "full_sha256": "e32889ebb89e459c54670624c46b8abd0783effaa19a5041b9041f06a480f2a4",
+   "name": "Orinta Leiputė",
+   "settled_events": 1104,
+   "settled_sha256": "46899b8697194aea75666783ec7bed0a636eccbe3e4dd30460a8c9a1c8bda007"
+  },
+  "16004": {
+   "events": 307,
+   "full_sha256": "84a8cc9a970e55ef437dcedb15954a6b0b5b54f5b5178e9341e34af6f77ae98e",
+   "name": "Raimondas Kuodis",
+   "settled_events": 302,
+   "settled_sha256": "7fb0512e43bfa7505d50c5490713fe22a0ce2b103c3ec8332d424b39704f35a4"
+  },
+  "22792": {
+   "events": 101,
+   "full_sha256": "18cab9623e74cf502d7095a37cd48238b4d3b3142fa97a450bdb7b22def7c7f4",
+   "name": "Angelė Jakavonytė",
+   "settled_events": 88,
+   "settled_sha256": "b91b260ff0486481dd452ba941320e9881fea26c4c86fd41e449a64112f7ccfb"
+  },
+  "22886": {
+   "events": 619,
+   "full_sha256": "8c5a0a5ec7b49b594c00978bb8c63bfe5540a95fbdbf216fb1e15bee02e9fce7",
+   "name": "Kęstutis Vilkauskas",
+   "settled_events": 607,
+   "settled_sha256": "4b4a730eab28ac736314fa5e69481f733b7d6ea01cd9459b0aa65e0fa4976c5e"
+  },
+  "23279": {
+   "events": 237,
+   "full_sha256": "052493e61f81cad27da3bf1f0512dc121177d1588306be4ff80600782b17f56a",
+   "name": "Bronis Ropė",
+   "settled_events": 233,
+   "settled_sha256": "57ac75b64cc6bb9751f03a2248c901563236f4a23a77bf31965e3ee790e849ad"
+  },
+  "23521": {
+   "events": 404,
+   "full_sha256": "0edf3d9fcb8cab75cbaeea9b24bad22f244b6c9a7d3b65ca1bb850be82782cc5",
+   "name": "Julius Sabatauskas",
+   "settled_events": 400,
+   "settled_sha256": "589d83fd698d5d234c638504bd4a149eb5ca43304bef0fd56c133e3158638674"
+  },
+  "23526": {
+   "events": 349,
+   "full_sha256": "13d552736f05aba4fa8fc1d4c4eb9cba883be7422f55f470668206ee0b5227f1",
+   "name": "Birutė Vėsaitė",
+   "settled_events": 343,
+   "settled_sha256": "4efb5864471d183c11361c180a36b9372972bc941f747cd403bd90c25ee561d0"
+  },
+  "23671": {
+   "events": 730,
+   "full_sha256": "962e4335f9a549a707188f19b8725a9b9c9f19607b49f208ec08cacbda6334fa",
+   "name": "Raimondas Šukys",
+   "settled_events": 724,
+   "settled_sha256": "dc9f7b387a89a7a5c0fa5d1bc85dd792bce4d22d9aa08914cf4139db65d7b537"
+  },
+  "24048": {
+   "events": 551,
+   "full_sha256": "8a521f387ff505f8cedd00d99507d159698464c010d7c07b1d0661599c934d40",
+   "name": "Dainius Kreivys",
+   "settled_events": 546,
+   "settled_sha256": "f58c63f9b1b425c8594441a06ea6419fa49c273525a31ee420931b588a37506b"
+  },
+  "26333": {
+   "events": 317,
+   "full_sha256": "6e73bbe8fbf44c61f75b64fcfa38b7b57f8d43472f230a475961390891c8b00f",
+   "name": "Rimantas Sinkevičius",
+   "settled_events": 313,
+   "settled_sha256": "969611b479502812e9577455f411cd08bd1d47b28947daedd9e4f0d198f75f5f"
+  },
+  "26656": {
+   "events": 727,
+   "full_sha256": "e6db70de6c2c7a38448651cc06af06322fb4a93e974b62d4e8fd5750f1a1d07f",
+   "name": "Rima Baškienė",
+   "settled_events": 723,
+   "settled_sha256": "b0d50eccf613d8019be4fa7f61627e4f9857f7bf32ebefb3fd8800f5f8b17197"
+  },
+  "29725": {
+   "events": 731,
+   "full_sha256": "d4a99099e0e64c1e124269ae64fb7c6ecb37065523791f8c0df1aab5583016d4",
+   "name": "Jūratė Zailskienė",
+   "settled_events": 709,
+   "settled_sha256": "1a2382592575f9e3bc0906e6f702f1aa3626daa8604c4509a30ddcd24f8d5abb"
+  },
+  "34428": {
+   "events": 390,
+   "full_sha256": "5e64b8037112fa4eca6eb364ca57b4e024777e61a46dffea9d2e9582e097fcc9",
+   "name": "Vytautas Grubliauskas",
+   "settled_events": 386,
+   "settled_sha256": "a1bfaed78023593a3589af85be415fad9a82fb24bf08283b9bbbe3c5e9872d9a"
+  },
+  "35799": {
+   "events": 860,
+   "full_sha256": "36e2acfd157c5f6cf49f0d0e1912e1baeb617280befab8b6462379506684fee1",
+   "name": "Ričardas Juška",
+   "settled_events": 860,
+   "settled_sha256": "36e2acfd157c5f6cf49f0d0e1912e1baeb617280befab8b6462379506684fee1"
+  },
+  "43": {
+   "events": 343,
+   "full_sha256": "57c5f2d94601238494e2ba0fa9d569a4b170c9dd2008b6facb2231c650a6a509",
+   "name": "Emanuelis Zingeris",
+   "settled_events": 339,
+   "settled_sha256": "c2031ed0afdafdd29e468aab00d965779e5c8403aec4b5ebb43502d9a19b506d"
+  },
+  "47211": {
+   "events": 978,
+   "full_sha256": "c5eeac91880cffd7b27c2dc1f5203661bf7e9e2aafe6d6aa28bbe9950c716fd7",
+   "name": "Arminas Lydeka",
+   "settled_events": 960,
+   "settled_sha256": "6dfb95f749afda5f100f849169c885191480507c686a718ab82cd489d14a93a5"
+  },
+  "47220": {
+   "events": 271,
+   "full_sha256": "b152bf954d6c1da803fade254c1d42aa936947e20c5746d51e46032327d35a43",
+   "name": "Zigmantas Balčytis",
+   "settled_events": 266,
+   "settled_sha256": "17a4b5c68bc62fedc73b51e87b8165644abf9ca8dc727813ebf2c3f4bfff74fc"
+  },
+  "47229": {
+   "events": 291,
+   "full_sha256": "bd0e853a80e2a859185635ad1b27f66d7f6b73cd2cfc44f980a877e3b2375469",
+   "name": "Artūras Skardžius",
+   "settled_events": 286,
+   "settled_sha256": "cc2a904bca9dead514ef4a23169823d3ec4bd883bb7b6fe078f80c8596327c30"
+  },
+  "47571": {
+   "events": 323,
+   "full_sha256": "087c317eb0db5ac8e541e0ea3160974ca21f8f3b943c630dcd7b6e77a2bfddc7",
+   "name": "Linas Jonauskas",
+   "settled_events": 319,
+   "settled_sha256": "5c9fb3b5e29762b315b034dff77b09a71ffc289313c78b07f0b456237840da0c"
+  },
+  "47855": {
+   "events": 313,
+   "full_sha256": "63edd31ae9840f72dab5ac732d505ad7fd1e78af688c1d3eecbea584aac8a8e9",
+   "name": "Aidas Gedvilas",
+   "settled_events": 308,
+   "settled_sha256": "01b1f8f19bf1f550c6f97e47f4ede508babdade56b82c9cd277f886caa0966fa"
+  },
+  "47856": {
+   "events": 318,
+   "full_sha256": "bda4614542cdc672c89682944144a22c70df0a7cb606c6e59a6aadf15966d6e5",
+   "name": "Saulius Bucevičius",
+   "settled_events": 311,
+   "settled_sha256": "e4398a1d4e0c11e49ccab55a023c55d8003a92d071cde3dca5f14ba3d8171b17"
+  },
+  "47857": {
+   "events": 296,
+   "full_sha256": "c6de128f6cb08a90fefe4320cc40cb298a97a287cc42d1e24a60bde4603b4fb2",
+   "name": "Artūras Zuokas",
+   "settled_events": 290,
+   "settled_sha256": "2d542b4dd40ce621f39bcfbfc7120314aeb2aa67df28eed45eb7f71fb0ee233e"
+  },
+  "48049": {
+   "events": 573,
+   "full_sha256": "8b68c29bdfd00acea13e64bf3f0f4f169fced060f4515e280ed22a963daac0d8",
+   "name": "Tomas Tomilinas",
+   "settled_events": 569,
+   "settled_sha256": "73eb82f2b4dec4b310da7917a92647e6d4b3fa7abdf08f49e1930ace01ec3771"
+  },
+  "48538": {
+   "events": 695,
+   "full_sha256": "bae2106f149c6612a8e45cef626504fdca0bbd300e08e3bfc211487467f15024",
+   "name": "Radvilė Morkūnaitė-Mikulėnienė",
+   "settled_events": 688,
+   "settled_sha256": "cb98a743c07fe781d015ad5a234c096cb36c3e78835e424704e98dfe39952bee"
+  },
+  "50482": {
+   "events": 471,
+   "full_sha256": "dce86e945d279bf0b5ea3311aa7388ebdc6aa235b7675c568a429eed0a7c2220",
+   "name": "Agnė Bilotaitė",
+   "settled_events": 467,
+   "settled_sha256": "60effe51f80941066912adf56b10ae6a6827a00ccca1b4ae51a6b8fd6b55bf73"
+  },
+  "50877": {
+   "events": 397,
+   "full_sha256": "686275483ef37337d39aaca603869e7c01376e7796f6927933590d26a57ebd23",
+   "name": "Arūnas Dudėnas",
+   "settled_events": 392,
+   "settled_sha256": "23b01b29636cec8058b9590a30e57b726f466aaaecb3feea3c54f989b3bbe847"
+  },
+  "53911": {
+   "events": 356,
+   "full_sha256": "404d542606e148e894849f5a9199034050f410fc4e8229499bf69f1f2c4022bf",
+   "name": "Antanas Nedzinskas",
+   "settled_events": 352,
+   "settled_sha256": "5173793929293bf647060420be4c23a80364eff13fe6585444abbfd01da1d101"
+  },
+  "53916": {
+   "events": 486,
+   "full_sha256": "644be2d645d9d29b4de3cd7f6650d1cf815ac926cc098452b38576878e167e3a",
+   "name": "Arvydas Anušauskas",
+   "settled_events": 476,
+   "settled_sha256": "f9f0c8e2b96f03882692e36d3bc862ff9edf44cc8e255df77b905ad74671e452"
+  },
+  "54711": {
+   "events": 355,
+   "full_sha256": "12888fbaa56398e6f9797733792fdfaf3e58bd8f6255322799aa51c78b02ae64",
+   "name": "Liutauras Kazlavickas",
+   "settled_events": 349,
+   "settled_sha256": "b5bbe40064cf98371ebdf950d7ef6c637cf08f022c11488d7022bd83423b8e11"
+  },
+  "56180": {
+   "events": 502,
+   "full_sha256": "68b084df6938cbcd6f916fe86e3ced482a32ab2d88efdfc950e9c48297831ee5",
+   "name": "Ingrida Šimonytė",
+   "settled_events": 498,
+   "settled_sha256": "a47d898fa251ef38848e5da77a8b1774f6e07078a184ac606e119c80ddaa7223"
+  },
+  "64701": {
+   "events": 342,
+   "full_sha256": "370af9f2ef32d14946cabfc6a54365dce93d049292479e311792f95512c2afc3",
+   "name": "Laurynas Kasčiūnas",
+   "settled_events": 337,
+   "settled_sha256": "fd17254d03c1e0846b8e7f5dd237cdb8d12c7cfa5cb395475f219f74229946e8"
+  },
+  "65703": {
+   "events": 329,
+   "full_sha256": "dd40e373a97ac00246749964b7dd8c5b111420fefbe0e27f8d6d02a4d459bf54",
+   "name": "Remigijus Žemaitaitis",
+   "settled_events": 323,
+   "settled_sha256": "e6fe3b5feada2e9a5251e0ee1cb8f52650d4bf19bd221da6f96bbda1295bfc95"
+  },
+  "69153": {
+   "events": 378,
+   "full_sha256": "7de22b5a072180aafc231983951088e747a478763e1a252d5388ebd31d1ad21b",
+   "name": "Paulė Kuzmickienė",
+   "settled_events": 374,
+   "settled_sha256": "4eef9b529afd04b220d6414bf5e575bcf6ca342567bea8ffd56e891667ca37c9"
+  },
+  "69276": {
+   "events": 311,
+   "full_sha256": "f83a689bfa45f5b903aa176257ae2210260f9b8f2cbf9d8099111e033ef10459",
+   "name": "Matas Maldeikis",
+   "settled_events": 306,
+   "settled_sha256": "e4eeeb9ad5e8b9b96937111c3d914a7cc65292e3fe2206a0596782e59abd9d66"
+  },
+  "70414": {
+   "events": 377,
+   "full_sha256": "5cd85e1271af24d525746fbe2ecf42d6f0a419016a2fb1a57d848970dbf1d485",
+   "name": "Karolis Podolskis",
+   "settled_events": 371,
+   "settled_sha256": "c40369f93e0c10a11bd639d305238751e4fab55e0b6c1236a05bf82e6b09e90b"
+  },
+  "70739": {
+   "events": 427,
+   "full_sha256": "f8baa0a7590fddc686e1975808a40f550160ae273fbca435aa435fd54c9cab28",
+   "name": "Daiva Žebelienė",
+   "settled_events": 421,
+   "settled_sha256": "accbef104a8a677f78c24303123ccd2101dd8c7aed26d328fe92c164b267c46e"
+  },
+  "71563": {
+   "events": 1444,
+   "full_sha256": "650edc8a5e757cd18ac718384e2c989e06529a60737e7fcaa730274d685da162",
+   "name": "Viktorija Čmilytė-Nielsen",
+   "settled_events": 1430,
+   "settled_sha256": "64468ed1cdd7095dfee461d9ad5ff6d0e2fec7adc5ccf566e9f755259cb6ace3"
+  },
+  "71923": {
+   "events": 255,
+   "full_sha256": "eac9e9c9554cf24703992b28cbd2d0a4a6e0bd4f740563a3220986dbcea95cc9",
+   "name": "Gintarė Skaistė",
+   "settled_events": 251,
+   "settled_sha256": "6ee840449772ebd9413a15071e20bcdb7125e094eb50d20f8995ad13fd377726"
+  },
+  "7193": {
+   "events": 1081,
+   "full_sha256": "7e433233a250a9168f547516c28022e3fde93f305c2e1722a9f15ccdc291b335",
+   "name": "Juozas Olekas",
+   "settled_events": 1056,
+   "settled_sha256": "e2e1bc23ff75467b465518fb25c5572cc853633aebd4d962092181255d086aa1"
+  },
+  "7194": {
+   "events": 528,
+   "full_sha256": "c9dbf225eaef5aeec624d5b217e027ae427397ba18ca05013a85f6d71915e1ce",
+   "name": "Algirdas Butkevičius",
+   "settled_events": 523,
+   "settled_sha256": "0ec72a3bb4a00c9c1b13094f78cfbc24c2731bdb5eef2874f3557cb0f5739c91"
+  },
+  "7208": {
+   "events": 314,
+   "full_sha256": "dc88416a81106cacc384588043a8879562aebb087748177794b697b132a0cbd4",
+   "name": "Audronius Ažubalis",
+   "settled_events": 310,
+   "settled_sha256": "91df34a71de4ad5e7acca6aeb5201ba847e6b6c74a74b9e74fd0eece0216ce32"
+  },
+  "7242": {
+   "events": 303,
+   "full_sha256": "08603b793338a47eb1591a709dbfd814e24c5a50296c3bfb61ed85c749d5990d",
+   "name": "Jurgis Razma",
+   "settled_events": 297,
+   "settled_sha256": "461a3983671485353e56b77b3e7acacbc5f5188123fb3ef781cae0356cc6a6f1"
+  },
+  "7252": {
+   "events": 522,
+   "full_sha256": "6c34ea4ce247b73353fe8f1371b92d2ed00d6d206586d2f038f4eb47699522c2",
+   "name": "Algirdas Sysas",
+   "settled_events": 513,
+   "settled_sha256": "b7712aa7e03dc07527ad984d418e8806ca741abb1e61085106f3209d38b0916a"
+  },
+  "73568": {
+   "events": 681,
+   "full_sha256": "8abd73efee01428b429cf179d9c2327e53ed9559f22bf796e64ec65f0fd7ed22",
+   "name": "Linas Balsys",
+   "settled_events": 609,
+   "settled_sha256": "f2b6b68e17abdc46cede88df6f67091a78da16f25dc452ab494fe591f68ff1b5"
+  },
+  "73569": {
+   "events": 341,
+   "full_sha256": "c5c83c6b7efdd13c197f862a2ba103096cac4e0001f255160e9a4f884c7738a2",
+   "name": "Šarūnas Birutis",
+   "settled_events": 337,
+   "settled_sha256": "e541c34d6d52ef61381ea32fa9ac821561804317f5e77a93e4498820f264f4f2"
+  },
+  "73571": {
+   "events": 541,
+   "full_sha256": "594a3b9fb5a863403a877a32b9f9105afb2b16cc00471be68db053a7af2551c5",
+   "name": "Viktoras Fiodorovas",
+   "settled_events": 535,
+   "settled_sha256": "9452ec1ad193983b10acebbf6143d8264d51eab7a7e71655e35ebca9d06e21b4"
+  },
+  "73572": {
+   "events": 671,
+   "full_sha256": "5a5ae3fa6090cc1a84271786f67ab1fc35c87835e528f0850e66c35cfe64d3f7",
+   "name": "Vitalijus Gailius",
+   "settled_events": 661,
+   "settled_sha256": "f2a0b8416e307e8e7d70cd5e7dae42252e823d5f46db6aabb340889f387ddddf"
+  },
+  "73575": {
+   "events": 492,
+   "full_sha256": "ed4372243604187586b926385c4e5a1131d5bc87d0ee01c58270192a752aeaed",
+   "name": "Vytautas Juozapaitis",
+   "settled_events": 485,
+   "settled_sha256": "4373a42384ebddb055bb7bd991cc8014a3c96534867787d462fd7aa0f3511b74"
+  },
+  "73583": {
+   "events": 1606,
+   "full_sha256": "2b10f785f733cf08310af7a3dcd4c449fac88883e3b406c22ab4fd552281b8fa",
+   "name": "Raminta Popovienė",
+   "settled_events": 1596,
+   "settled_sha256": "3bae2e714083241df536753f5cf8db46dc4b4c0d73984b28c4b0d081b816c34c"
+  },
+  "73586": {
+   "events": 324,
+   "full_sha256": "5bd44216d87feea9f0fa2a57346ad3a635eec72fba0682274a042116e69c265b",
+   "name": "Rita Tamašunienė",
+   "settled_events": 318,
+   "settled_sha256": "cca440632074b13fb48647d1ac6f2af6f809b92490b02e90de5044726db637a8"
+  },
+  "7363": {
+   "events": 808,
+   "full_sha256": "af3721570485e1b2b0274a13612e216b0f31cc415399e78125a8a67f0144eb33",
+   "name": "Rasa Budbergytė",
+   "settled_events": 803,
+   "settled_sha256": "f17cb4dce45023c3fcebda4865ea99743094b786e4e47b84952c687442b54940"
+  },
+  "73642": {
+   "events": 352,
+   "full_sha256": "3796f1a772e36ec2006973221f0fe34a91fa6e6d4b0e63459072aa70c221d71d",
+   "name": "Modesta Petrauskaitė",
+   "settled_events": 348,
+   "settled_sha256": "7c75c8ee317af1deaeeddaaa2d5ab58dc8cc523df298c85175359239ad49f8b0"
+  },
+  "73694": {
+   "events": 937,
+   "full_sha256": "f1c0b4c3ea51d23901068224e79786b2f7f9076638bb943346e58b0d60ce15a7",
+   "name": "Indrė Kižienė",
+   "settled_events": 912,
+   "settled_sha256": "3861349858374152042db60700a6cbc773e6cfce5872de31bf44ef44c91de02c"
+  },
+  "73848": {
+   "events": 870,
+   "full_sha256": "37e390af55295b9dc248f8340867a95985dbe3892a13f87a64862bd78ad1dde9",
+   "name": "Tadas Barauskas",
+   "settled_events": 837,
+   "settled_sha256": "2c9d5b30c75d82483d69adbc8365829f0e45558526420e3f53dae85e5fb44114"
+  },
+  "73917": {
+   "events": 278,
+   "full_sha256": "fb393846dbbd5c4e22d6d2622b3b2b20cfb4cb72b78defd8412d6dfafc03f53f",
+   "name": "Aistė Gedvilienė",
+   "settled_events": 274,
+   "settled_sha256": "545a1aa1acc80a9c7f0c29b8499ada3954d73567ef1dc0cb488049aad4985572"
+  },
+  "74854": {
+   "events": 745,
+   "full_sha256": "0f172de98978ef82e687bab81aa6421ebab0893683ea0b4fde981c69d0c63475",
+   "name": "Vytautas Sinica",
+   "settled_events": 741,
+   "settled_sha256": "a39dc719304348613f89d8943563982d56f7f6e85129328e048508dc3f8f8750"
+  },
+  "7597": {
+   "events": 1118,
+   "full_sha256": "d99d2987c04a0da4782fc2c89b3b65c34a51bc9196355181a0ddadb710df8a19",
+   "name": "Remigijus Motuzas",
+   "settled_events": 1094,
+   "settled_sha256": "32a559957dc769e1650d095e2ee5c5a99db060a33b994a435cd0eacb621a6f72"
+  },
+  "77490": {
+   "events": 353,
+   "full_sha256": "e31257487958200e54f5613a08537acb3e81218eb5779afb12e386c9fe356451",
+   "name": "Mantas Poškus",
+   "settled_events": 347,
+   "settled_sha256": "e57222259f836c00fea328ac8f3628677a87cb0c184fb85d586dcafd67a1a478"
+  },
+  "79122": {
+   "events": 1103,
+   "full_sha256": "c4e51f85d3a97e2bb615da4b13fff7ad9f3aa2146a3e36358fdbfe43a4d70beb",
+   "name": "Jurgita Šukevičienė",
+   "settled_events": 1083,
+   "settled_sha256": "ba5d9f4c3a063e000b67ce386c9864cdc7448ac2a995962333892fecbbf50fb0"
+  },
+  "79131": {
+   "events": 261,
+   "full_sha256": "bdd66c7a724f2ad979aa2b7ac98bb5c84b50e006d500a4f33aa002b4418a36b6",
+   "name": "Kęstutis Mažeika",
+   "settled_events": 257,
+   "settled_sha256": "fc8e5b9aa11e4dc55b7a327675258aed07de3e50677b5079190f61eb6bd86362"
+  },
+  "79132": {
+   "events": 533,
+   "full_sha256": "c57792e46adc67204b5edb04cfb118fd060e7992146bdc21fa4461f670b6fa19",
+   "name": "Rūta Miliūtė",
+   "settled_events": 529,
+   "settled_sha256": "62f0af7ca3c14da6185d4b51cabd260046306232d2a1df31875b511a654ff0ef"
+  },
+  "79136": {
+   "events": 636,
+   "full_sha256": "b7f281515a8beade3b0c900e15bdb2210f3bd3a21cf321dbddee8c9ed4ae2439",
+   "name": "Aušrinė Norkienė",
+   "settled_events": 629,
+   "settled_sha256": "83eb5686ce14166848a734659ccfe2c16d69828b3932c3078112bc1ccc5389a2"
+  },
+  "79137": {
+   "events": 338,
+   "full_sha256": "d64fdaf17cc4f9cdbd1a11acab6cb3c5ddfca3949b39f30b0c5f1f6909b6d43b",
+   "name": "Česlav Olševski",
+   "settled_events": 334,
+   "settled_sha256": "478111c39890400ac72e0f29f69f096e23b7aeae03001f240f867451ad41ccde"
+  },
+  "79139": {
+   "events": 314,
+   "full_sha256": "dc88416a81106cacc384588043a8879562aebb087748177794b697b132a0cbd4",
+   "name": "Žygimantas Pavilionis",
+   "settled_events": 310,
+   "settled_sha256": "91df34a71de4ad5e7acca6aeb5201ba847e6b6c74a74b9e74fd0eece0216ce32"
+  },
+  "79141": {
+   "events": 484,
+   "full_sha256": "41d0be96c6958764604098d234975941d45c99f82239b9020b9ba1c06157c40e",
+   "name": "Viktoras Pranckietis",
+   "settled_events": 473,
+   "settled_sha256": "f968dac307f3eedc663412ddf96d7f013e9ca0a7ff6ff7c1aa3a542795098c35"
+  },
+  "79145": {
+   "events": 563,
+   "full_sha256": "7e71fbdd625206dd8399bbdf294c21494bb1b117b185bcb6c1e40699411a354c",
+   "name": "Saulius Skvernelis",
+   "settled_events": 559,
+   "settled_sha256": "7fb655fd7d4ff2491e3dcf1d3c7cdca78f9e846805024a06ce1acb78fd52da71"
+  },
+  "79150": {
+   "events": 1123,
+   "full_sha256": "893b6bcfb21cb7e2e51a0ceafd28acd982ba959916d3151e9c7f294d86da4a64",
+   "name": "Dovilė Šakalienė",
+   "settled_events": 1116,
+   "settled_sha256": "b104392328ee3df419322fac50142dd2004ac47087ff9471296f587c175bc3a1"
+  },
+  "79153": {
+   "events": 417,
+   "full_sha256": "5de932b89b1fcf7d2e5b32b5001b76c278abfc860625c6efddaebbefd8d9b1ec",
+   "name": "Agnė Širinskienė",
+   "settled_events": 410,
+   "settled_sha256": "e31b3f10315781fec282bba59fbbd2f73cbabb244891d1520935fb28ba04429a"
+  },
+  "79162": {
+   "events": 1902,
+   "full_sha256": "6f9a654ab060dd40c34b1773be5a44c364e1d6a298d392cd33ca7202a7a2194f",
+   "name": "Virgilijus Alekna",
+   "settled_events": 1896,
+   "settled_sha256": "142b442e33a30b9b0e0b069a49841b64d2815f0136a6ed25be26d8f5dd3d13dd"
+  },
+  "79165": {
+   "events": 553,
+   "full_sha256": "06f731f3e66401e75e0403008718bf53868b64dd634c77c44c1f28bec919cb63",
+   "name": "Valius Ąžuolas",
+   "settled_events": 548,
+   "settled_sha256": "c4401178acc52ccdd1c62b62f9dbe7e7d0d9b4a8716a426ae1032339f63ad9a4"
+  },
+  "79169": {
+   "events": 384,
+   "full_sha256": "330029027fe7c6a410e90256e58c581b11db3ceb7d1363f99c626443e0310b20",
+   "name": "Dainius Gaižauskas",
+   "settled_events": 380,
+   "settled_sha256": "28a226f9e9cb7fb8b132932deadb92558625790d8e069ce0a363319d94d4799c"
+  },
+  "79170": {
+   "events": 314,
+   "full_sha256": "1a1aa8eda45e6295cbcb5c899d2dae04b58e5c65ec9026e59dabf8350eae865d",
+   "name": "Simonas Gentvilas",
+   "settled_events": 309,
+   "settled_sha256": "2c59ef36a870204b74862ec696a3ee633eeeb9b918906797b6ba8b68605383f9"
+  },
+  "79176": {
+   "events": 270,
+   "full_sha256": "6208c2412e01ca5510cb7437463f77881d3069414ff27dd03825916cadf2d7b0",
+   "name": "Vytautas Kernagis",
+   "settled_events": 266,
+   "settled_sha256": "1c843c11e2a03e37f8fa87518447ba9f55cd18bdee536e837c00f5535a75543c"
+  },
+  "79225": {
+   "events": 585,
+   "full_sha256": "82628582e0eeff4fc1c804657cd9fb4451f2537027250811ea62480ce0083560",
+   "name": "Laurynas Šedvydis",
+   "settled_events": 576,
+   "settled_sha256": "c28638e70b98488cd8727b0e80f09696ea8c4d2c7febd82165c8790928f2d831"
+  },
+  "79343": {
+   "events": 305,
+   "full_sha256": "03e4957dbf5ea3315996c59799e8aa64e3a73f7e42d0b9035026b346a73d67bf",
+   "name": "Vytautas Jucius",
+   "settled_events": 301,
+   "settled_sha256": "07717355d6467e6426abb0dc02e5278501cf6d3d19b8f7fba49c8b1d2e1375ef"
+  },
+  "79353": {
+   "events": 340,
+   "full_sha256": "c05e27d4898665ed07d454fdf68f1d0493d58b2a95393da5f06dc490c7c4c03b",
+   "name": "Ligita Girskienė",
+   "settled_events": 336,
+   "settled_sha256": "f9da6ec0e710298abee15bfc2422c2a478cea2491bcd32f169061601cb893406"
+  },
+  "81543": {
+   "events": 264,
+   "full_sha256": "262cf702fd5a710707993c53f59df8cc4083b73488fe2cf767ad13b1e0c78023",
+   "name": "Arūnas Valinskas",
+   "settled_events": 260,
+   "settled_sha256": "8638d124f443af3069c52b7fcc623ad062707c83cd580758dec2bc4b4d583807"
+  },
+  "83286": {
+   "events": 359,
+   "full_sha256": "2a8c82db505916fddf883e6ffd4f5046813febd5e128c67b9453f315478148b2",
+   "name": "Tadas Sadauskis",
+   "settled_events": 355,
+   "settled_sha256": "6bbb726be2d4f10010c92fff0ba51f0fc8a4f1f68b6d1f560ea72e13edf1dc63"
+  },
+  "83412": {
+   "events": 434,
+   "full_sha256": "b5f88e45bfb36a21fcac67ba40b8954020866aee8370a92ea2aa2bef58fecc12",
+   "name": "Martynas Katelynas",
+   "settled_events": 430,
+   "settled_sha256": "cc61365740c4b4ed7e91ee0b7abe5527c4c931b684774ba4848b5580b37fcb7f"
+  },
+  "83614": {
+   "events": 293,
+   "full_sha256": "db964962bf469271585109876a992b2c549debc4961b689555c961ca6b9eafac",
+   "name": "Arvydas Pocius",
+   "settled_events": 289,
+   "settled_sha256": "e29424f4e2143f8329242effa0496053d0e2670a65d74c3c9250bd27bd8c5739"
+  },
+  "84599": {
+   "events": 546,
+   "full_sha256": "50d2bd844d383964d977b36b2d50db70b8356851ffe5c374c91b189dbca29aa9",
+   "name": "Dalia Asanavičiūtė-Gružauskienė",
+   "settled_events": 541,
+   "settled_sha256": "05fc0583803f45e69ade56e8c002f01069890949c7fc285eb37c009baceb355d"
+  },
+  "84600": {
+   "events": 330,
+   "full_sha256": "e1896e9913784465169b737109aff4632f839ffb2ea60195e26ff086bad06df8",
+   "name": "Andrius Bagdonas",
+   "settled_events": 325,
+   "settled_sha256": "6804ddd47673f0f833c8da57abae82f29789837bfc2a85a43fa875b41b8b6c49"
+  },
+  "84604": {
+   "events": 376,
+   "full_sha256": "8476713044178ea342d93db3e1e1f03924881e5dc8701f78cfe2b58de908d0a8",
+   "name": "Domas Griškevičius",
+   "settled_events": 369,
+   "settled_sha256": "45c2a7f5d6f2012818045011552949adb2af0ad5bfb2383e6c90df54dc856453"
+  },
+  "84606": {
+   "events": 324,
+   "full_sha256": "dfd9ae6bd05db7f66658151d34049dbb4e2abdff44f6c75a2eab08f320554f5d",
+   "name": "Linas Kukuraitis",
+   "settled_events": 320,
+   "settled_sha256": "964782b4083f448f763d708c0c3cac733b65eef54beab3aeada431208df193f7"
+  },
+  "84607": {
+   "events": 373,
+   "full_sha256": "7e3ea8c22a1730017b0a4ffa22905de503ba184c39f98c9e282dcd785dde1622",
+   "name": "Mindaugas Lingė",
+   "settled_events": 368,
+   "settled_sha256": "231e47e305f5069d5464d948ad45cf30e42ba4fb03fbe9b5100d96c18acec5b2"
+  },
+  "84612": {
+   "events": 225,
+   "full_sha256": "a03d8d682b3d54825b779ca277bdd1160cf255ea6edb5c61feb3f664d1dd837e",
+   "name": "Gintautas Paluckas",
+   "settled_events": 220,
+   "settled_sha256": "85cf2b82a9131969f37db77a5608733bc63faee931cbc3b88ffdeee0f6fc3188"
+  },
+  "84614": {
+   "events": 306,
+   "full_sha256": "2d83f5a568b4959146e5c5b732c8628de22491465b08840099336a2e980439eb",
+   "name": "Audrius Petrošius",
+   "settled_events": 302,
+   "settled_sha256": "45fe6d2fb2a12f1687efbfbbf1c10cb05449360e592bd5ebeb910829782953b9"
+  },
+  "84616": {
+   "events": 258,
+   "full_sha256": "f5f6ef243ad3cd72bde449f1133fafd37f8cce8ccb3e4b2c9dcf8069c14ecbf0",
+   "name": "Valdas Rakutis",
+   "settled_events": 254,
+   "settled_sha256": "8338dc43770089fc56852ecd081041365c180c1f61bb142d5ecc86a4fa6fe10e"
+  },
+  "84618": {
+   "events": 521,
+   "full_sha256": "9679ea50d26897193dcfbe80d949dcbcef9bf15d933b8050238e66b18771c39d",
+   "name": "Eugenijus Sabutis",
+   "settled_events": 512,
+   "settled_sha256": "8683171e72ca76ea2c18c8ea394263589aa6d63b20c15c2866557e2313699ba0"
+  },
+  "84619": {
+   "events": 300,
+   "full_sha256": "e657abc3cef3a0794aac2ccbf92fde6d84991aeb69e12850a823067a1efab8a4",
+   "name": "Lukas Savickas",
+   "settled_events": 296,
+   "settled_sha256": "b2dae8706734b15257677f862568977052831805cadcfed4c0cc60c8f971fe99"
+  },
+  "84620": {
+   "events": 535,
+   "full_sha256": "a322089939f20533a5593adfea89839549bfa01dded384567b4677ae8a58d6f3",
+   "name": "Jurgita Sejonienė",
+   "settled_events": 525,
+   "settled_sha256": "93bf7cecabdf88d6bb37b83e173068b44d2495af84b66481c83d98a2e96f4c6d"
+  },
+  "84626": {
+   "events": 95,
+   "full_sha256": "1dcf4f1dcf950d2fcc36b73a38c2e05d331fbdae43807b9aa9d1747a80f3ab7a",
+   "name": "Vilija Targamadzė",
+   "settled_events": 88,
+   "settled_sha256": "4c820d3557b0a713103e8d25ed69e7086b5422fd515eb62bc9bd03d527f8e8f4"
+  },
+  "84705": {
+   "events": 553,
+   "full_sha256": "1908ae8078b55859810d1f623a3f9b3a61a12791dee6e192882fefc063a97ec6",
+   "name": "Ruslanas Baranovas",
+   "settled_events": 549,
+   "settled_sha256": "0637c2a8a05e5a59fb31d810df5aa1ce0cc2a5e4aee9f5cd18c5f9b44f4208fe"
+  },
+  "84854": {
+   "events": 490,
+   "full_sha256": "a061fc9e6481d776f222a16a7d12afd7e61766771431d257cbe6c99ef1f200b2",
+   "name": "Kęstutis Bilius",
+   "settled_events": 485,
+   "settled_sha256": "62d2c238129803e6106c6e0a7535b116cbe67f02e2e439731bbc612c40ad6c53"
+  },
+  "86469": {
+   "events": 678,
+   "full_sha256": "99c054106026608f6e316f19bfe4fbd33f7d50dfaad4ca22d0c8777483288b0d",
+   "name": "Edita Rudelienė",
+   "settled_events": 669,
+   "settled_sha256": "4703eefb181197dc0b9179d87ab0cb9aaad2b6e4fb3e87c1f9f9ad4944c9c8bb"
+  },
+  "89374": {
+   "events": 370,
+   "full_sha256": "6ab4a8e3830fcadf57908c72e8a72afbbe3e243e9afed8d8b321daa556815e0b",
+   "name": "Matas Skamarakas",
+   "settled_events": 366,
+   "settled_sha256": "d394a61b7fbce0689af9145e229d58985df2be559d459361ba7229170fff525c"
+  },
+  "90627": {
+   "events": 402,
+   "full_sha256": "3433736da028419ba569fa00de21be6f2ddcd937d66a2d60379ae7bec61d2d47",
+   "name": "Jekaterina Rojaka",
+   "settled_events": 397,
+   "settled_sha256": "3e4167ccfe23fe3bf4bdc9cf4576f73c9ad71d147b1df05ee1f061b7eda332c3"
+  },
+  "90913": {
+   "events": 310,
+   "full_sha256": "9121e115b080b72709743a76268225a6c7b3092980fc1ae645fbbfd55de28d79",
+   "name": "Vitalijus Šeršniovas",
+   "settled_events": 305,
+   "settled_sha256": "93679ce026791cab752422d7164f20beda039957719aa7de32d34fa009e8a0be"
+  },
+  "90914": {
+   "events": 473,
+   "full_sha256": "a78b8e689617460573415e4574610a5bdb5f7715fe647d345e38f564afe0a54a",
+   "name": "Šarūnas Šukevičius",
+   "settled_events": 468,
+   "settled_sha256": "9c6cf3d28f1d2e98917719794c147ddb87a15e84fddc2ac683124352d7b06672"
+  },
+  "90916": {
+   "events": 395,
+   "full_sha256": "93738d977c1305fc084f36290279d7ebf244e67bfd5a43e0a10caf627c2f11d6",
+   "name": "Violeta Turauskaitė",
+   "settled_events": 389,
+   "settled_sha256": "34d45c603be17516d99c2a62263b0fb96716079869c9f1da861be04e713fe368"
+  },
+  "90917": {
+   "events": 678,
+   "full_sha256": "0761b4f3a4bcf2982e9de41b0a0dd11d7e0a66fefd7a78226714ed9ff46ad5a7",
+   "name": "Daiva Ulbinaitė",
+   "settled_events": 669,
+   "settled_sha256": "8c8548a223f36229c4ee8bde9574caf9556d5417f984238ecaa5e47c98a8708a"
+  },
+  "90918": {
+   "events": 374,
+   "full_sha256": "0282681856fad25761ff7865e9f010f1673c10d4f960122553a6396cb94cfd28",
+   "name": "Linas Urmanavičius",
+   "settled_events": 367,
+   "settled_sha256": "27d805c9dc6472a11382b7bcdcee5da2d1f069ce892593e0b4dee69fde63d2fe"
+  },
+  "90919": {
+   "events": 429,
+   "full_sha256": "e5210e3368a31bf4ba6d91c09f45ee3343b85c013b35ddf0df8f8325c4633d58",
+   "name": "Dainius Varnas",
+   "settled_events": 424,
+   "settled_sha256": "4bf9d593e62c3c8016272c5eb8c93e7a013c1c06d2423be9c133ce98b31c45d9"
+  },
+  "90920": {
+   "events": 288,
+   "full_sha256": "f6a733741e36ede5605b6431301d238bcc66e1747aa699f103a38e05e8ec7efb",
+   "name": "Petras Dargis",
+   "settled_events": 284,
+   "settled_sha256": "9456626ae140a5adb34bcff5cbd1d3f05108806691536234ac06b1dee98cf2ab"
+  },
+  "90921": {
+   "events": 480,
+   "full_sha256": "41fb548f800fecdcdc04dc6003d60bd4fdf8386ab3ecc3b06798e49a811e3354",
+   "name": "Ramūnas Vyžintas",
+   "settled_events": 465,
+   "settled_sha256": "ecfd01dec95e557e5f7c062dd791350e8b48968b3d179055989f80ac11b39e74"
+  },
+  "90922": {
+   "events": 523,
+   "full_sha256": "1cf2b7a0394fb7d32b43201e2723da7f0cd5ccc04fa220dec97e8aba94f20b3c",
+   "name": "Simonas Kairys",
+   "settled_events": 518,
+   "settled_sha256": "7a2c2d76fa9bbfd3d3ed8a7ab4d43a7c06232df064541136fbb69eb1ca737ec7"
+  },
+  "90923": {
+   "events": 562,
+   "full_sha256": "300f37fbabc212b966968d4ce8b6949a369b1bf7366da91fcba45e34ee8841b9",
+   "name": "Eimantas Kirkutis",
+   "settled_events": 558,
+   "settled_sha256": "9e2f99aeeb3ede7f323d60d10050bbd37555bab788f20ccbac363ad964fd1167"
+  },
+  "90924": {
+   "events": 317,
+   "full_sha256": "b2ce042f8be812b7bf8d4d77a49cd47171917b22dafe65432caf95256c0bf0ce",
+   "name": "Tomas Martinaitis",
+   "settled_events": 312,
+   "settled_sha256": "d52ba8fcef0b094370d1e6af0310f80e56f9718066eaf8bbf29c5d06edfe45e4"
+  },
+  "90925": {
+   "events": 265,
+   "full_sha256": "57f27abbb42316972792e1383fb95f4f539dd7ca7a2640f9392791bd21927cd4",
+   "name": "Laura Asadauskaitė-Zadneprovskienė",
+   "settled_events": 261,
+   "settled_sha256": "4904190765309f126367d362780bc7ac93d190b0991841f588455813fc8c503c"
+  },
+  "90927": {
+   "events": 373,
+   "full_sha256": "bb66563313bab68777732ed7807b076fb3fd5f0e6710304e66b593e68f261ecc",
+   "name": "Robert Puchovič",
+   "settled_events": 367,
+   "settled_sha256": "7caa62e4a7dc4ac20711fcc57b557163894858aeaf04f4bd0a3927e723f931f0"
+  },
+  "90928": {
+   "events": 341,
+   "full_sha256": "bbfca0ef8c4c91005c01e284061718d44133c7edc82334f4be3b797649f46b0c",
+   "name": "Lina Šukytė-Korsakė",
+   "settled_events": 331,
+   "settled_sha256": "a5c93d16ae34aa94df75f37f1a4211f689aae509ab9b3ad9b4f9e0969b3c1146"
+  },
+  "90929": {
+   "events": 438,
+   "full_sha256": "2bbbb174f6b0f89d4fff392a75db303187101d0f23b88d8937d5dae5bf3c8f8e",
+   "name": "Lilija Vaitiekūnienė",
+   "settled_events": 432,
+   "settled_sha256": "28195ca08517405119588108890028d24a1b538dd8f26634be4bd11c57bc2f0c"
+  },
+  "90930": {
+   "events": 538,
+   "full_sha256": "1f955697169627f5d887ae100a90cc43689770d9f7f341012fbf81f25d8df720",
+   "name": "Ignas Vėgėlė",
+   "settled_events": 532,
+   "settled_sha256": "b1b8dcac29f9ee73fd1585c325d1089537fb022fcce03b753387202103218dfe"
+  },
+  "90931": {
+   "events": 446,
+   "full_sha256": "6f96e78324835d22ac33f9fa9a25847d17f6a253246db09406e3ac4aa34bb9d6",
+   "name": "Saulius Luščikas",
+   "settled_events": 436,
+   "settled_sha256": "9fed4bb50907ef07b1548f7cac63ab430a3935ac440973caf94ae67e36dce191"
+  },
+  "90932": {
+   "events": 355,
+   "full_sha256": "14bce514e5baf75d2fad89ef8e9b582bc2e0fd5d43e5f41c066e63eb5122b97d",
+   "name": "Alvydas Mockus",
+   "settled_events": 343,
+   "settled_sha256": "d2a59dd58f61ebc946da1467d9669e7052cae400ad6e9b012bce4e23c5cb52ca"
+  },
+  "90933": {
+   "events": 903,
+   "full_sha256": "b46f24ee1ed2a54f65e65ff56903edb1c9aeadf1780831bff0925ebe41936718",
+   "name": "Karolis Neimantas",
+   "settled_events": 887,
+   "settled_sha256": "447957199d52bd4d9b16b83cf0267439dc062b144bb792eafed896016b9e7abe"
+  },
+  "90934": {
+   "events": 298,
+   "full_sha256": "28b14a696ec3383ae133a419f62020121142b63aa2c90e60d441872485b4ac04",
+   "name": "Daiva Petkevičienė",
+   "settled_events": 294,
+   "settled_sha256": "4f617b652abcb8b2debf733f516949d8e6b8076ca0a2d76074bfaef5f18421bb"
+  },
+  "90935": {
+   "events": 339,
+   "full_sha256": "454e6d0aa71a0b77f6f0eb2e69cbdd3a1aa86bc47646d635605a9739c22b03f1",
+   "name": "Tadas Prajara",
+   "settled_events": 335,
+   "settled_sha256": "6d20fc2fbc18e30fe15666e388800ee0c679bd3a8b8cb26c9a12abdf7184e786"
+  },
+  "90936": {
+   "events": 308,
+   "full_sha256": "957d780f01b2f66cbd79af632fe752675a0693448645dd33b043534b28820763",
+   "name": "Algimantas Radvila",
+   "settled_events": 304,
+   "settled_sha256": "4470c27efd175ba1e413f7eee1064b2dc5a97a457dfcb5c9bc91ccfb2b64e530"
+  },
+  "90937": {
+   "events": 532,
+   "full_sha256": "95127cf41a268a55894422ef7682a814ec9b7380f12faed479d9b514850d8c6b",
+   "name": "Audrius Radvilavičius",
+   "settled_events": 527,
+   "settled_sha256": "f121635cc3940f4c4403e1bc8ce4a3c75a35449e1dc5aa0edf29716002235794"
+  },
+  "90938": {
+   "events": 384,
+   "full_sha256": "93ed8c43746c11f6ba33697f2108bcfc20a37455d91e21971440dfa0e8e78ca0",
+   "name": "Darius Razmislevičius",
+   "settled_events": 380,
+   "settled_sha256": "da9c8d2ba9841274a137571a1ed23f8717fc45f84c5778eebaa8845f6b172263"
+  },
+  "90939": {
+   "events": 830,
+   "full_sha256": "3cc34000d4f1a36f49c3ecd4309f02a185d8252c7ed6b72d04364475c8322f09",
+   "name": "Vaida Aleknavičienė",
+   "settled_events": 826,
+   "settled_sha256": "7ec5f6f24fb9c86b0f100faef16f7523da02f80f6544eb73c03a96e75ab6a094"
+  },
+  "90940": {
+   "events": 1158,
+   "full_sha256": "75e28592a980ba948a4d2e8ebdcf97beab58ef647067623033b86ee2ae8f8d74",
+   "name": "Giedrė Balčytytė",
+   "settled_events": 1140,
+   "settled_sha256": "d275ca7e7d3e194d3961a4ba172165e22bc84cdff95fd732fc73f10dcb0fab63"
+  },
+  "90941": {
+   "events": 278,
+   "full_sha256": "2f5d03ebdf81466051d8da71fd80d22e2b2446eb725fd29c4efbe205759b99b0",
+   "name": "Dainoras Bradauskas",
+   "settled_events": 274,
+   "settled_sha256": "f2a5c09619e77fe16a97a506f749e030e74f5143db950ba6d0ba9f2a58ae3bcc"
+  },
+  "90942": {
+   "events": 617,
+   "full_sha256": "7c215a254c77f463b8430b8b3fc6840836f3424771c2fead8ad14236b8ee8ca4",
+   "name": "Ingrida Braziulienė",
+   "settled_events": 605,
+   "settled_sha256": "00a4b263cbd7e6ed070f5a37a1d6e7c285018828c59d9c3a9c73bf2c86a596d7"
+  },
+  "90943": {
+   "events": 434,
+   "full_sha256": "b1108b2727449e66b3c99f09e6be8eb16241e82204962a773ca956acfd48676e",
+   "name": "Andrius Busila",
+   "settled_events": 429,
+   "settled_sha256": "f93c78f067deebc5d052d614ec0d754c9ee17b9bff6156c376a37d9143485195"
+  },
+  "90944": {
+   "events": 524,
+   "full_sha256": "782ae9b99ca117edaf99409b11bf5d0fb7d700d9118a2a871baea4572a78b638",
+   "name": "Saulius Čaplinskas",
+   "settled_events": 519,
+   "settled_sha256": "cbf9d0bd6d5922c07cb40e6fd9b3f64987e1474cf8d7bb8273bcff8c32e2258f"
+  },
+  "90945": {
+   "events": 290,
+   "full_sha256": "949a9ca8f583580b225fc77ca398bed8a0f2e3e84df1da77c2561e3d58c5052f",
+   "name": "Tomas Domarkas",
+   "settled_events": 286,
+   "settled_sha256": "1d685bffad3f3edd30175fb73a038d03b9439ee8c5c29c9f54045037ba5e2d28"
+  },
+  "90946": {
+   "events": 533,
+   "full_sha256": "c3f4792bfc3b80c89771ac43a39f62ccdae47a454544428c627db3977d92ddf2",
+   "name": "Giedrius Drukteinis",
+   "settled_events": 529,
+   "settled_sha256": "4135ead92a6081fc071633a234660e5954246eae9ad58e962802280a7282edfc"
+  },
+  "90947": {
+   "events": 552,
+   "full_sha256": "a5f91cc035eb26638fcd8e9ace92a97b620461a67d33cdcdf2f26e7b725d191f",
+   "name": "Martynas Gedvilas",
+   "settled_events": 548,
+   "settled_sha256": "49b110f14eef8146b11e155d794d1e35af2f2e2a92f526233aa59b6d428fe6fa"
+  },
+  "90948": {
+   "events": 955,
+   "full_sha256": "15ae46d37a8364a870e77669ac97af12f8c480bbb95fc19c947a929ea903f735",
+   "name": "Ilona Gelažnikienė",
+   "settled_events": 940,
+   "settled_sha256": "1f3b00a3e79793a2019170cfbafe8d977a63109008d339039c19858c8fbc9d40"
+  },
+  "90949": {
+   "events": 576,
+   "full_sha256": "6d5102bd196fbdcad9c7ebf7dfc1bc4f3f089ee03b84d1a166c9ae7fbab933a9",
+   "name": "Darius Jakavičius",
+   "settled_events": 569,
+   "settled_sha256": "07b2b307c40d0e92cfe78534d117b3c28981167cfa11a0597a50c9cafbd5c30a"
+  },
+  "90950": {
+   "events": 682,
+   "full_sha256": "4bb2f79fc4060e6c9d7b984111c58600cea5b3fee4eed74c50ac03ee7a4a6c40",
+   "name": "Agnė Jakavičiutė-Miliauskienė",
+   "settled_events": 673,
+   "settled_sha256": "a7b3070a737e468d4e54bbdc4784ed5fdfec94a51b93487d3642e84f56ff70c8"
+  },
+  "90951": {
+   "events": 747,
+   "full_sha256": "f8e6537f23ce9caf7b003c657850474e93eb11aaac523f5eeae5452fdee4fa26",
+   "name": "Roma Janušonienė",
+   "settled_events": 720,
+   "settled_sha256": "f185f9fc222840426f7afefd47dfba8e244d3753a2f342403762e675ac305dde"
+  },
+  "90952": {
+   "events": 339,
+   "full_sha256": "465de8213236b181b220cab56bd814a981af545b89cfef6d3c4eeaddc53fb322",
+   "name": "Robertas Kaunas",
+   "settled_events": 335,
+   "settled_sha256": "ae61e960c3b5fb0098c3a2e1394b8fcbb745139aa3ed7332916aa0151d7bb27a"
+  },
+  "90953": {
+   "events": 206,
+   "full_sha256": "e87ca08c5eea10d006303a87ae476f6b298629532608759845ef85a4e6670dbd",
+   "name": "Inga Ruginienė",
+   "settled_events": 202,
+   "settled_sha256": "01726ba1515aa94f77a49a8234bcb76bf456be76a35b8f0588b2c37dbce90853"
+  },
+  "90970": {
+   "events": 275,
+   "full_sha256": "21c9df54ea15354cdfcedb149774b9a8f673d59575f49cd0d4b0a4bbf8e7fad7",
+   "name": "Rimas Jonas Jankūnas",
+   "settled_events": 270,
+   "settled_sha256": "9b2e16c68c6a6275b4866bfb96333a51040acaa24bd609989b7a168800103b9f"
+  },
+  "90971": {
+   "events": 550,
+   "full_sha256": "8cd2b15deaa9e645b302052544f8220c3b50eae71174a181a3a3748f80c2be67",
+   "name": "Paulius Visockas",
+   "settled_events": 545,
+   "settled_sha256": "0e6a5a16aa9dfa483d5c4361d6afb8ed1fb19cd082c443b2b2aaf827d5f4ede2"
+  }
+ },
+ "settled_cutoff": "2026-08-20",
+ "settled_days": 7
+}
