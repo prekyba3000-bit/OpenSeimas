@@ -36,6 +36,15 @@ echo "[$(date -Is)] daily sync start"
 .venv/bin/python apply_migrations.py
 .venv/bin/python -m pipeline.ingest_seimas
 .venv/bin/python -m pipeline.ingest_votes_v2
+
+# Registrations, immediately after the votes that create the sitting day.
+# Attendance v2 counts "registered OR voted", and a sitting day enters the
+# denominator the moment its votes land. If registrations arrive later — this
+# ingest had not run for 16 days — every member who attended without voting is
+# recorded absent until they do. That understated 25 members after the
+# 2026-08-25 sitting. Order is the fix: same run, votes first, registrations
+# straight after, matview refresh only once both are in.
+.venv/bin/python -m pipeline.ingest_registrations || echo "[$(date -Is)] registrations ingest failed (non-fatal, but attendance may understate until it succeeds)"
 # Session boundaries. Cheap (one request) and the sessions page groups every
 # vote by them; session 146 opens 2026-08-25 and 145 on 2026-09-10, neither of
 # which existed in the hardcoded table this replaced.
