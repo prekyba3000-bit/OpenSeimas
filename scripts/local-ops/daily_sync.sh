@@ -63,6 +63,10 @@ echo "[$(date -Is)] daily sync start"
 
 # Official foreign travel. Evidence only — no dial reads mp_travel.
 .venv/bin/python -m pipeline.ingest_travel || echo "[$(date -Is)] travel ingest failed (non-fatal, previous rows kept)"
+
+# Assistants and secretaries. Employment relationship only — the feed's contact
+# fields are discarded at the parser and mp_assistants has no column for them.
+.venv/bin/python -m pipeline.ingest_assistants || echo "[$(date -Is)] assistants ingest failed (non-fatal, previous rows kept)"
 .venv/bin/python -m pipeline.cli tag_topics || echo "[$(date -Is)] tag_topics failed (non-fatal, same as workflow)"
 # Data-quality gate. Runs after ingestion, before anything downstream trusts
 # the data. A block_publish failure exits non-zero and the refresh job will
