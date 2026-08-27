@@ -96,7 +96,24 @@ def test_seeded_checks_all_parse(conn):
     with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
         cur.execute("SELECT check_key, sql, severity, action FROM dq_checks WHERE enabled")
         checks = cur.fetchall()
-    assert len(checks) == 10, "Wave 1 seeds exactly ten checks"
+    # Asserted by name, not by count. A frozen total fails the moment a new
+    # failure class earns a check — which is the system working, not breaking —
+    # and the cheapest way to make it green is to edit the number. Removing a
+    # check still fails here; adding one does not.
+    WAVE1 = {
+        "politicians_asmens_id_unique_not_null",
+        "active_mp_count_in_band",
+        "mp_votes_orphan_politicians",
+        "mp_votes_unique_member_per_vote",
+        "mp_votes_choice_in_domain",
+        "mp_votes_orphan_votes",
+        "legislation_project_id_unique_not_null",
+        "source_freshness",
+        "frozen_feed",
+        "three_way_reconciliation",
+    }
+    present = {c["check_key"] for c in checks}
+    assert WAVE1 <= present, f"seeded checks went missing: {WAVE1 - present}"
     unknown = []
     for ch in checks:
         r = runner.run_check(conn, dict(ch))
