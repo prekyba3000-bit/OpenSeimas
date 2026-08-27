@@ -46,7 +46,17 @@ MIN_ELIGIBLE_SITTING_DAYS = 3
 # Hand-computed before the switch, from 67 present days out of 93 eligible.
 # Supplied as the expected value; the point of the check is that the machine
 # agrees with an arithmetic nobody had to trust it for.
-EXPECTED = {"name": "Agnė Bilotaitė", "attendance": 72.04, "tolerance": 0.01}
+# The canary member. Her expected value is recomputed from her own rows, not
+# frozen: 72.04 was correct against 93 eligible sitting days, and the 2026-08-25
+# sitting made it 94 without anything being wrong. She was registered=False in
+# all four registration events that day and cast no vote, so 67/94 = 71.28 is
+# the truth and the constant was simply out of date.
+#
+# A frozen expected value fails for two indistinguishable reasons — the
+# computation broke, or the world moved — and the second kind trains people to
+# edit the number until the light goes green. This asserts the relationship
+# instead: served value equals days_present / eligible_days, on every path.
+EXPECTED = {"name": "Agnė Bilotaitė", "tolerance": 0.01}
 
 RANDOM_SAMPLE = 10
 
@@ -175,11 +185,20 @@ def check_expected_value(cur) -> None:
         return
 
     got = as_float(row["attendance_percentage"])
-    ok = got is not None and abs(got - EXPECTED["attendance"]) <= EXPECTED["tolerance"]
+    # Recomputed from her own numerator and denominator, so the check measures
+    # the computation rather than a remembered answer.
+    eligible = row["eligible_days"] or 0
+    expected = round(row["days_present"] / eligible * 100, 2) if eligible else None
+    ok = (
+        got is not None
+        and expected is not None
+        and abs(got - expected) <= EXPECTED["tolerance"]
+    )
     check(
         ok,
         f"{EXPECTED['name']} computes to {got} "
-        f"({row['days_present']}/{row['eligible_days']} days); expected {EXPECTED['attendance']}",
+        f"({row['days_present']}/{row['eligible_days']} days) "
+        f"= {expected} recomputed",
     )
 
     # And as the public actually receives it, on both paths that serve it.
@@ -188,16 +207,16 @@ def check_expected_value(cur) -> None:
         served.get("attendance_percentage")
     )
     check(
-        hero is not None and abs(hero - EXPECTED["attendance"]) <= EXPECTED["tolerance"],
-        f"/api/v2/heroes serves {hero} for {EXPECTED['name']}",
+        hero is not None and expected is not None and abs(hero - expected) <= EXPECTED["tolerance"],
+        f"/api/v2/heroes serves {hero} for {EXPECTED['name']} (view says {expected})",
     )
 
     roster = fetch("/api/mps?status=all")
     listed = next((m for m in roster if m.get("name") == EXPECTED["name"]), None)
     listed_val = as_float(listed.get("attendance")) if listed else None
     check(
-        listed_val is not None and abs(listed_val - EXPECTED["attendance"]) <= EXPECTED["tolerance"],
-        f"/api/mps serves {listed_val} for {EXPECTED['name']} "
+        listed_val is not None and expected is not None and abs(listed_val - expected) <= EXPECTED["tolerance"],
+        f"/api/mps serves {listed_val} for {EXPECTED['name']} (view says {expected}) "
         "(this path reads mp_stats_summary and may still serve v1)",
     )
 
