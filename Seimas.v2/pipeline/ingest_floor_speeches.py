@@ -175,6 +175,80 @@ def fetch_turns(posedis_id, stenograma_url):
             }
 
 
+# A closed sitting is append-only at the source, so re-reading it is wasted.
+# Sittings inside this window are always re-read anyway: a stenogram can be
+# revised shortly after the sitting, and 14 days is cheap insurance against
+# treating a provisional read as final.
+SETTLED_AFTER_DAYS = 14
+
+
+def load_sitting_state(cur):
+    """posedis_id -> (stenogram_present, turns_seen, sitting_date)."""
+    cur.execute("SELECT to_regclass('public.sitting_ingest_state') AS t")
+    row = cur.fetchone()
+    present = row[0] if not isinstance(row, dict) else row.get("t")
+    if present is None:
+        return {}
+    cur.execute(
+        "SELECT posedis_id, stenogram_present, turns_seen, sitting_date "
+        "FROM sitting_ingest_state"
+    )
+    return {r[0]: (r[1], r[2], r[3]) for r in cur.fetchall()}
+
+
+def _as_date(value):
+    """Normalise a sitting timestamp to a date.
+
+    fetch_sittings yields `pradzia` as the raw feed string ("2024-12-19 10:00"),
+    not a datetime, and comparing that to a date raises rather than returning
+    False — so an unparseable value must mean "do not skip", never "skip".
+    """
+    import datetime as _dt
+    if value is None:
+        return None
+    if isinstance(value, _dt.datetime):
+        return value.date()
+    if isinstance(value, _dt.date):
+        return value
+    try:
+        return _dt.date.fromisoformat(str(value).strip()[:10])
+    except (ValueError, TypeError):
+        return None
+
+
+def should_skip(posedis_id, sitting_dt, state, force_full):
+    """Skip only where re-reading has been observed to find nothing."""
+    if force_full:
+        return False
+    entry = state.get(str(posedis_id))
+    if not entry:
+        return False                      # never read
+    stenogram_present, turns_seen, _ = entry
+    if not stenogram_present or not turns_seen:
+        return False                      # may still gain a stenogram or turns
+    day = _as_date(sitting_dt)
+    if day is None:
+        return False                      # undated or unparseable: never skip
+    from datetime import date, timedelta
+    return day < date.today() - timedelta(days=SETTLED_AFTER_DAYS)
+
+
+def record_sitting_state(cur, posedis_id, sitting_dt, stenograma_url, turns_seen):
+    cur.execute(
+        """
+        INSERT INTO sitting_ingest_state
+            (posedis_id, sitting_date, stenogram_present, turns_seen, last_read_at)
+        VALUES (%s, %s, %s, %s, NOW())
+        ON CONFLICT (posedis_id) DO UPDATE SET
+            sitting_date = EXCLUDED.sitting_date,
+            stenogram_present = EXCLUDED.stenogram_present,
+            turns_seen = EXCLUDED.turns_seen,
+            last_read_at = NOW()
+        """,
+        (str(posedis_id), _as_date(sitting_dt), bool(stenograma_url), turns_seen),
+    )
+
+
 def build_asm_id_map(cur):
     """seimas_mp_id (str) → politicians.id (uuid str). Only active MPs."""
     cur.execute(
@@ -219,16 +293,28 @@ def _ingest():
     total_deduped = 0     # ON CONFLICT skips (attempted - inserted)
     skipped_unknown_mp = defaultdict(int)
     sittings_processed = 0
+    sittings_skipped = 0
+
+    force_full = "--full" in sys.argv
+    sitting_state = load_sitting_state(cur)
+    if force_full:
+        print("  --full: re-reading every sitting, ignoring recorded state")
 
     for ses_id, sittings in sittings_by_session.items():
         for sitting in sittings:
             posedis_id = sitting["posedis_id"]
             stenograma_url = sitting.get("stenograma_url")
+            sitting_dt = sitting.get("pradzia")
+            if should_skip(posedis_id, sitting_dt, sitting_state, force_full):
+                sittings_skipped += 1
+                continue
             try:
                 turns = list(fetch_turns(posedis_id, stenograma_url))
             except Exception as exc:
                 print(f"  FAILED sitting {posedis_id}: {exc}")
                 continue
+            record_sitting_state(cur, posedis_id, sitting_dt, stenograma_url, len(turns))
+            conn.commit()
 
             payload = []
             for t in turns:
@@ -292,7 +378,8 @@ def _ingest():
     conn.close()
     print(
         f"\nFloor-speech ingest complete.\n"
-        f"  sittings processed: {sittings_processed}\n"
+        f"  sittings processed: {sittings_processed}"
+        f" (skipped {sittings_skipped} already-settled)\n"
         f"  turn rows attempted: {total_attempted}\n"
         f"  turn rows inserted: {total_inserted}\n"
         f"  turn rows deduped (ON CONFLICT, prior runs): {total_deduped}"
@@ -303,7 +390,7 @@ def _ingest():
             f"  skipped {unknown_total} turn(s) for {len(skipped_unknown_mp)} "
             f"asm_id(s) not in active politicians — former members or replacements."
         )
-    return total_inserted
+    return total_attempted, total_inserted
 
 
 def run():
@@ -314,7 +401,23 @@ def run():
     conn = psycopg2.connect(DB_DSN)
     try:
         with record_fetch(conn, "seimas_floor_speeches", EIGA_FULL_URL) as fetch:
-            fetch["rows"] = _ingest() or 0
+            attempted, inserted = _ingest()
+            fetch["rows"] = inserted
+            # Two different numbers. What the source offered is what says
+            # whether the feed is alive; what we inserted is 0 on every healthy
+            # run once the backlog is in, and reporting that as rows_affected
+            # made frozen_feed fire on a perfectly working ingest.
+            #
+            # These assignments must stay inside the with-block: record_fetch
+            # writes the row on exit, so mutating the dict afterwards changes
+            # nothing and leaves parsed_count NULL.
+            fetch["parsed"] = attempted
+            fetch["inserted"] = inserted
+            if attempted != inserted:
+                fetch["note"] = (
+                    f"{attempted - inserted} turns already stored "
+                    "(idempotent re-run; a closed sitting is append-only at source)"
+                )
     finally:
         conn.close()
     return 0

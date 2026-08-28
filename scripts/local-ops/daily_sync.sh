@@ -62,9 +62,10 @@ echo "[$(date -Is)] daily sync start"
 .venv/bin/python -m pipeline.ingest_speeches || echo "[$(date -Is)] press-release ingest failed (non-fatal, previous rows kept)"
 
 # Floor speeches. Off the schedule for 16 days, which left visibility running on
-# data that stopped at 2026-07-14 while the chamber sat on 08-25. Walks all 177
-# sittings and dedupes almost everything (8,036 attempted, 24 inserted on the
-# catch-up run) — wasteful but idempotent, and correctness first.
+# data that stopped at 2026-07-14 while the chamber sat on 08-25. Now reads only
+# sittings it has not already read to completion — 5 of 177, ~18s instead of
+# ~10min. `--full` re-reads everything and is the way to prove the skip is
+# lossless; it currently finds nothing.
 .venv/bin/python -m pipeline.ingest_floor_speeches || echo "[$(date -Is)] floor-speech ingest failed (non-fatal, previous rows kept)"
 
 # Official foreign travel. Evidence only — no dial reads mp_travel.
