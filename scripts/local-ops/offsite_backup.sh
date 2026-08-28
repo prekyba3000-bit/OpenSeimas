@@ -98,7 +98,13 @@ echo "[$(date -Is)] offsite bundle: $(basename "$DUMP") + $CONFIG_DIR"
 # Stream tar -> gpg so the *plaintext* bundle never touches disk. The keystore
 # is already on this disk, but writing a second unencrypted copy of it into a
 # backup staging dir would be a gratuitous extra exposure.
+# recovery-card.txt is excluded: it is a transient plaintext copy of the
+# passphrase, meant to live only between generating it and storing it in a
+# password manager. offsite.env already carries the same value, so including
+# the card adds an extra plaintext copy and no recoverability.
 tar -czf - \
+      --exclude='openseimas/recovery-card.txt' \
+      --exclude='openseimas/offsite.env.old-*' \
       -C "$BACKUP_DIR" "$(basename "$DUMP")" \
       -C "$HOME/.config" "openseimas" \
   | gpg --batch --yes --symmetric --cipher-algo AES256 \
