@@ -22,9 +22,13 @@ REMOTE="${OPENSEIMAS_RCLONE_REMOTE:-gdrive}"
 RPATH="${OPENSEIMAS_RCLONE_PATH:-OpenSeimas/backups}"
 ACK="${OPS_STATE_DIR:-$HOME/.local/state/openseimas}/offsite-passphrase-stored"
 
+CARD_FILE="$CONFIG_DIR/recovery-card.txt"
+
 if [ "${1:-}" = "--stored" ]; then
   date +%s > "$ACK"
+  rm -f "$CARD_FILE"
   echo "Recorded: a second copy of the passphrase exists off this machine."
+  echo "Removed $CARD_FILE"
   echo "If that stops being true, delete $ACK"
   exit 0
 fi
@@ -33,6 +37,12 @@ fi
 # shellcheck disable=SC1090
 set -a; . "$PASS_FILE"; set +a
 
+# The passphrase is written to a 0600 file rather than stdout by default.
+# Printing a secret into a terminal is an invitation to paste it somewhere it
+# should never go — which is exactly how the first one ended up in a chat
+# transcript and had to be rotated. `--show` still exists for anyone who wants
+# it on screen, but they have to ask for it.
+render_card() {
 cat <<CARD
 
   ┌─ OpenSeimas offsite recovery card ──────────────────────────────────┐
@@ -60,3 +70,29 @@ cat <<CARD
   Once stored:   $(basename "${BASH_SOURCE[0]}") --stored
 
 CARD
+}
+
+if [ "${1:-}" = "--show" ]; then
+  render_card
+  exit 0
+fi
+
+umask 077
+render_card > "$CARD_FILE"
+chmod 600 "$CARD_FILE"
+
+cat <<MSG
+
+  Recovery card written to:
+
+      $CARD_FILE   (0600)
+
+  Open it, copy the passphrase into your password manager, then:
+
+      $(basename "${BASH_SOURCE[0]}") --stored     # records it, deletes the card
+
+  Deliberately not printed here. A secret on your screen is one keystroke from
+  a paste buffer, and that is how the previous passphrase had to be rotated.
+  Use --show if you genuinely want it on the terminal.
+
+MSG
