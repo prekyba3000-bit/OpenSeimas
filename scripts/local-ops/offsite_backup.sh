@@ -83,6 +83,16 @@ if ! rclone listremotes 2>/dev/null | grep -q "^${RCLONE_REMOTE}:"; then
   exit 0
 fi
 
+# An encrypted backup whose passphrase exists only on the machine being backed
+# up is not a backup. Nothing can verify a password manager from here, so this
+# tracks acknowledgement instead of guessing — weekly, because it is a standing
+# risk rather than news.
+ACK_FILE="${OPS_STATE_DIR:-$HOME/.local/state/openseimas}/offsite-passphrase-stored"
+if [ ! -f "$ACK_FILE" ]; then
+  OPS_NOTIFY_QUIET_SECS=604800 ops_fail_once "$JOB" "passphrase-unstored" \
+    "Backup passphrase exists only on this laptop — the archive is unreadable if this disk dies. Run scripts/local-ops/offsite_recovery_card.sh"
+fi
+
 echo "[$(date -Is)] offsite bundle: $(basename "$DUMP") + $CONFIG_DIR"
 
 # Stream tar -> gpg so the *plaintext* bundle never touches disk. The keystore
