@@ -52,3 +52,26 @@ ops_trap_fail() {
   ops_fail "$job" "exited $code (see $OPS_LOG_DIR/ops-$job.log)"
   exit "$code"
 }
+
+# A failure with a standing cause — an unconfigured remote, a missing
+# credential — is the same news every hour. Log every occurrence, but notify at
+# most once per OPS_NOTIFY_QUIET_SECS so the desktop popup still means
+# "something changed" rather than "the clock ticked".
+OPS_NOTIFY_QUIET_SECS="${OPS_NOTIFY_QUIET_SECS:-86400}"
+
+ops_fail_once() {
+  local job="$1" key="$2" message="$3"
+  local state_dir="${OPS_STATE_DIR:-$HOME/.local/state/openseimas}"
+  mkdir -p "$state_dir"
+  local stamp="$state_dir/last-notified-${job}-${key}"
+  local now last
+  now="$(date +%s)"
+  last="$( [ -f "$stamp" ] && cat "$stamp" 2>/dev/null || echo 0 )"
+
+  printf '[%s] %s: %s\n' "$(date -Is)" "$job" "$message" >> "$OPS_FAILURE_LOG"
+
+  if [ "$(( now - last ))" -ge "$OPS_NOTIFY_QUIET_SECS" ]; then
+    printf '%s' "$now" > "$stamp"
+    ops_notify critical "OpenSeimas: $job failed" "$message"
+  fi
+}

@@ -64,6 +64,25 @@ fi
 STAMP="$(date +%Y%m%d-%H%M)"
 ARCHIVE="$STAGE_DIR/openseimas-offsite-$STAMP.tar.gz.gpg"
 
+# --- preconditions ----------------------------------------------------------
+# Checked BEFORE building anything. Previously the bundle was written first and
+# the upload leg checked afterwards, so an unconfigured remote still produced a
+# 20MB encrypted archive on every run — and the local retention prune sat below
+# the failure point and never ran. 204 bundles and 3.9GB accumulated that way.
+if ! command -v rclone >/dev/null 2>&1; then
+  ops_fail_once "$JOB" "no-rclone" "rclone not installed — offsite upload cannot run. Nothing was bundled."
+  exit 0
+fi
+
+if ! rclone listremotes 2>/dev/null | grep -q "^${RCLONE_REMOTE}:"; then
+  # A standing configuration gap, not a transient fault. Exit 0 so the job is
+  # not retried hourly, and say so once a day rather than every hour. The local
+  # DB dumps in $BACKUP_DIR are unaffected and still running.
+  ops_fail_once "$JOB" "no-remote" \
+    "rclone remote '${RCLONE_REMOTE}:' not configured — no off-machine copy. Local DB dumps unaffected. Run scripts/local-ops/offsite_setup.sh"
+  exit 0
+fi
+
 echo "[$(date -Is)] offsite bundle: $(basename "$DUMP") + $CONFIG_DIR"
 
 # Stream tar -> gpg so the *plaintext* bundle never touches disk. The keystore
@@ -78,6 +97,10 @@ tar -czf - \
 chmod 600 "$ARCHIVE"
 [ -s "$ARCHIVE" ] || { ops_fail "$JOB" "encrypted archive empty: $ARCHIVE"; exit 1; }
 
+# Prune local staging here, not after the upload. Retention that lives below a
+# failure point is retention that never runs when it is most needed.
+ls -t "$STAGE_DIR"/openseimas-offsite-*.tar.gz.gpg 2>/dev/null | tail -n +5 | xargs -r rm --
+
 # Prove it decrypts before trusting it. An unverified backup is a guess.
 if ! gpg --batch --quiet --decrypt --passphrase-fd 3 3<<<"$OFFSITE_PASSPHRASE" \
         "$ARCHIVE" 2>/dev/null | tar -tzf - >/dev/null 2>&1; then
@@ -87,18 +110,6 @@ fi
 echo "[$(date -Is)] archive verified: $ARCHIVE ($(du -h "$ARCHIVE" | cut -f1))"
 
 # --- upload -----------------------------------------------------------------
-if ! command -v rclone >/dev/null 2>&1; then
-  ops_fail "$JOB" "rclone not installed — local encrypted bundle written, NOT uploaded"
-  exit 1
-fi
-
-if ! rclone listremotes 2>/dev/null | grep -q "^${RCLONE_REMOTE}:"; then
-  # Not a hard failure the first time: the bundle exists and is verified, only
-  # the upload leg is unconfigured. Still shout, because an off-machine backup
-  # that never left the machine is not an off-machine backup.
-  ops_fail "$JOB" "rclone remote '${RCLONE_REMOTE}:' not configured — bundle written locally only. See offsite_setup.sh"
-  exit 1
-fi
 
 rclone copy "$ARCHIVE" "${RCLONE_REMOTE}:${RCLONE_PATH}/" --no-traverse
 echo "[$(date -Is)] uploaded to ${RCLONE_REMOTE}:${RCLONE_PATH}/$(basename "$ARCHIVE")"
@@ -114,8 +125,7 @@ for f in "${remote_old[@]:-}"; do
   rclone delete "${RCLONE_REMOTE}:${RCLONE_PATH}/$f" && echo "  pruned remote $f"
 done
 
-# Local staging: keep newest 4 too (the 30-dump local history is the DB dumps).
-ls -t "$STAGE_DIR"/openseimas-offsite-*.tar.gz.gpg 2>/dev/null | tail -n +5 | xargs -r rm --
+
 
 remote_count=$(rclone lsf "${RCLONE_REMOTE}:${RCLONE_PATH}/" --include 'openseimas-offsite-*.tar.gz.gpg' 2>/dev/null | wc -l)
 echo "[$(date -Is)] offsite ok — remote copies: $remote_count"
