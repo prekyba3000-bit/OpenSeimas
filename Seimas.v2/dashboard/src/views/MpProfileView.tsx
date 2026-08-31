@@ -10,6 +10,7 @@ import { MpReplies } from '../components/MpReplies';
 import { DimensionDial } from '../components/DimensionDial';
 import { AttendanceTrajectoryStrip } from '../components/AttendanceTrajectory';
 import { MpActivityPanel } from '../components/MpActivityPanel';
+import { MpDiaryTimeline } from '../components/MpDiaryTimeline';
 import {
   CIVIC_DIMENSION_ORDER,
   type MpCivicDimension,
@@ -282,6 +283,8 @@ export const MpProfileLayout = ({
             <AttendanceTrajectoryStrip data={trajectory} />
 
               <MpActivityPanel data={activity} />
+
+              <MpDiaryTimeline mpId={profile.mp.id} />
 
             <MpReplies mpId={profile.mp.id} />
           </div>

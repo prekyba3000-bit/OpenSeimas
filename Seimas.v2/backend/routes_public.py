@@ -509,6 +509,58 @@ def get_mp_activity(mp_id: str, travel_limit: int = 100, press_limit: int = 100)
             }
 
 
+@router.get("/api/mps/{mp_id}/diary")
+def get_mp_diary(mp_id: str, limit: int = 50, offset: int = 0):
+    """The member's official parliamentary calendar, as a paginated timeline.
+
+    Evidence, not a metric. No total is returned and none is derivable from the
+    response: `has_more` says whether another page exists and nothing says how
+    many pages there are. Diary length tracks office and committee load — 4,024
+    events for the busiest member against 97 for the quietest — so a count
+    beside a name would be read as diligence. See
+    docs/reviews/mp-diary-design-note.md.
+
+    `location` is null on 89% of events because the feed leaves it blank. That
+    is unknown, not "no location", and the client renders it as such.
+    """
+    limit = max(1, min(limit, 200))
+    offset = max(0, offset)
+    with get_db_conn() as conn:
+        if not conn:
+            raise HTTPException(status_code=500, detail="Database connection failed")
+        with conn.cursor() as cur:
+            cur.execute("SELECT to_regclass('public.mp_diary_events') AS t")
+            if cur.fetchone()["t"] is None:
+                # Absent table means we cannot tell, which is not the same as a
+                # member with an empty calendar.
+                return {"events": None, "has_more": None}
+
+            cur.execute(
+                """
+                SELECT starts_at, ends_at, location, title
+                FROM mp_diary_events WHERE mp_id = %s::uuid
+                ORDER BY starts_at DESC, title
+                LIMIT %s OFFSET %s
+                """,
+                (mp_id, limit + 1, offset),
+            )
+            rows = cur.fetchall()
+            has_more = len(rows) > limit
+            return {
+                "events": [
+                    {
+                        "starts_at": r["starts_at"].isoformat(sep=" ", timespec="minutes"),
+                        "ends_at": r["ends_at"].isoformat(sep=" ", timespec="minutes")
+                        if r["ends_at"] else None,
+                        "location": r["location"],
+                        "title": r["title"],
+                    }
+                    for r in rows[:limit]
+                ],
+                "has_more": has_more,
+            }
+
+
 # Same floor as the aggregate figure. Invariant: the thin-data suppression rule
 # holds on every surface, and a month with one or two sitting days yields 0%,
 # 50% or 100% — noise wearing a percentage sign.
