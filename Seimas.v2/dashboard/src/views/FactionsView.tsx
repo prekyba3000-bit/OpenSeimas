@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { ltPlural } from '../utils/ltPlural';
 import { useQuery } from '@tanstack/react-query';
 import { Users, Shield, AlertTriangle, TrendingUp, ChevronRight } from 'lucide-react';
 import { motion } from 'motion/react';
@@ -139,7 +140,12 @@ const FactionsView = () => {
                   <div className="flex items-center gap-6 text-right">
                     <div>
                       <div className="text-xl font-bold text-foreground">{faction.members.length}</div>
-                      <div className="text-xs text-muted-foreground">nariai</div>
+                      {/* 19 and 11 take the genitive plural in Lithuanian and 1 the
+                          singular; a fixed „nariai" was wrong on four of the twelve
+                          faction cards. */}
+                      <div className="text-xs text-muted-foreground">
+                        {ltPlural(faction.members.length, 'narys', 'nariai', 'narių')}
+                      </div>
                     </div>
                     <div>
                       <div className="text-xl font-bold text-foreground">{formatAttendance(faction.avgAttendance)}</div>

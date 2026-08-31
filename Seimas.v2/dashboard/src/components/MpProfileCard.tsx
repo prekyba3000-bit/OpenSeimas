@@ -15,7 +15,6 @@ export default function MpProfileCard({ profile, highlightEngine }: MpProfileCar
   const [isDownloading, setIsDownloading] = useState(false);
   const flagListRef = useRef<HTMLElement>(null);
   const flags = forensicBreakdownToFlags(profile.forensicBreakdown);
-  const adjustment = profile.forensicBreakdown.totalForensicAdjustment;
 
   useEffect(() => {
     if (highlightEngine && flagListRef.current) {
@@ -23,11 +22,6 @@ export default function MpProfileCard({ profile, highlightEngine }: MpProfileCar
     }
   }, [highlightEngine]);
 
-  const pointsLabel = (points: number) => {
-    if (points > 0) return `+${points} pts`;
-    if (points < 0) return `${points} pts`;
-    return '0 pts';
-  };
 
   const handleShareCard = async () => {
     if (isDownloading) return;
@@ -94,12 +88,12 @@ export default function MpProfileCard({ profile, highlightEngine }: MpProfileCar
           <FlagList ref={flagListRef} flags={flags} highlightEngine={highlightEngine} />
         </div>
 
-        <div className="pt-3 border-t border-border space-y-2">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-foreground">Bendra forensinė korekcija</span>
-            <span className="font-bold text-foreground">{pointsLabel(adjustment)}</span>
-          </div>
-        </div>
+        {/* A „Bendra forensinė korekcija" total stood here, summing the
+            engines into a single ±N points figure beside a named member — three
+            lines above the profile's own statement that the indicators are not
+            added into one score. It was the composite, rebuilt under another
+            name. The individual findings remain, each with its methodology
+            link; only the total is gone. */}
       </Card>
     </Card>
   );

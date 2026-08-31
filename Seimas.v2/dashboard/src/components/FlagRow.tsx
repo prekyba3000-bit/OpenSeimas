@@ -31,8 +31,10 @@ const SEVERITY_BADGE: Record<
     className:
       "bg-primary/15 text-primary",
   },
+  // „Gerai" graded the member rather than describing the check. A clean
+  // result is a finding about the data, not a compliment to a person.
   none: {
-    label: "Gerai",
+    label: "Požymių nerasta",
     className:
       "bg-vote-for/15 text-vote-for",
   },
