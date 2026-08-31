@@ -41,7 +41,6 @@ import {
 import { ProblemDetailsNotice } from '../components/ProblemDetailsNotice';
 import { Button } from '../components/Button';
 import { occupancyLabel } from '../utils/mpCounts';
-import { AbsenteeismCard } from '../components/AbsenteeismCard';
 import { byAttendance, formatAttendance, hasAttendance, withAttendance } from '../utils/attendance';
 
 const EMPTY_CHRONO: ChronoResponse = { items: [], clusters: [] };
@@ -189,7 +188,7 @@ export default function SkaidrumasHubView() {
       // the count holding a mandate today, against the constitutional 141.
       `Seimo nariai (mandatą turi): ${occupancyLabel(stats ?? {})}`,
       `Balsavimai: ${stats?.historical_votes ?? '—'}`,
-      `Žemas lankomumas (<60%): ${lowAttendanceCount}`,
+      `Dalyvavimas žemiau 60 %: ${lowAttendanceCount}`,
       `Naujausias balsavimas: ${newestVote}`,
     ];
   }, [stats, mps, votes]);
@@ -332,8 +331,13 @@ export default function SkaidrumasHubView() {
         <div className="rounded-xl border border-border bg-card p-4">
           <div className="flex items-center gap-2 mb-4">
             <AlertTriangle className="w-4 h-4 text-primary" />
-            <h2 className="text-base font-semibold text-foreground">Įspėjimai</h2>
+            <h2 className="text-base font-semibold text-foreground">Lankomumas žemiau 60 %</h2>
           </div>
+            {/* LT-COPY: needs native review */}
+            <p className="text-xs text-muted-foreground mb-3">
+              Nariai, kurių dalyvavimas posėdžiuose žemiau 60 %. Tai atrankos kriterijus, o ne
+              vertinimas — kaip skaičiuojama, žr. metodikoje.
+            </p>
           <div className="space-y-2">
             {riskyMps.slice(0, 5).map((mp) => (
               <button
@@ -344,7 +348,7 @@ export default function SkaidrumasHubView() {
               >
                 <div className="text-sm font-semibold">{mp.name}</div>
                 <div className="text-xs text-muted-foreground mt-1">
-                  Žemas lankomumas: {formatAttendance(mp.attendance)} · {mp.party || 'Nežinoma frakcija'}
+                    Dalyvavimas: {formatAttendance(mp.attendance)} · {mp.party || 'Nežinoma frakcija'}
                 </div>
               </button>
             ))}
@@ -355,7 +359,8 @@ export default function SkaidrumasHubView() {
             `100 - attendance` — a composite invented locally, under a label
             that described something else entirely, presented as an index. The
             low-attendance figures it was built from are already on this page,
-            in „Įspėjimai", stated as what they are. */}
+            in the low-attendance list, stated as a criterion rather than a
+              judgement. */}
         <div className="rounded-xl border border-border bg-card p-4">
           <div className="flex items-center gap-2 mb-4">
             <Radio className="w-4 h-4 text-primary" />
@@ -387,12 +392,21 @@ export default function SkaidrumasHubView() {
         <CorrectionsAndRepliesPanel />
       </section>
 
-      {/* „Gėdos siena“ — attendance by sitting day. It was on the landing,
-          which the Phase 2 wireframe reduces to three attention zones. It is
-          not deleted: it is the same subject as the low-attendance warnings
-          directly above it, and this is where a reader who wants that
-          question comes looking. */}
-      <AbsenteeismCard />
+        {/* A „Gėdos siena" — wall of shame — stood here: the fifteen
+            lowest-attendance members, ranked #1 to #15 by name, each with a
+            euro figure for the salary they had supposedly not earned. It was
+            regenerated and committed daily.
+
+            It is the plainest thing the accumulated law forbids: a rank, about
+            named people, carrying a moral label and a derived accusation. It
+            also contradicted the platform's own published methodology, still
+            counting attendance the v1 way (a vote that day) after v2 took
+            effect on 2026-08-26 — so it showed 42.6% for a member the panel
+            above showed at 44%.
+
+            Attendance is already published per member, with its denominator,
+            its coverage note and a methodology drawer. That is the evidence.
+            The ranking was the verdict. See docs/corrections. */}
 
       {/* ── FORENSIC ENGINES ─────────────────────────────────────────── */}
 

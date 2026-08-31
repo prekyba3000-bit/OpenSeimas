@@ -60,7 +60,9 @@ export function LandingPage() {
             <span className="text-primary">visuomenei</span>
           </h1>
           <p className="text-lg text-muted-foreground max-w-lg leading-relaxed">
-            Stebėkite balsavimus, Seimo narių veiklą ir paaiškintus rizikos signalus. Kiekvienas rodiklis turi kontekstą — ne tik „balą“ be šaltinio.
+            {/* LT-COPY: needs native review */}
+            Stebėkite balsavimus ir Seimo narių veiklą. Kiekvienas rodiklis turi šaltinį ir
+            paaiškinimą, kaip jis skaičiuojamas. Bendro balo neskelbiame — jo nėra.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 pt-4">
@@ -103,8 +105,9 @@ export function LandingPage() {
               className="flex flex-col items-start p-4 rounded-xl border border-border bg-card hover:border-primary/50 transition-all group"
             >
               <ShieldCheck className="w-5 h-5 text-primary mb-2 group-hover:scale-110 transition-transform" />
-              <span className="text-sm font-semibold">Skaidrumo reitingas</span>
-              <span className="text-xs text-muted-foreground mt-1">Rizikos signalai</span>
+              {/* LT-COPY: needs native review */}
+              <span className="text-sm font-semibold">Rodikliai ir šaltiniai</span>
+              <span className="text-xs text-muted-foreground mt-1">Penki atskiri rodikliai</span>
             </button>
           </div>
 
