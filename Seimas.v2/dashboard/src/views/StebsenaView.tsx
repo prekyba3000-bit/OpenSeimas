@@ -30,8 +30,6 @@ type MpRow = MpLeaderboardRow;
 const DEFAULT_PHOTO =
   'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%231f2937" width="100" height="100"/><text x="50" y="58" text-anchor="middle" fill="%239ca3af" font-size="34">MP</text></svg>';
 
-const SKAIDRUMO_HELP_LT =
-  'Skaidrumo indeksas atitinka modelio vientisumo balą (0–100), susietą su forensinių variklių korekcijomis (forensic_breakdown.*), kai jos prieinamos. Žalia / geltona / raudona žymė priklauso nuo total_forensic_adjustment.';
 
 /**
  * A metric value, or an honest blank.
@@ -194,7 +192,6 @@ export default function StebsenaView() {
 
   /** Sort keys offered on the phone layout, where there are no column headers to tap. */
   const sortOptions: Array<{ key: SortKey; label: string }> = [
-    { key: 'rank', label: 'Vieta' },
     { key: 'name', label: 'Seimo narys' },
     { key: 'faction', label: 'Frakcija' },
     ...visibleDimensions.map((dim) => ({ key: dim as SortKey, label: CIVIC_DIMENSION_LABELS_LT[dim] })),
@@ -231,9 +228,10 @@ export default function StebsenaView() {
 
       <Card className="p-4 md:p-6 bg-muted border-border rounded-xl space-y-3">
         <p className="text-sm text-foreground/90 leading-relaxed">
-          Tai <strong className="text-foreground">ne</strong> oficialus Seimo reitingas. Rodomi laukai ateina iš
-          stebėsenos API. Tuščios arba klaidingos eilutės reiškia API triktį arba trūkstamus duomenis — žr. būseną
-          žemiau.
+            {/* LT-COPY: needs native review */}
+            Tai <strong className="text-foreground">ne</strong> reitingas. Nariai išdėstyti abėcėlės tvarka, o
+            stulpeliai yra atskiri rodikliai — jie nesudedami ir tarpusavyje nepalyginami. Tuščios eilutės
+            reiškia trūkstamus duomenis — žr. būseną žemiau.
         </p>
         {hiddenDimensions.length > 0 && (
           <p className="text-xs text-foreground/70 leading-relaxed">
@@ -306,7 +304,6 @@ export default function StebsenaView() {
                     className="w-full rounded-xl border border-border bg-card p-4 text-left"
                   >
                     <div className="flex items-center gap-3">
-                      <span className="font-bold text-primary">#{row.rank}</span>
                       <img
                         src={row.mp.photo || DEFAULT_PHOTO}
                         alt=""
@@ -343,9 +340,6 @@ export default function StebsenaView() {
               <thead>
                 <tr className="border-b border-border bg-card">
                   <th className="text-left p-4">
-                    <SortHeader label="Vieta" keyName="rank" />
-                  </th>
-                  <th className="text-left p-4">
                     <SortHeader label="Seimo narys" keyName="name" />
                   </th>
                   <th className="text-left p-4">
@@ -365,7 +359,6 @@ export default function StebsenaView() {
                     className="border-b border-border/40 bg-card hover:bg-border cursor-pointer transition-colors"
                     onClick={() => navigate(`/dashboard/mps/${row.mp.id}`)}
                   >
-                    <td className="p-4 font-bold text-primary">#{row.rank}</td>
                     <td className="p-4">
                       <div className="flex items-center gap-3">
                         <img

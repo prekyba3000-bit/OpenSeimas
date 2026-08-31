@@ -6,7 +6,7 @@
 # Idempotent by construction, so a catch-up run is safe: apply_migrations is
 # guarded, ingest_seimas upserts (its only DELETE is a scoped replace of the
 # committee rows it is about to re-insert), ingest_votes_v2 is all ON CONFLICT,
-# and export_stats overwrites one JSON file.
+# and nothing writes into the working tree.
 #
 # Reads DB_DSN from ~/.config/openseimas/prod.env — never store the DSN in-repo.
 #
@@ -85,7 +85,6 @@ echo "[$(date -Is)] daily sync start"
 # hold, leaving the last-good data served.
 .venv/bin/python scripts/dq_check_runner.py || echo "[$(date -Is)] dq checks reported a blocking failure"
 
-.venv/bin/python export_stats.py
 
 # Mirror the workflow's data commit; --no-verify skips the pre-push quality gate
 # because this push is data-only (the gate is for code pushes).
@@ -96,13 +95,10 @@ echo "[$(date -Is)] daily sync start"
 # with --no-verify — i.e. code reaching origin under a data message, with the
 # quality gate bypassed. That happened once. Passing the pathspec to commit
 # makes it ignore the rest of the index entirely.
-cd "$REPO"
-DATA_FILE="Seimas.v2/dashboard/public/data/absenteeism.json"
-if ! git diff --quiet "$DATA_FILE"; then
-  git commit -m "data: daily sync (local cron) [skip ci]" -- "$DATA_FILE"
-  git pull --rebase origin main && git push --no-verify origin main \
-    || echo "[$(date -Is)] push failed — data commit left local"
-fi
+# Nothing to commit any more. The only file this sync produced was
+# absenteeism.json — the „Gėdos siena" ranking, retired 2026-08-31 — and the
+# push existed to publish it daily. Ingested data lives in the database, not in
+# the repository, so a green sync now changes no tracked file.
 # Dead-man's switch. Pings only if a URL is configured; no account is created
 # by this repo. An unconfigured ping is silence, not a false green.
 if [ -n "${HEALTHCHECK_SYNC_URL:-}" ]; then
