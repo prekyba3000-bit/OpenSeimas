@@ -1,4 +1,5 @@
 import React from 'react';
+import { ltPlural } from '../utils/ltPlural';
 
 // The three vote choices, on the theme's own tokens. These pointed at
 // --status-success / --status-danger / --status-warning, none of which is
@@ -67,7 +68,7 @@ function LegendItem({ label, count, percentage, color }: LegendItemProps) {
             {label}
           </span>
           <span className="text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>
-            {count} balsai
+            {count} {ltPlural(count, 'balsas', 'balsai', 'balsų')}
           </span>
         </div>
       </div>

@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import { ltPlural } from '../utils/ltPlural';
 import { useNavigate } from 'react-router';
 import { Search, X } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
@@ -359,7 +360,7 @@ export function SeimasMap({
                           </div>
                           <h4 className="font-bold text-sm leading-tight">{seat.mp.name}</h4>
                           <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                            <span>{seat.mp.vote_count} balsų</span>
+                            <span>{seat.mp.vote_count} {ltPlural(seat.mp.vote_count, 'balsas', 'balsai', 'balsų')}</span>
                             <span>•</span>
                             <span>{seat.mp.attendance?.toFixed(0) ?? '—'}% dalyvavimas</span>
                           </div>
@@ -398,7 +399,7 @@ export function SeimasMap({
                   {revealedMp.party || 'Nepriklausomas (-a)'}
                 </p>
                 <p className="mt-0.5 text-xs text-muted-foreground">
-                  {revealedMp.vote_count} balsų
+                  {revealedMp.vote_count} {ltPlural(revealedMp.vote_count, 'balsas', 'balsai', 'balsų')}
                   {typeof revealedMp.attendance === 'number'
                     ? ` · ${revealedMp.attendance.toFixed(0)}% dalyvavimas`
                     : ''}
