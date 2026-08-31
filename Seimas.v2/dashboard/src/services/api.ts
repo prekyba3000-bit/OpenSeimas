@@ -320,6 +320,28 @@ export const mpActivitySchema = z.object({
 
 export type MpActivity = z.infer<typeof mpActivitySchema>;
 
+
+// Wire contract. No total, deliberately: `has_more` says another page exists
+// and nothing says how many. A count of diary events measures office, not
+// effort, so the API declines to make one available.
+export const mpDiarySchema = z.object({
+  // null = the table is absent here (we cannot tell); [] = this member's
+  // calendar is genuinely empty. Rendered differently.
+  events: z
+    .array(
+      z.object({
+        starts_at: z.string(),
+        ends_at: z.string().nullable(),
+        location: z.string().nullable(),
+        title: z.string(),
+      }),
+    )
+    .nullable(),
+  has_more: z.boolean().nullable(),
+});
+
+export type MpDiary = z.infer<typeof mpDiarySchema>;
+
 const mpLeaderboardRawSchema = z.array(mpProfileSchema);
 const mpSearchResponseRawSchema = z.object({
   query: z.string(),
@@ -768,6 +790,12 @@ export const api = {
 
   getVotes: (limit = 50, offset = 0) =>
     request<VoteSummary[]>(`/votes?limit=${limit}&offset=${offset}`),
+
+  getMpDiary: (id: string, limit = 50, offset = 0, options?: RequestOptions<MpDiary>) =>
+    request<MpDiary>(`/mps/${id}/diary?limit=${limit}&offset=${offset}`, {
+      ...options,
+      parse: (data) => mpDiarySchema.parse(data),
+    }),
 
   getMpActivity: (id: string, options?: RequestOptions<MpActivity>) =>
     request<MpActivity>(`/mps/${id}/activity`, {
