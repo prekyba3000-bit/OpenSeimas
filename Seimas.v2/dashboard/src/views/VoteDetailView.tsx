@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { ltPlural } from '../utils/ltPlural';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, ExternalLink, ThumbsUp, ThumbsDown, Minus, UserX, Search, PieChart, Calendar, AlertTriangle, BarChart3 } from 'lucide-react';
 import { motion } from 'motion/react';
@@ -141,7 +142,7 @@ const VoteDetailView = ({ voteId }: { voteId: string }) => {
                     )}
                     {showTallies && (
                         <span className="flex items-center gap-2 px-3 py-1 rounded-full bg-muted">
-                            <PieChart className="w-4 h-4" /> {totalVotes} balsų
+                            <PieChart className="w-4 h-4" /> {totalVotes} {ltPlural(totalVotes, 'balsas', 'balsai', 'balsų')}
                         </span>
                     )}
                 </div>

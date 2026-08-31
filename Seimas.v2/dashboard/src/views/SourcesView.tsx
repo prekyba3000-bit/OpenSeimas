@@ -4,9 +4,17 @@ import { Database, ArrowLeft } from 'lucide-react';
 import { Card } from '../components/Card';
 
 const SOURCES = [
-  { name: 'Lietuvos Respublikos Seimas (LRS)', detail: 'Balsavimai, posėdžiai, parlamentinė informacija — per sinchronizavimo sluoksnį.' },
+  // Listed as what is actually ingested today. The previous entry claimed
+  // „deklaracijos" from VRK/VMI; no declaration data exists in the database.
+  // VTEK's register is reachable only through a reCAPTCHA-gated search and its
+  // open data is monthly counts, so a sources page promising declarations was
+  // telling readers we hold something we do not. See
+  // docs/reviews/declarations-feasibility.md.
+  // LT-COPY: needs native review
+  { name: 'Lietuvos Respublikos Seimas (LRS)', detail: 'Balsavimai, posėdžiai, registracijos, sesijų ribos — per sinchronizavimo sluoksnį (p2b, CC BY 4.0).' },
+  { name: 'LRS — Seimo narių veikla', detail: 'Darbotvarkės, komandiruotės, pranešimai žiniasklaidai, pasisakymai posėdžiuose, padėjėjai. Padėjėjų kontaktų nerenkame.' },
   { name: 'data.gov.lt', detail: 'Vieši duomenų rinkiniai, kai integruoti į projekto pipeline.' },
-  { name: 'VRK / VMI / registrai', detail: 'Kandidatūros, deklaracijos ir susiję vieši duomenys — pagal prieinamumą.' },
+  { name: 'Turto ir interesų deklaracijos', detail: 'Kol kas nerenkame. VTEK privačių interesų registro paieška apsaugota nuo automatinio nuskaitymo, o atviri duomenys yra tik mėnesio suvestinės — todėl deklaracijų portale nerodome.' },
   { name: 'Projekto PostgreSQL duomenų bazė', detail: 'Agreguoti ir analizuoti įrašai; atnaujinimo laikas priklauso nuo sinchronizacijos.' },
 ];
 

@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { ltPlural } from '../utils/ltPlural';
 import { useQuery } from '@tanstack/react-query';
 import { Calendar, ChevronRight, AlertTriangle, Vote, Clock, BarChart3 } from 'lucide-react';
 import { motion } from 'motion/react';
@@ -192,6 +193,8 @@ const SessionsView = () => {
           const isExpanded = expandedSession === session.id;
           const isCurrent = session.status === 'sitting';
           const dates = Object.keys(data?.byDate ?? {}).sort().reverse();
+          // The LRS feed lists a session before it opens.
+          const hasStarted = session.date_from <= new Date().toISOString().slice(0, 10);
 
           return (
             <Card
@@ -228,14 +231,30 @@ const SessionsView = () => {
                   </div>
                 </div>
                 <div className="flex items-center gap-6">
-                  <div className="text-right">
-                    <div className="text-lg font-bold text-foreground">{data?.votes.length ?? 0}</div>
-                    <div className="text-xs text-muted-foreground">balsavimų</div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-lg font-bold text-foreground">{dates.length}</div>
-                    <div className="text-xs text-muted-foreground">posėdžių dienų</div>
-                  </div>
+                  {/* A session that has not begun has no votes yet, which is not the
+                      same as one that met and decided nothing. Zero beside a future
+                      date reads as the second. */}
+                  {hasStarted ? (
+                    <>
+                      <div className="text-right">
+                        <div className="text-lg font-bold text-foreground">{data?.votes.length ?? 0}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {ltPlural(data?.votes.length ?? 0, 'balsavimas', 'balsavimai', 'balsavimų')}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-lg font-bold text-foreground">{dates.length}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {ltPlural(dates.length, 'posėdžio diena', 'posėdžių dienos', 'posėdžių dienų')}
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    /* LT-COPY: needs native review */
+                    <div className="text-right text-xs text-muted-foreground max-w-[9rem]">
+                      Sesija dar neprasidėjo
+                    </div>
+                  )}
                   <ChevronRight className={cn(
                     'w-5 h-5 text-muted-foreground transition-transform',
                     isExpanded && 'rotate-90',
