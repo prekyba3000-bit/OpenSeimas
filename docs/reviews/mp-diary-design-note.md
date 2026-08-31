@@ -81,3 +81,53 @@ Build it as a paginated, per-member evidence timeline with no aggregate number
 anywhere, after measuring point 4. Do not ingest until the freshness question
 is answered, because a diary that is silently rewritten upstream is a
 correctness problem we would discover from a reader rather than a test.
+
+---
+
+## Freshness answered (2026-08-31)
+
+The note above held the ingest on one question: are settled entries rewritten
+upstream? Baseline 2026-08-27, compared 2026-08-31.
+
+**Answer: rarely, but not never. 3 of 140 members in four days.**
+
+| | |
+| --- | ---: |
+| settled past rewritten | **3** |
+| grew (new events only) | 40 |
+| unchanged | 97 |
+| unreadable | 0 |
+
+In all three the settled count *rose* — 673→674, 720→721, 545→547 — so the feed
+**adds past-dated entries late** rather than editing existing ones. An
+insert-once ingest would miss them permanently and never notice.
+
+### The first answer was wrong, and the error is the more useful finding
+
+The first comparison reported **38** rewritten. It was an artifact of my own
+measurement: the settled window is defined as "ended more than 7 days ago", so
+its cutoff moves with the calendar. The baseline hashed events before
+2026-08-20; the comparison run hashed events before 2026-08-24. Events in that
+four-day band became settled between the runs, changed the hash, and were
+counted as rewriting.
+
+Comparing now pins the cutoff to the baseline's, so both sides describe the same
+events. 38 → 3.
+
+Worth keeping, because the failure was silent and confident: a moving definition
+compared against a fixed snapshot manufactures change out of nothing but elapsed
+time. The tool reported a clean, plausible, badly wrong number, and the only
+reason it was caught is that the direction looked odd — settled counts should
+not rise for 27% of members in four days.
+
+### What this means for the ingest
+
+Re-fetch and reconcile, not insert-once — but cheaply. ~2% of members per four
+days gain a late past-dated entry, so the volume is small. The sitting-state
+pattern from the floor-speech ingest applies directly: track what was read,
+re-read a bounded recent window plus anything whose fingerprint moved, and skip
+the rest.
+
+The design decision in the note above is unchanged and unaffected: the diary is
+an evidence timeline, never a count, whatever its freshness behaviour turns out
+to be.

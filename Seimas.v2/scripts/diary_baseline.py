@@ -75,8 +75,17 @@ def settled(events, cutoff: datetime.date):
     return keep
 
 
-def collect(members):
-    cutoff = datetime.date.today() - datetime.timedelta(days=SETTLED_DAYS)
+def collect(members, cutoff=None):
+    """Read every diary and hash it.
+
+    `cutoff` must be supplied when comparing against a baseline: the settled
+    window moves with the calendar, so hashing today's events at today's cutoff
+    and comparing to a baseline hashed at an older one compares two different
+    sets of events. Every diary would then look rewritten simply because time
+    passed — which is exactly what the first comparison run reported.
+    """
+    if cutoff is None:
+        cutoff = datetime.date.today() - datetime.timedelta(days=SETTLED_DAYS)
     rows = {}
     for i, m in enumerate(members):
         mp = str(m["seimas_mp_id"])
@@ -146,6 +155,12 @@ def main():
     if not dsn:
         print("ERROR: DB_DSN not set", file=sys.stderr)
         return 2
+    # Validated before the 140 fetches, not after. The first comparison run
+    # spent four minutes reading every diary and then died on a missing file,
+    # which is a waste of our time and of lrs.lt's.
+    if args.compare and not os.path.exists(args.compare):
+        print(f"ERROR: baseline not found: {args.compare}", file=sys.stderr)
+        return 2
     conn = psycopg2.connect(dsn)
     conn.set_session(readonly=True)
     with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
@@ -154,16 +169,26 @@ def main():
         members = cur.fetchall()
     conn.close()
 
+    baseline = None
+    compare_cutoff = None
+    if args.compare:
+        with open(args.compare, encoding="utf-8") as fh:
+            baseline = json.load(fh)
+        # Hash today's events against the cutoff the baseline used, so the two
+        # sides describe the same window.
+        compare_cutoff = datetime.date.fromisoformat(baseline["settled_cutoff"])
+        print(f"  comparing at the baseline's cutoff {compare_cutoff} "
+              f"(not today's), so both sides cover the same events")
+
     print(f"  reading diaries for {len(members)} active members…")
-    snapshot = collect(members)
+    snapshot = collect(members, compare_cutoff)
     ok = [r for r in snapshot["members"].values() if "error" not in r]
     print(f"  read {len(ok)}/{len(members)}; "
           f"{sum(r['events'] for r in ok)} events, "
           f"{sum(r['settled_events'] for r in ok)} settled")
 
     if args.compare:
-        with open(args.compare, encoding="utf-8") as fh:
-            return compare(json.load(fh), snapshot)
+        return compare(baseline, snapshot)
 
     out = args.out or ("docs/reviews/diary-baseline-"
                        f"{datetime.date.today().isoformat()}.json")
