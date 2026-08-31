@@ -74,6 +74,11 @@ echo "[$(date -Is)] daily sync start"
 # Assistants and secretaries. Employment relationship only — the feed's contact
 # fields are discarded at the parser and mp_assistants has no column for them.
 .venv/bin/python -m pipeline.ingest_assistants || echo "[$(date -Is)] assistants ingest failed (non-fatal, previous rows kept)"
+
+# Diary events. Re-reads every diary and upserts: the feed adds past-dated
+# entries late, so insert-once would miss them. Write work is skipped for the
+# ~140 diaries whose fingerprint is unchanged, which is the usual case.
+.venv/bin/python -m pipeline.ingest_diary || echo "[$(date -Is)] diary ingest failed (non-fatal, previous rows kept)"
 .venv/bin/python -m pipeline.cli tag_topics || echo "[$(date -Is)] tag_topics failed (non-fatal, same as workflow)"
 # Data-quality gate. Runs after ingestion, before anything downstream trusts
 # the data. A block_publish failure exits non-zero and the refresh job will
