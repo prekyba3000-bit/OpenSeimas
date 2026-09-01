@@ -23,7 +23,7 @@ export function forensicBreakdownToFlags(bd: ForensicBreakdown): ForensicFlag[] 
   const loyalty: ForensicFlag = {
     engine: "loyalty",
     status: bd.loyaltyBonus.status,
-    title: "Partijos lojalumas",
+    title: "Sutapimas su frakcija",
     description: bd.loyaltyBonus.explanation,
     severity: forensicSeverityFromStatus(bd.loyaltyBonus.status),
     penalty: bd.loyaltyBonus.bonus,

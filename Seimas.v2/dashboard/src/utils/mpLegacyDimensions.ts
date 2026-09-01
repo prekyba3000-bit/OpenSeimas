@@ -26,7 +26,10 @@ export type MpCivicDimension =
 
 export const CIVIC_DIMENSION_LABELS_LT: Record<MpCivicDimension, string> = {
   attendance: "Dalyvavimas",
-  partyLoyalty: "Partijos lojalumas",
+  // The key stays `partyLoyalty`; the label does not. „Lojalumas" asserts the
+  // one thing the drawer beneath it spends a paragraph denying — that this
+  // measures fidelity. It measures how often two choices matched.
+  partyLoyalty: "Sutapimas su frakcija",
   experience: "Patirtis ir aktyvumas",
   // LT-COPY: needs native review
   legislativeActivity: "Inicijuoti ar prisidėta prie projektų",
