@@ -58,7 +58,13 @@ function MoreNote({ show }: { show: boolean }) {
 export function MpActivityPanel({ data }: { data: MpActivity | null | undefined }) {
   if (!data) return null;
 
-  const { travel, press_releases: press, travel_has_more: travelMore, press_has_more: pressMore } = data;
+  const {
+    travel,
+    press_releases: press,
+    travel_has_more: travelMore,
+    press_has_more: pressMore,
+    staff,
+  } = data;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -137,6 +143,41 @@ export function MpActivityPanel({ data }: { data: MpActivity | null | undefined 
           </ul>
         )}
         <MoreNote show={pressMore} />
+      </section>
+      <section
+        className="rounded-xl border border-border bg-card p-5 lg:col-span-2"
+        aria-label="Padėjėjai ir sekretoriai"
+      >
+        {/* LT-COPY: needs native review */}
+        <h3 className="text-base font-semibold text-foreground">Padėjėjai ir sekretoriai</h3>
+        <p className="text-sm text-muted-foreground mt-1">
+          Kas dirba nario komandoje. Kontaktų nerenkame ir neskelbiame — padėjėjai
+          yra darbuotojai, o ne renkami politikai.
+        </p>
+
+        {staff === null ? (
+          <p className="mt-4 text-sm text-muted-foreground">Duomenų nėra.</p>
+        ) : staff.length === 0 ? (
+          <p className="mt-4 text-sm text-muted-foreground">Padėjėjų neužfiksuota.</p>
+        ) : (
+          <ul className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
+            {staff.map((person) => (
+              <li
+                key={`${person.last_name}-${person.first_name}`}
+                className="text-sm text-foreground flex items-baseline gap-2"
+              >
+                <span>
+                  {person.first_name} {person.last_name}
+                </span>
+                {/* null means the source did not say, which is not "not in the
+                    constituency". Only an explicit yes is labelled. */}
+                {person.in_constituency === true && (
+                  <span className="text-xs text-muted-foreground">apygardoje</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
     </div>
   );
