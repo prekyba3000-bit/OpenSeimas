@@ -354,6 +354,32 @@ export const mpDiarySchema = z.object({
 
 export type MpDiary = z.infer<typeof mpDiarySchema>;
 
+
+// Wire contract for the votes behind the faction-alignment figure.
+export const factionAlignmentSchema = z.object({
+  // null below the comparable-vote floor: a percentage from a handful of votes
+  // is noise wearing a decimal point.
+  alignment_pct: z.number().nullable(),
+  comparable_votes: z.number(),
+  aligned_votes: z.number(),
+  votes: z.array(
+    z.object({
+      vote_id: z.number(),
+      date: z.string(),
+      title: z.string(),
+      choice: z.string(),
+      faction_position: z.string(),
+      faction_voters: z.number(),
+      // The choices matched. Not "was loyal": voting differently from one's
+      // faction is a normal act, and we do not have the reasons.
+      agreed: z.boolean(),
+    }),
+  ),
+  has_more: z.boolean(),
+});
+
+export type FactionAlignment = z.infer<typeof factionAlignmentSchema>;
+
 const mpLeaderboardRawSchema = z.array(mpProfileSchema);
 const mpSearchResponseRawSchema = z.object({
   query: z.string(),
@@ -808,6 +834,18 @@ export const api = {
       ...options,
       parse: (data) => mpDiarySchema.parse(data),
     }),
+
+  getMpFactionAlignment: (
+    id: string,
+    only: 'all' | 'diverged' | 'agreed' = 'diverged',
+    limit = 25,
+    offset = 0,
+    options?: RequestOptions<FactionAlignment>,
+  ) =>
+    request<FactionAlignment>(
+      `/mps/${id}/faction-alignment?only=${only}&limit=${limit}&offset=${offset}`,
+      { ...options, parse: (data) => factionAlignmentSchema.parse(data) },
+    ),
 
   getMpActivity: (id: string, options?: RequestOptions<MpActivity>) =>
     request<MpActivity>(`/mps/${id}/activity`, {

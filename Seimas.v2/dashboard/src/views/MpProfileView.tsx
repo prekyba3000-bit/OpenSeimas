@@ -11,6 +11,7 @@ import { DimensionDial } from '../components/DimensionDial';
 import { AttendanceTrajectoryStrip } from '../components/AttendanceTrajectory';
 import { MpActivityPanel } from '../components/MpActivityPanel';
 import { MpDiaryTimeline } from '../components/MpDiaryTimeline';
+import { MpFactionAlignment } from '../components/MpFactionAlignment';
 import {
   CIVIC_DIMENSION_ORDER,
   type MpCivicDimension,
@@ -281,6 +282,8 @@ export const MpProfileLayout = ({
             </section>
 
             <AttendanceTrajectoryStrip data={trajectory} />
+
+              <MpFactionAlignment mpId={profile.mp.id} />
 
               <MpActivityPanel data={activity} />
 
