@@ -96,7 +96,7 @@ export function MethodologyView() {
 
         <section>
           <h2 id="partijos-lojalumas" className="text-lg font-semibold mb-2">
-            Partijos lojalumas
+            Sutapimas su frakcija (anksčiau „Partijos lojalumas")
           </h2>
           <p className="text-muted-foreground text-sm leading-relaxed">
             Frakcijos linijos atžvilgiu matuojame nepriklausomo balsavimo dalį per laiką — tai kontekstinis rodiklis,

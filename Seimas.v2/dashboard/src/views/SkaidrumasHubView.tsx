@@ -608,10 +608,18 @@ export default function SkaidrumasHubView() {
         <div className="flex items-center gap-2 mb-4">
           <GitBranch className="w-4 h-4 text-sky-400" />
           <h2 className="text-base font-semibold text-foreground">
-            03 · Frakcijos lojalumas
+            03 · Sutapimas su frakcija
           </h2>
-          <span className="ml-auto text-xs text-muted-foreground">Lojalumo grafas</span>
+          <span className="ml-auto text-xs text-muted-foreground">Kaip dažnai sutapo</span>
         </div>
+
+          {/* LT-COPY: needs native review */}
+          <p className="text-xs text-muted-foreground mb-3 max-w-prose">
+            Kiek kartų nario pasirinkimas sutapo su daugumos jo frakcijos pasirinkimu.
+            Tai nėra ištikimybės ar principingumo matas: mažesnis skaičius nereiškia
+            nei blogiau, nei geriau — tik tai, kad narys dažniau balsavo kitaip nei
+            jo frakcija. Priežasčių mes nežinome.
+          </p>
 
         {(loyalty?.alignment?.length ?? 0) > 0 ? (
           <div className="space-y-2 max-h-72 overflow-y-auto">
