@@ -586,6 +586,115 @@ def get_mp_diary(mp_id: str, limit: int = 50, offset: int = 0):
             }
 
 
+# A faction position needs a faction. Same floor as the rebuilt
+# faction_alignment view: below ten members voting, „the faction's position" is
+# one or two people, and comparing someone to it says nothing.
+MIN_FACTION_VOTERS = 10
+
+_FACTION_ALIGNMENT_SQL = """
+WITH countable AS (
+    SELECT mv.politician_id, mv.vote_id, p.current_party,
+           lower(mv.vote_choice) AS choice
+    FROM mp_votes mv
+    JOIN politicians p ON p.id = mv.politician_id
+    WHERE mv.vote_choice IS NOT NULL
+      AND lower(mv.vote_choice) IN ('už','uz','prieš','pries','susilaikė','susilaike')
+      AND p.current_party IS NOT NULL
+),
+mine AS (
+    SELECT vote_id, current_party, choice
+    FROM countable WHERE politician_id = %(mp)s::uuid
+),
+pos AS (
+    SELECT c.vote_id,
+           count(*) AS voters,
+           mode() WITHIN GROUP (ORDER BY c.choice) AS position
+    FROM countable c
+    JOIN mine m ON m.vote_id = c.vote_id AND c.current_party = m.current_party
+    GROUP BY c.vote_id
+)
+SELECT v.seimas_vote_id, v.sitting_date, v.title,
+       m.choice, pos.position, pos.voters,
+       (m.choice = pos.position) AS agreed
+FROM mine m
+JOIN pos ON pos.vote_id = m.vote_id
+JOIN votes v ON v.seimas_vote_id = m.vote_id
+WHERE pos.voters >= %(floor)s
+"""
+
+
+@router.get("/api/mps/{mp_id}/faction-alignment")
+def get_mp_faction_alignment(mp_id: str, limit: int = 25, offset: int = 0,
+                             only: str = "all"):
+    """The votes behind a member's faction-alignment figure.
+
+    A percentage nobody can open is an assertion. This returns the individual
+    votes it is made of: what the member chose, what the majority of their
+    faction chose on that same vote, and whether the two matched.
+
+    Deliberately neutral. `agreed` says the choices matched, not that the member
+    was loyal — voting differently from one's faction is a normal act with many
+    reasons, and the platform does not have the reasons. The methodology drawer
+    says as much on the surface.
+
+    Votes where fewer than ten of the member's faction voted are excluded
+    entirely rather than scored, because there is no majority to compare against.
+    """
+    limit = max(1, min(limit, 100))
+    offset = max(0, offset)
+    only = only if only in ("all", "diverged", "agreed") else "all"
+
+    with get_db_conn() as conn:
+        if not conn:
+            raise HTTPException(status_code=500, detail="Database connection failed")
+        with conn.cursor() as cur:
+            params = {"mp": mp_id, "floor": MIN_FACTION_VOTERS}
+
+            cur.execute(
+                f"SELECT count(*) AS n, count(*) FILTER (WHERE agreed) AS agreed "
+                f"FROM ({_FACTION_ALIGNMENT_SQL}) t", params)
+            totals = cur.fetchone()
+            comparable = totals["n"] or 0
+            agreed_total = totals["agreed"] or 0
+
+            where = ""
+            if only == "diverged":
+                where = "WHERE NOT agreed"
+            elif only == "agreed":
+                where = "WHERE agreed"
+
+            cur.execute(
+                f"SELECT * FROM ({_FACTION_ALIGNMENT_SQL}) t {where} "
+                f"ORDER BY sitting_date DESC, seimas_vote_id DESC LIMIT %(limit)s OFFSET %(offset)s",
+                {**params, "limit": limit + 1, "offset": offset})
+            rows = cur.fetchall()
+            has_more = len(rows) > limit
+
+            return {
+                # Below 20 comparable votes a percentage is noise wearing a
+                # decimal point — the same floor the view applies.
+                "alignment_pct": (
+                    round(agreed_total / comparable * 100, 2)
+                    if comparable >= 20 else None
+                ),
+                "comparable_votes": comparable,
+                "aligned_votes": agreed_total,
+                "votes": [
+                    {
+                        "vote_id": r["seimas_vote_id"],
+                        "date": str(r["sitting_date"]),
+                        "title": r["title"],
+                        "choice": r["choice"],
+                        "faction_position": r["position"],
+                        "faction_voters": r["voters"],
+                        "agreed": r["agreed"],
+                    }
+                    for r in rows[:limit]
+                ],
+                "has_more": has_more,
+            }
+
+
 # Same floor as the aggregate figure. Invariant: the thin-data suppression rule
 # holds on every surface, and a month with one or two sitting days yields 0%,
 # 50% or 100% — noise wearing a percentage sign.
