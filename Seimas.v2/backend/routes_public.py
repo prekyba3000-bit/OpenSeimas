@@ -496,6 +496,30 @@ def get_mp_activity(mp_id: str, travel_limit: int = 100, press_limit: int = 100)
                 for r in cur.fetchall()
             ]
 
+            # Staff: the employment relationship only. mp_assistants has no
+            # contact column by design — the feed's phone numbers and addresses
+            # are discarded at the parser, so there is nothing here to withhold.
+            cur.execute("SELECT to_regclass('public.mp_assistants') AS t")
+            has_staff = cur.fetchone()["t"] is not None
+            staff = None
+            if has_staff:
+                cur.execute(
+                    """
+                    SELECT first_name, last_name, in_constituency
+                    FROM mp_assistants WHERE mp_id = %s::uuid
+                    ORDER BY last_name, first_name
+                    """,
+                    (mp_id,),
+                )
+                staff = [
+                    {
+                        "first_name": r["first_name"],
+                        "last_name": r["last_name"],
+                        "in_constituency": r["in_constituency"],
+                    }
+                    for r in cur.fetchall()
+                ]
+
             travel_more = len(travel) > travel_limit
             press_more = len(press) > press_limit
             return {
@@ -506,6 +530,7 @@ def get_mp_activity(mp_id: str, travel_limit: int = 100, press_limit: int = 100)
                 "travel_has_more": travel_more if has_travel else None,
                 "press_releases": press[:press_limit],
                 "press_has_more": press_more,
+                "staff": staff,
             }
 
 

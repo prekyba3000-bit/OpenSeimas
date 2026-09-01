@@ -316,6 +316,18 @@ export const mpActivitySchema = z.object({
     }),
   ),
   press_has_more: z.boolean(),
+  // Names and whether the post is in the constituency office. No contact
+  // field exists to declare: mp_assistants has no column for one, because
+  // the feed's phone numbers and addresses are dropped at the parser.
+  staff: z
+    .array(
+      z.object({
+        first_name: z.string(),
+        last_name: z.string(),
+        in_constituency: z.boolean().nullable(),
+      }),
+    )
+    .nullable(),
 });
 
 export type MpActivity = z.infer<typeof mpActivitySchema>;
