@@ -1,5 +1,4 @@
 import React from 'react';
-import { DIMENSION_UNAVAILABLE_LT } from '../utils/mpLegacyDimensions';
 import { useQueries } from '@tanstack/react-query';
 import { useNavigate, NavLink } from 'react-router';
 import {
@@ -635,16 +634,31 @@ export default function SkaidrumasHubView() {
                     <span className="text-xs text-muted-foreground ml-2">{mp.party}</span>
                   </div>
                   <span className="text-sm font-mono text-foreground shrink-0">
-                    {mp.alignment_pct === null
-                      ? DIMENSION_UNAVAILABLE_LT
-                      : `${mp.alignment_pct}%`}
+                    {/* An em dash, not the generic „source data not loaded" string: the
+                        reason sits on the line below and stating two different causes
+                        for the same absence is worse than stating none. */}
+                    {mp.alignment_pct === null ? "—" : `${mp.alignment_pct}%`}
                   </span>
-                </div>
-                {/* LT-COPY: needs native review */}
-                <div className="text-xs text-muted-foreground mt-1">
-                  {mp.aligned_votes} iš {mp.comparable_votes} balsavimų, kuriuose
-                  frakcijos pozicija nustatyta · {mp.sitting_days} posėdžių dienų
-                </div>
+                  </div>
+                  {/* LT-COPY: needs native review */}
+                  {/* The reason travels with the row. A generic „source data not
+                      loaded" was shown for members whose data is entirely present and
+                      whose faction is simply too small to have a position — the right
+                      answer to the wrong question. And 0 of 0 is not a count. */}
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {mp.comparable_votes > 0 ? (
+                      <>
+                        {mp.aligned_votes} iš {mp.comparable_votes} balsavimų, kuriuose
+                        frakcijos pozicija nustatyta
+                      </>
+                    ) : mp.suppression_reason === 'faction_too_small' ? (
+                      <>Frakcija per maža, kad būtų galima nustatyti jos poziciją.</>
+                    ) : mp.suppression_reason === 'no_faction' ? (
+                      <>Narys nepriklauso frakcijai.</>
+                    ) : (
+                      <>Palyginamų balsavimų nepakanka.</>
+                    )}
+                  </div>
               </button>
             ))}
           </div>
