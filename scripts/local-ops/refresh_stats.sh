@@ -89,6 +89,15 @@ with conn.cursor() as cur:
         _t = datetime.datetime.now(datetime.timezone.utc)
         cur.execute("REFRESH MATERIALIZED VIEW CONCURRENTLY mp_attendance_v2;")
         refreshed(cur, "mp_attendance_v2", _t)
+
+    # faction_alignment was created WITH NO DATA and populated by hand once the
+    # surface showing the votes behind each figure existed. From here it keeps
+    # up with the votes like any other view.
+    cur.execute("SELECT to_regclass('public.faction_alignment')")
+    if cur.fetchone()[0]:
+        _t = datetime.datetime.now(datetime.timezone.utc)
+        cur.execute("REFRESH MATERIALIZED VIEW CONCURRENTLY faction_alignment;")
+        refreshed(cur, "faction_alignment", _t)
 conn.close()
 print(f"[{datetime.datetime.now().isoformat()}] views refreshed")
 EOF

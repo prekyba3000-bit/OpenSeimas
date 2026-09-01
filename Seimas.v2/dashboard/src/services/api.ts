@@ -543,8 +543,17 @@ export interface LoyaltyMp {
   aligned_votes: number;
   comparable_votes: number;
   alignment_pct: number | null;
-  sitting_days: number;
-  daily: LoyaltyDay[];
+  /**
+   * Why a percentage is absent, so the surface can name the cause rather
+   * than showing a generic „source data not loaded" for a member whose
+   * data is complete and whose faction is simply too small to have a
+   * position.
+   */
+  suppression_reason:
+    | 'faction_too_small'
+    | 'no_faction'
+    | 'too_few_comparable_votes'
+    | null;
 }
 
 export interface LoyaltyResponse {
