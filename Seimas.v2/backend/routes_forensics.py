@@ -3,6 +3,7 @@ from fastapi import APIRouter, HTTPException
 import datetime
 from typing import List, Dict, Optional, Any
 
+import psycopg2
 from psycopg2.extras import RealDictCursor
 from collections import defaultdict
 
@@ -184,60 +185,52 @@ def get_loyalty_graph():
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             has_matview = _table_exists(cur, "faction_alignment")
 
+            rows = []
             if has_matview:
-                cur.execute("""
-                    SELECT mp_id::text, display_name, current_party, sitting_date,
-                           alignment_pct, aligned_votes, votes_on_day
-                    FROM faction_alignment
-                    ORDER BY display_name ASC, sitting_date ASC
-                """)
-                rows = cur.fetchall()
-            else:
-                rows = []
+                try:
+                    cur.execute("""
+                        SELECT mp_id::text, display_name, current_party,
+                               comparable_votes, aligned_votes, alignment_pct,
+                               suppression_reason
+                        FROM faction_alignment
+                        ORDER BY display_name ASC
+                    """)
+                    rows = cur.fetchall()
+                except psycopg2.errors.ObjectNotInPrerequisiteState:
+                    # The view exists but has never been refreshed. Postgres
+                    # raises rather than returning nothing, and an unpopulated
+                    # view is "we have not computed this yet" — an empty result,
+                    # not a failure that should blank the hub.
+                    conn.rollback()
+                except psycopg2.errors.UndefinedColumn:
+                    # Older shape (one row per sitting day) still materialised.
+                    conn.rollback()
 
-            mp_data: dict = defaultdict(
-                lambda: {"name": "", "party": "", "daily": []}
-            )
-            for r in rows:
-                mp_id = r["mp_id"]
-                mp_data[mp_id]["name"] = r["display_name"]
-                mp_data[mp_id]["party"] = r["current_party"]
-                mp_data[mp_id]["daily"].append({
-                    "date": str(r["sitting_date"]),
+            # One row per member now. The view sums the counts itself, so
+            # nothing here averages percentages: a sitting day carries between
+            # 1 and 124 votes, and a mean of daily percentages weighed a
+            # one-vote day as heavily as a hundred-vote one — up to 4.1 points
+            # apart in this data.
+            alignment_summary = [
+                {
+                    "mp_id": r["mp_id"],
+                    "name": r["display_name"],
+                    "party": r["current_party"],
+                    "aligned_votes": r["aligned_votes"],
+                    "comparable_votes": r["comparable_votes"],
                     # None stays None. The previous default of 100 turned the
-                    # strongest possible disagreement into the strongest
-                    # possible agreement.
-                    "alignment": (
+                    # strongest possible disagreement into perfect agreement.
+                    "alignment_pct": (
                         float(r["alignment_pct"])
                         if r["alignment_pct"] is not None
                         else None
                     ),
-                    "aligned_votes": r["aligned_votes"],
-                    "votes_on_day": r["votes_on_day"],
-                })
-
-            alignment_summary = []
-            for mp_id, data in mp_data.items():
-                daily = sorted(data["daily"], key=lambda x: x["date"])
-                # Sum the counts rather than averaging the daily percentages.
-                # A sitting day carries between 1 and 124 votes, so a mean of
-                # daily percentages weighs a one-vote day as heavily as a
-                # hundred-vote one; the two differ by up to 4.1 points in this
-                # data.
-                aligned = sum(d["aligned_votes"] or 0 for d in daily)
-                comparable = sum(d["votes_on_day"] or 0 for d in daily)
-                alignment_summary.append({
-                    "mp_id": mp_id,
-                    "name": data["name"],
-                    "party": data["party"],
-                    "aligned_votes": aligned,
-                    "comparable_votes": comparable,
-                    "alignment_pct": (
-                        round(aligned / comparable * 100, 2) if comparable else None
-                    ),
-                    "sitting_days": len(daily),
-                    "daily": daily,
-                })
+                    # Why a figure is absent, so the surface can say it rather
+                    # than leaving a blank the reader must interpret.
+                    "suppression_reason": r["suppression_reason"],
+                }
+                for r in rows
+            ]
 
             # By name. Ordering by the metric would rank people, and the order
             # of a list is itself a claim.
@@ -245,7 +238,7 @@ def get_loyalty_graph():
 
             return {
                 "alignment": alignment_summary,
-                "total_mps": len(mp_data),
+                "total_mps": len(alignment_summary),
                 "source": "faction_alignment",
             }
 

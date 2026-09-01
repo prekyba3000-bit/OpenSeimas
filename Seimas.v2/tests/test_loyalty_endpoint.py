@@ -24,12 +24,15 @@ D = datetime.date
 
 
 def _rows(*specs):
+    """One row per member. The view aggregates now, so the endpoint no longer
+    sees sitting days and cannot average percentages even by accident."""
     out = []
-    for name, date, pct, aligned, total in specs:
+    for name, pct, aligned, comparable, *rest in specs:
         out.append({
             "mp_id": f"id-{name}", "display_name": name, "current_party": "P",
-            "sitting_date": date, "alignment_pct": pct,
-            "aligned_votes": aligned, "votes_on_day": total,
+            "alignment_pct": pct, "aligned_votes": aligned,
+            "comparable_votes": comparable,
+            "suppression_reason": rest[0] if rest else None,
         })
     return out
 
@@ -61,52 +64,62 @@ async def _get(monkeypatch, rows, has_view=True):
 
 @pytest.mark.asyncio
 async def test_zero_alignment_is_not_published_as_one_hundred(monkeypatch):
-    body = await _get(monkeypatch, _rows(("Aa", D(2026, 3, 10), 0, 0, 12)))
+    """`float(x) if x else 100` published perfect agreement for a member who
+    agreed on nothing, because 0 is falsy."""
+    body = await _get(monkeypatch, _rows(("Aa", 0, 0, 12)))
     mp = body["alignment"][0]
-    assert mp["daily"][0]["alignment"] == 0
     assert mp["alignment_pct"] == 0
     assert mp["aligned_votes"] == 0 and mp["comparable_votes"] == 12
 
 
 @pytest.mark.asyncio
-async def test_a_null_day_stays_null(monkeypatch):
-    body = await _get(monkeypatch, _rows(("Aa", D(2026, 3, 10), None, None, None)))
-    assert body["alignment"][0]["daily"][0]["alignment"] is None
-    # No comparable votes at all means no percentage, not zero and not 100.
-    assert body["alignment"][0]["alignment_pct"] is None
+async def test_no_comparable_votes_stays_null(monkeypatch):
+    body = await _get(monkeypatch, _rows(("Aa", None, 0, 0, "faction_too_small")))
+    mp = body["alignment"][0]
+    # Not zero and not 100: we did not measure, which is neither agreement nor
+    # disagreement.
+    assert mp["alignment_pct"] is None
+    assert mp["suppression_reason"] == "faction_too_small"
+
+
+@pytest.mark.asyncio
+async def test_a_suppressed_member_is_still_returned(monkeypatch):
+    """Dropping them would make the list shorter than the chamber, and a reader
+    cannot ask about a row that is not there."""
+    body = await _get(monkeypatch, _rows(
+        ("Aa", 91.0, 91, 100),
+        ("Bb", None, 0, 0, "faction_too_small"),
+    ))
+    assert [m["name"] for m in body["alignment"]] == ["Aa", "Bb"]
+    assert body["total_mps"] == 2
 
 
 @pytest.mark.asyncio
 async def test_members_are_ordered_by_name_not_by_the_metric(monkeypatch):
     body = await _get(monkeypatch, _rows(
-        ("Zebra", D(2026, 3, 10), 99, 99, 100),
-        ("Ana", D(2026, 3, 10), 10, 10, 100),
-        ("Milda", D(2026, 3, 10), 50, 50, 100),
+        ("Zebra", 99, 99, 100),
+        ("Ana", 10, 10, 100),
+        ("Milda", 50, 50, 100),
     ))
     assert [m["name"] for m in body["alignment"]] == ["Ana", "Milda", "Zebra"]
 
 
 @pytest.mark.asyncio
 async def test_every_member_is_returned_not_a_bottom_slice(monkeypatch):
-    specs = [(f"M{i:03}", D(2026, 3, 10), i % 100, i % 100, 100) for i in range(60)]
+    specs = [(f"M{i:03}", i % 100, i % 100, 100) for i in range(60)]
     body = await _get(monkeypatch, _rows(*specs))
     assert len(body["alignment"]) == 60
     assert body["total_mps"] == 60
 
 
 @pytest.mark.asyncio
-async def test_percentage_comes_from_summed_counts_not_a_mean_of_daily(monkeypatch):
-    """A sitting day carries 1 to 124 votes. Averaging the daily percentages
-    weighs a one-vote day like a hundred-vote one; in production the two differ
-    by up to 4.1 points."""
-    body = await _get(monkeypatch, _rows(
-        ("Aa", D(2026, 3, 10), 100.0, 1, 1),      # perfect, but one vote
-        ("Aa", D(2026, 3, 11), 50.0, 50, 100),    # half, on a hundred
-    ))
+async def test_the_endpoint_publishes_counts_beside_every_percentage(monkeypatch):
+    """A percentage without its denominator cannot be argued with. 91% of 100
+    and 91% of 11 are different claims."""
+    body = await _get(monkeypatch, _rows(("Aa", 50.5, 51, 101)))
     mp = body["alignment"][0]
     assert mp["aligned_votes"] == 51 and mp["comparable_votes"] == 101
-    assert mp["alignment_pct"] == round(51 / 101 * 100, 2)   # 50.5
-    assert mp["alignment_pct"] != 75.0                        # the mean of 100 and 50
+    assert mp["alignment_pct"] == 50.5
 
 
 @pytest.mark.asyncio
