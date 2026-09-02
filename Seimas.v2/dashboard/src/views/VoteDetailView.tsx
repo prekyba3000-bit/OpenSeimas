@@ -12,6 +12,7 @@ import { cn } from '../components/ui/utils';
 import { ProblemDetailsNotice } from '../components/ProblemDetailsNotice';
 import { formatLtDateLong } from '../utils/ltDate';
 import { NoPerMemberData } from '../components/NoPerMemberData';
+import { isTruncatedTitle, TITLE_TRUNCATED_LT } from '../utils/voteTitle';
 import {
     perMemberChoiceState,
     hasAggregateTallies,
@@ -119,7 +120,19 @@ const VoteDetailView = ({ voteId }: { voteId: string }) => {
             {/* Header */}
             <Card className="p-6">
                 <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-4">
-                    <h1 className="text-xl font-bold leading-tight">{vote.title}</h1>
+                    <div>
+                        <h1 className="text-xl font-bold leading-tight">
+                            {vote.title}
+                            {isTruncatedTitle(vote.title) && (
+                                <span className="text-muted-foreground font-normal" aria-hidden>…</span>
+                            )}
+                        </h1>
+                        {isTruncatedTitle(vote.title) && (
+                            <p className="mt-2 text-sm text-muted-foreground max-w-prose">
+                                {TITLE_TRUNCATED_LT}
+                            </p>
+                        )}
+                    </div>
                     {vote.url && (
                         <Button variant="secondary" size="sm" icon={ExternalLink} onClick={() => window.open(vote.url!, '_blank')}>
                             Šaltinis
