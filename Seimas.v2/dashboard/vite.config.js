@@ -22,6 +22,12 @@ export default defineConfig({
       allow: [
         __dirname,
         path.resolve(__dirname, '../../packages'),
+        // @fontsource hoists to the repo-root node_modules, outside this
+        // project root, so the dev server answered 403 for all 20 font files
+        // and rendered in fallback typefaces. The production build inlines
+        // them correctly, which is why this stayed invisible — but it makes
+        // every local rendered-surface audit happen in the wrong font.
+        path.resolve(__dirname, '../../node_modules'),
       ],
     },
     proxy: {
