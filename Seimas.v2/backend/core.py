@@ -198,7 +198,20 @@ def get_pool():
     global _pool
     if _pool is None and DB_DSN:
         try:
-            _pool = ThreadedConnectionPool(2, 10, DB_DSN)
+            # TCP keepalives so Neon does not silently drop an idle connection.
+            # Neon closes idle sessions; the pool then hands out a socket whose
+            # far end is already gone and the query dies with
+            # "SSL SYSCALL error: EOF detected". This site is quiet by nature —
+            # a civic dashboard is idle most of the day — so that is the normal
+            # case, not an edge one. Probing every 30s keeps the session alive
+            # and costs nothing measurable.
+            _pool = ThreadedConnectionPool(
+                2, 10, DB_DSN,
+                keepalives=1,
+                keepalives_idle=30,
+                keepalives_interval=10,
+                keepalives_count=3,
+            )
         except Exception as e:
             print(f"Failed to create connection pool: {e}")
     return _pool
@@ -212,16 +225,26 @@ def get_db_conn():
         yield None
         return
     conn = None
+    discard = False
     try:
         conn = pool.getconn()
         conn.cursor_factory = RealDictCursor
         yield conn
+    except psycopg2.OperationalError as e:
+        # The connection is dead, not merely unlucky. Returning it to the pool
+        # hands the same corpse to the next request, so a single dropped socket
+        # becomes a run of 500s rather than one. Discard it instead; the pool
+        # opens a fresh one on demand.
+        discard = True
+        print(f"Database connection dropped, discarding from pool: {e}")
+        raise
     except Exception as e:
         print(f"Database connection error: {e}")
         raise
     finally:
         if conn:
-            pool.putconn(conn)
+            # close=True evicts rather than returns.
+            pool.putconn(conn, close=discard)
 
 
 # ─── API Endpoints ───────────────────────────────────────────────────────────

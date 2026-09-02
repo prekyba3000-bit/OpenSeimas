@@ -40,7 +40,10 @@ router = APIRouter()
 
 @router.get("/api/stats")
 def get_stats(request: Request):
-    client_ip = request.client.host if request.client else "unknown"
+    # core.client_ip reads X-Forwarded-For. request.client.host is Render's
+    # proxy for every visitor, which puts the whole site in one 60/min
+    # bucket — throttling everyone at once and an abuser not at all.
+    client_ip = core.client_ip(request)
     if not check_rate_limit(client_ip):
         raise HTTPException(status_code=429, detail="Rate limit exceeded")
 
