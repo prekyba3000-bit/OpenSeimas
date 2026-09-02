@@ -62,11 +62,11 @@ export function factionEncoding(mps: MpSummary[]): SeatEncoding {
 /**
  * Whether a vote has any recorded per-member choice at all.
  *
- * 1,653 of 5,279 votes (31%) have none. Every one carries the LRS comment
- * „Elektroninėmis priemonėmis gauti individualūs balsavimo rezultatai
- * neatitinka protokole įrašytų suminių rezultatų“ — the electronic per-member
- * results disagree with the protocol totals — and the source publishes zeros
- * rather than figures it does not stand behind.
+ * 1,656 of 5,286 votes (31%) have none. The source does not say why: the LRS
+ * comment „Elektroninėmis priemonėmis gauti individualūs balsavimo rezultatai
+ * neatitinka protokole įrašytų suminių rezultatų“ was once read as the reason,
+ * but it is attached to every vote in the table — including all 3,630 that do
+ * publish per-member results — so it explains nothing.
  *
  * Colouring the chamber from one of those would paint 140 hollow seats
  * labelled „Nedalyvavo“, asserting that the entire Seimas skipped a vote. The

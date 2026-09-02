@@ -99,10 +99,9 @@ describe("seat map encodings", () => {
   });
 
   it("recognises a vote the source published no results for", () => {
-    // 1,653 of 5,279 votes are like this: LRS flags the electronic per-member
-    // results as disagreeing with the protocol totals and publishes zeros.
-    // Colouring the chamber from one would paint 140 seats „Nedalyvavo“ —
-    // asserting the whole Seimas skipped a vote.
+    // 1,656 of 5,286 votes are like this: the source publishes no per-member
+    // results and gives no reason. Colouring the chamber from one would paint
+    // 140 seats „Nedalyvavo“ — asserting the whole Seimas skipped a vote.
     expect(hasRecordedChoices(vote({ a: null, b: null, c: null }))).toBe(false);
     expect(hasRecordedChoices(null)).toBe(false);
     expect(hasRecordedChoices({ id: "1", title: "x", votes: [] } as never)).toBe(false);
