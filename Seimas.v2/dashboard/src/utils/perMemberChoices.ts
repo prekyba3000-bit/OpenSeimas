@@ -2,11 +2,15 @@
  * Whether a vote has individual per-member choices, and the three different
  * answers that question can have.
  *
- * 1,653 of 5,279 votes (31%) have none. The LRS results feed flags them
- * („Elektroninėmis priemonėmis gauti individualūs balsavimo rezultatai
- * neatitinka protokole įrašytų suminių rezultatų“) and publishes no per-member
- * data — but the API still returns one row per member with `choice: null`, so
- * the array is present and full-length while carrying nothing.
+ * 1,656 of 5,286 votes (31%) have none: the feed publishes no per-member data
+ * for them, but the API still returns one row per member with `choice: null`,
+ * so the array is present and full-length while carrying nothing.
+ *
+ * The source does not say why. An earlier version of this file attributed it to
+ * the („Elektroninėmis priemonėmis gauti individualūs balsavimo rezultatai
+ * neatitinka protokole įrašytų suminių rezultatų“) note in the results feed;
+ * that note turned out to be on every vote in the table, so it explains
+ * nothing. See NO_PER_MEMBER_DATA_REASON_LT below.
  *
  * Two surfaces crashed on this before the state was made explicit: the vote
  * detail page called `choice.toLowerCase()` and the MP profile's Balsavimai tab
@@ -57,10 +61,22 @@ export function hasAggregateTallies(
 
 export const NO_PER_MEMBER_DATA_LT = "Nėra duomenų apie pavienius balsus";
 
+/**
+ * LT-COPY: needs native review.
+ *
+ * This text used to name a cause: „elektroniniu būdu gauti rezultatai nesutapo
+ * su protokolo suvestine“. That was wrong. The `komentaras` attribute carrying
+ * that sentence is on **all 5,286 votes**, including the 3,630 that publish
+ * complete per-member data — one identical string, every row. It is boilerplate
+ * the source attaches to everything, not a per-vote flag, so it cannot explain
+ * why any particular vote is missing its per-member results.
+ *
+ * We know the data is absent. We do not know why. Saying so is the honest
+ * version, and shorter.
+ */
 export const NO_PER_MEMBER_DATA_REASON_LT =
-  "Šiam balsavimui šaltinis nepaskelbė, kaip balsavo kiekvienas narys — " +
-  "elektroniniu būdu gauti rezultatai nesutapo su protokolo suvestine. " +
-  "Rodome tik tai, kas užfiksuota.";
+  "Šiam balsavimui šaltinis nepaskelbė, kaip balsavo kiekvienas narys. " +
+  "Priežasties šaltinis nenurodo. Rodome tik tai, kas užfiksuota.";
 
 /**
  * A single member's non-choice, on a vote where the source published none.
