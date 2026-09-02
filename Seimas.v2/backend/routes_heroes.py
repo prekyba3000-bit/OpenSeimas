@@ -99,7 +99,10 @@ def search_heroes(
     limit: int = Query(20, ge=1),
 ):
     """Search active MPs by name/party and return hero profiles."""
-    client_ip = request.client.host if request.client else "unknown"
+    # core.client_ip reads X-Forwarded-For. request.client.host is Render's
+    # proxy for every visitor, which puts the whole site in one 60/min
+    # bucket — throttling everyone at once and an abuser not at all.
+    client_ip = core.client_ip(request)
     if not check_rate_limit(client_ip):
         raise HTTPException(status_code=429, detail="Rate limit exceeded")
 
@@ -173,7 +176,10 @@ def get_openplanter_graph(request: Request):
     Export a Cytoscape.js graph: active MPs, phantom-network links, parties (belongs_to),
     committees (serves_on), wealth/asset declarations, VTEK interests, and recent roll-call votes (voted_on).
     """
-    client_ip = request.client.host if request.client else "unknown"
+    # core.client_ip reads X-Forwarded-For. request.client.host is Render's
+    # proxy for every visitor, which puts the whole site in one 60/min
+    # bucket — throttling everyone at once and an abuser not at all.
+    client_ip = core.client_ip(request)
     if not check_rate_limit(client_ip):
         raise HTTPException(status_code=429, detail="Rate limit exceeded")
 
