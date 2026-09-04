@@ -58,8 +58,10 @@ Neither was found by grepping. Both came from reading a rendered page.
 - **Stage glosses vs the Seimas Statute** — see above; gates P5 publication.
 - **Legal name** — `<FILL IN>` in `NOTICE:3`, `NOTICE:18`, `README.md:69`.
   Awaits the VšĮ entity code. Never invent it.
-- **Vercel frontend URL** is still recorded nowhere in the repo, so deploy
-  pairing cannot be verified from a clean checkout.
+- ~~**Vercel frontend URL**~~ — **resolved 2026-09-04.** Two live deployments,
+  both serving the same build: `seimas-v2.vercel.app` and
+  `open-seimas-dashboard.vercel.app`. Recorded in `Seimas.v2/README.md`. The
+  third CORS origin, `dashboard-tawny-tau-42.vercel.app`, is dead (404).
 - Five older decisions still open: VTEK approach, snapshot payload storage,
   `ingest_votes_v2` manifest policy, faction spelling variants, forensic
   severity badges.

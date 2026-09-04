@@ -19,6 +19,13 @@ The backend is Dockerized and deploys automatically to Render when changes are p
 
 ### 2. Frontend (Vercel)
 The dashboard is connected to Vercel and rebuilds on git push.
+- **Live URLs** (both serve the same build, verified 2026-09-04):
+    - https://seimas-v2.vercel.app
+    - https://open-seimas-dashboard.vercel.app
+  These are the addresses to open when the charter calls for a rendered-surface
+  audit against production. A third origin, `dashboard-tawny-tau-42.vercel.app`,
+  is still in `core.ALLOWED_ORIGINS` and returns 404 — a dead entry, not a
+  deployment.
 - **Project Settings**: Root directory `dashboard/`.
 - **Environment Variables**:
     - `VITE_API_URL`: Set this to `https://seimas-api.onrender.com` (Your Render Backend URL).
