@@ -1070,14 +1070,19 @@ def calculate_hero_profile(mp_id: str, db_cursor) -> Dict[str, Any]:
 
     db_cursor.execute(
         """
-        SELECT COALESCE(NULLIF(current_party, ''), 'Unknown') AS party_name
+        -- No COALESCE to 'Unknown'. Since migration 039 current_party is the
+        -- faction and is NULL when the member sits in none (the Speaker, by
+        -- convention). Substituting a placeholder here put the English string
+        -- "Unknown" into a public payload and hid a real state behind a label
+        -- that looks like a party name.
+        SELECT NULLIF(current_party, '') AS party_name
         FROM politicians
         WHERE id = %s::uuid
         """,
         (mp_id,),
     )
     party_row = db_cursor.fetchone()
-    party_name = party_row["party_name"] if party_row else (mp_row["current_party"] or "Unknown")
+    party_name = party_row["party_name"] if party_row else (mp_row["current_party"] or None)
 
     str_score = score_legislative(
         bills_authored, maxima["max_bills_authored"],
@@ -1211,7 +1216,7 @@ def fetch_graph_mp_summaries(db_cursor, active_only: bool = True) -> List[Dict[s
         SELECT
             p.id AS mp_id,
             p.display_name,
-            COALESCE(NULLIF(p.current_party, ''), 'Unknown') AS current_party,
+            NULLIF(p.current_party, '') AS current_party,
             COALESCE(p.bills_authored_count, 0) AS bills_authored_count,
             p.bills_initiated_total,
             p.bills_initiated_individually,

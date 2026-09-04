@@ -1,3 +1,4 @@
+import { NO_FACTION_LT } from './faction';
 /**
  * Faction colours: muted, 40–60% chroma, no pure red or green.
  *
@@ -60,7 +61,7 @@ function labelFor(partyName: string): string {
 }
 
 export function getPartyMeta(partyName: string | null | undefined): PartyMeta {
-  if (!partyName || partyName === 'Unknown') return FALLBACK;
+  if (!partyName || partyName === 'Unknown' || partyName === NO_FACTION_LT) return FALLBACK;
   const known = PARTY_MAP[partyName];
   if (known) return known;
   return { ...FALLBACK, short: labelFor(partyName) };
