@@ -65,7 +65,12 @@ def _build_openplanter_graph_payload(cur) -> Dict:
                     "id": mp_id,
                     "label": summary["display_name"] or "Unknown",
                     "category": "politician",
-                    "party": summary["current_party"] or "Unknown",
+                    # Not "Unknown": since migration 039 current_party is the
+                    # faction and is NULL when the member sits in none. The
+                    # party-node and belongs_to queries below already filter
+                    # NULL out, so this was the one place a placeholder leaked
+                    # into the payload.
+                    "party": summary["current_party"],
                 }
             }
         )
