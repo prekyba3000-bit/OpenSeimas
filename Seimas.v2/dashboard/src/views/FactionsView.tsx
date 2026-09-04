@@ -6,6 +6,7 @@ import { motion } from 'motion/react';
 import { useNavigate } from 'react-router';
 import { api, MpSummary } from '../services/api';
 import { Card } from '../components/Card';
+import { factionLabel } from '../utils/faction';
 import { getPartyMeta, PartyMeta } from '../utils/partyColors';
 import { cn } from '../components/ui/utils';
 import { ProblemDetailsNotice } from '../components/ProblemDetailsNotice';
@@ -34,7 +35,7 @@ const FactionsView = () => {
   const factions = useMemo<FactionData[]>(() => {
     const groups: Record<string, MpSummary[]> = {};
     mps.filter(m => m.is_active).forEach(mp => {
-      const party = mp.party || 'Unknown';
+      const party = factionLabel(mp.party);
       if (!groups[party]) groups[party] = [];
       groups[party].push(mp);
     });
@@ -81,7 +82,7 @@ const FactionsView = () => {
       {/* Faction overview bar */}
       <Card className="p-4">
         <div className="flex h-8 rounded-full overflow-hidden bg-muted">
-          {factions.filter(f => f.name !== 'Unknown').map(f => (
+          {factions.map(f => (
             <div
               key={f.name}
               className="h-full flex items-center justify-center text-xs font-bold text-white transition-all cursor-pointer hover:brightness-110"
@@ -98,7 +99,7 @@ const FactionsView = () => {
           ))}
         </div>
         <div className="flex items-center justify-center gap-4 mt-3 flex-wrap">
-          {factions.filter(f => f.name !== 'Unknown').map(f => (
+          {factions.map(f => (
             <div key={f.name} className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: f.meta.hex }} />
               {f.meta.short} ({f.members.length})

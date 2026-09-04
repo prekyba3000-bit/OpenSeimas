@@ -258,3 +258,26 @@ def test_hero_mp_response_declares_mandate_dates():
     dumped = built.model_dump()
     assert dumped["mandate_start_date"] == "2024-11-14"
     assert dumped["mandate_end_date"] == "2026-05-28"
+
+
+def test_party_is_never_coalesced_to_unknown():
+    """Migration 039: current_party is the faction, NULL when there is none.
+
+    Both read paths in hero_engine used to COALESCE it to the literal string
+    'Unknown' — an English placeholder shipped in a public payload on a
+    Lithuanian surface, and the same failure class as COALESCE(metric, 0):
+    a real unknown wearing a label that looks like an answer.
+    """
+    import pathlib
+    import re
+
+    src = pathlib.Path(__file__).resolve().parents[1] / "backend" / "hero_engine.py"
+    text = src.read_text()
+    # Strip SQL/py comments so the explanatory note above each fix does not trip this.
+    body = "\n".join(
+        line for line in text.splitlines()
+        if not line.lstrip().startswith(("--", "#"))
+    )
+    offenders = re.findall(r"COALESCE\s*\([^)]*current_party[^)]*\)", body, re.IGNORECASE)
+    assert offenders == [], f"current_party coalesced to a placeholder: {offenders}"
+    assert "or \"Unknown\"" not in body, "current_party falls back to 'Unknown' in Python"

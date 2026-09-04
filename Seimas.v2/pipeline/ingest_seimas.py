@@ -84,6 +84,47 @@ def fetch_factions_map() -> dict[str, str]:
     return factions
 
 
+# The factions feed exposes an umbrella node named "Seimo frakcijos" alongside
+# the real factions. It is a container, not a group anyone belongs to.
+_FACTION_UMBRELLA = {"seimo frakcijos"}
+
+
+def resolve_faction(node, factions_map: dict[str, str]) -> str | None:
+    """The member's CURRENT parliamentary group, or None.
+
+    Matches on the department name rather than the role string. The role string
+    was the original bug: it tested for "frakcijos nar" (Frakcijos narys/narė)
+    and so missed "Frakcijos seniūnas" and "Frakcijos seniūno pavaduotojas",
+    dropping the 10 faction leaders and deputies back onto their nominating
+    party. `padalinio_tipas` cannot be used either — it is empty on every
+    Pareigos row in the live feed.
+
+    Roles carrying a `data_iki` are skipped: they have ended. Without that, the
+    Speaker would keep the faction he left on 2025-09-10.
+
+    Returns None when the member sits in no group. That is a real state, not a
+    lookup failure, and it must reach the surface as unknown rather than as
+    whoever nominated them.
+    """
+    for pareigos in node.findall('Pareigos'):
+        if pareigos.get('data_iki'):
+            continue
+        department_name = (pareigos.get('padalinio_pavadinimas') or '').strip()
+        if not department_name or department_name.lower() in _FACTION_UMBRELLA:
+            continue
+        low = department_name.lower()
+        # „Mišri Seimo narių grupė" is a parliamentary group like any faction,
+        # and does not carry the word frakcija.
+        if 'frakcij' not in low and 'mišri' not in low:
+            continue
+        department_id = get_attr(pareigos, ("padalinio_id", "frakcijos_id", "frakcija_id"))
+        name = factions_map.get(department_id or '', department_name)
+        # The factions feed itself spells one name with a double space; two
+        # entries differing only by whitespace would render as two factions.
+        return re.sub(r'\s+', ' ', name).strip()
+    return None
+
+
 def is_committee_role(role_name: str, department_name: str) -> bool:
     role_val = (role_name or "").lower()
     dep_val = (department_name or "").lower()
@@ -137,26 +178,14 @@ def sync_db():
         
         if is_active: active_count += 1
         
-        mp_faction_id = get_attr(node, ("frakcijos_id", "frakcija_id", "fakcijos_id"))
-        party = get_attr(node, ("iškėlusi_partija", "iskelusi_partija", "partija")) or 'Unknown'
-        if mp_faction_id and mp_faction_id in factions_map:
-            party = factions_map[mp_faction_id]
+        nominating_party = get_attr(
+            node, ("iškėlusi_partija", "iskelusi_partija", "partija")
+        ) or None
+        party = resolve_faction(node, factions_map)
 
         for pareigos in node.findall('Pareigos'):
             role_name = pareigos.get('pareigos')
             department_name = pareigos.get('padalinio_pavadinimas')
-            department_id = get_attr(pareigos, ("padalinio_id", "frakcijos_id", "frakcija_id"))
-            department_type = (pareigos.get("padalinio_tipas") or "").lower()
-
-            if "frakc" in department_type and department_id and department_id in factions_map:
-                party = factions_map[department_id]
-
-            role_norm = (role_name or "").lower()
-            if "frakcijos nar" in role_norm:
-                if department_id and department_id in factions_map:
-                    party = factions_map[department_id]
-                elif department_name:
-                    party = department_name
 
             if is_committee_role(role_name or "", department_name or ""):
                 committee_rows.append((
@@ -178,6 +207,7 @@ def sync_db():
             full_name,
             mp_id,
             party,
+            nominating_party,
             is_active,
             term_end,
             photo_url,
@@ -194,11 +224,12 @@ def sync_db():
     
     sql = """
         INSERT INTO politicians (
-            full_name_normalized, display_name, seimas_mp_id, current_party, is_active, term_end_date, photo_url, bio,
+            full_name_normalized, display_name, seimas_mp_id, current_party, nominating_party, is_active, term_end_date, photo_url, bio,
             mandate_start_date, mandate_end_date
         ) VALUES %s
         ON CONFLICT (seimas_mp_id) DO UPDATE SET
             current_party = EXCLUDED.current_party,
+            nominating_party = EXCLUDED.nominating_party,
             is_active = EXCLUDED.is_active,
             term_end_date = EXCLUDED.term_end_date,
             photo_url = EXCLUDED.photo_url,

@@ -17,6 +17,7 @@ import {
   hasRecordedChoices,
 } from './seatMapModes';
 import type { LastSittingDay, VoteDetail } from '../services/api';
+import { factionLabel } from '../utils/faction';
 
 export interface Seat {
   id: string;
@@ -103,7 +104,7 @@ export function SeimasMap({
   const parties = useMemo(() => {
     const counts: Record<string, number> = {};
     activeMps.forEach(m => {
-      const p = m.party || 'Unknown';
+      const p = factionLabel(m.party);
       counts[p] = (counts[p] || 0) + 1;
     });
     return Object.entries(counts)
