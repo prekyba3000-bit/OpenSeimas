@@ -82,7 +82,7 @@ export type ForensicBreakdown = {
   };
   loyaltyBonus: {
     status: ForensicStatus;
-    independentVotingDaysPct: number;
+    independentVotingDaysPct?: number | null;
     bonus: number;
     explanation: string;
   };
@@ -187,7 +187,17 @@ type _RawForensicBreakdown = {
   };
   loyalty_bonus: {
     status: ForensicStatus;
-    independent_voting_days_pct: number;
+    /**
+     * null when agreement with a faction cannot be measured at all — the
+     * member sits in none, or has too few comparable votes.
+     *
+     * Optional as well as nullable to match p_value / worst_zscore /
+     * closest_hop_count above: this project compiles with strict:false, and
+     * under that setting a null-bearing zod schema renders its key optional,
+     * so a required field here cannot be satisfied by any schema that admits
+     * null. The backend always sends the key.
+     */
+    independent_voting_days_pct?: number | null;
     bonus: number;
     explanation: string;
   };
@@ -217,7 +227,11 @@ const rawForensicBreakdownSchema: z.ZodType<_RawForensicBreakdown> = z.object({
   }),
   loyalty_bonus: z.object({
     status: forensicStatusSchema,
-    independent_voting_days_pct: z.number(),
+    // Nullable because a member who sits in no faction has nothing to be
+    // independent OF, so the backend reports the engine as unavailable rather
+    // than inverting a missing figure into 100% independence. A bare
+    // z.number() here failed the parse and blanked the whole profile.
+    independent_voting_days_pct: z.number().nullable().optional(),
     bonus: z.number(),
     explanation: z.string(),
   }),

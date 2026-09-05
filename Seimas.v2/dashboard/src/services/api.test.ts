@@ -194,6 +194,29 @@ describe("mpProfileSchema null tolerance", () => {
     expect(parsed.success).toBe(true);
   });
 
+  it("accepts a forensic breakdown whose loyalty engine is unavailable", async () => {
+    // The backend reports status "unavailable" with a null percentage when a
+    // member sits in no faction. A bare z.number() on that field failed the
+    // parse and blanked the entire profile — the second time in one session
+    // that a wire change skipped the zod schema (charter §1.11).
+    const { mpProfileSchema } = await import("./api");
+    const wire = profileWire({ attendance_percentage: 94.68, party_loyalty: null });
+    const parsed = mpProfileSchema.safeParse({
+      ...wire,
+      mp: { ...wire.mp, party: null },
+      forensic_breakdown: {
+        ...forensic,
+        loyalty_bonus: {
+          status: "unavailable" as const,
+          independent_voting_days_pct: null,
+          bonus: 0,
+          explanation: "-",
+        },
+      },
+    });
+    expect(parsed.success).toBe(true);
+  });
+
   it("accepts a member who sits in no faction", async () => {
     // Since migration 039 party is NULL for the Speaker, who steps out of his
     // faction. `z.string().optional()` admits undefined and rejects null, so
