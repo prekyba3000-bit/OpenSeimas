@@ -146,3 +146,38 @@ coalesces `current_party` to a placeholder.
 | File | String |
 | --- | --- |
 | `dashboard/src/utils/faction.ts` | `NO_FACTION_LT` — „Frakcija nenurodyta" |
+
+## Testing upgrade (2026-09-04)
+
+Three defects in this session were found only by opening a page. The suites were
+green through all of them, and the reason is the same each time: every fixture in
+the suite was **written by hand**, and nobody hand-writes the awkward case.
+`provenanceContract.test.ts` already went through `parse` correctly — and still
+could not have caught this, because its payload says `party: "P"`.
+
+Two layers were added, both working from evidence rather than imagination.
+
+**`contracts/wire-nullability.json`** — every payload path the backend may send
+as null, declared once with a reason, read by both suites.
+
+**`contracts/fixtures/heroes-*.json`** — real payloads captured from production
+by `scripts/refresh_wire_fixtures.py`, for members chosen by awkward *property*
+rather than by name: no faction, former member, suppressed attendance, and one
+ordinary member as a control. Selecting by property means the set survives the
+Speaker changing or a member leaving.
+
+| Layer | File | Catches |
+| --- | --- | --- |
+| Python | `tests/test_wire_contract.py` | A null in a real payload the contract does not declare — a widening someone forgot to write down. Also stale declarations naming fields that no longer exist. |
+| TypeScript | `dashboard/src/services/wireContract.test.ts` | A declared null the zod schema still rejects. Parses each real payload as-is, then nulls each declared path in turn. |
+
+Both were verified by reintroducing the two shipped bugs. Restoring
+`party: z.string().optional()` and `independent_voting_days_pct: z.number()`
+fails **12 tests**, including three real payloads that no longer parse at all.
+Removing `mp.party` from the contract fails the Python layer. A guard nobody has
+watched fail is not a guard.
+
+One honest gap: if a backend field becomes nullable and nobody refreshes the
+fixtures, the Python layer has nothing new to notice. Refreshing is one command
+and the daily sync could run it, but that loop is not wired yet — and pretending
+otherwise would repeat the mistake of trusting a green suite.
