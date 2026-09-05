@@ -30,7 +30,14 @@
         "forensic_breakdown.benford.p_value": "Too few digits to run the test.",
         "forensic_breakdown.chrono.worst_zscore": "No amendment timing data.",
         "forensic_breakdown.vote_geometry.max_deviation_sigma": "No geometry computed for this member.",
-        "forensic_breakdown.phantom_network.closest_hop_count": "No phantom-network hit, so there is no hop distance."
+        "forensic_breakdown.phantom_network.closest_hop_count": "No phantom-network hit, so there is no hop distance.",
+        "mp.active": "politicians.is_active is a nullable column. No row has it null today; one would have blanked that member's profile.",
+        "mp.photo": "politicians.photo_url is nullable. Same shape as mp.active — latent rather than live.",
+        "mp.seimas_id": "The LRS person id is absent for a row not yet reconciled with the members feed.",
+        "mp.mandate_start_date": "Mandate window unknown — an empty or partially-ingested members table.",
+        "mp.last_synced_at": "Never synced; only reachable on a fresh database.",
+        "metrics.bills_initiated_total": "The authored-bills feed has not run, so the count is unknown rather than zero.",
+        "metrics.bills_initiated_individually": "Same feed. Zero here would claim the member initiated nothing alone, which is the stronger claim migration 021 warned about."
       }
     }
   }

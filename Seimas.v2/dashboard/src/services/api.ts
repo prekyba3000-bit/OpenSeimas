@@ -249,8 +249,12 @@ export const mpProfileSchema = z
       // profile fails to parse and the page renders „Užklausa neteisinga",
       // losing every other field over one legitimately-absent value.
       party: z.string().nullable().optional(),
-      photo: z.string().optional(),
-      active: z.boolean().optional(),
+      // Both nullable because both derive from columns the database marks
+      // nullable (photo_url, is_active). No row has them null today, which is
+      // exactly why no hand-written fixture ever tried it — a single such row
+      // would have blanked the profile page for that member.
+      photo: z.string().nullable().optional(),
+      active: z.boolean().nullable().optional(),
       seimas_id: z.union([z.string(), z.number(), z.null()]).optional(),
       mandate_start_date: z.string().nullable().optional(),
       mandate_end_date: z.string().nullable().optional(),

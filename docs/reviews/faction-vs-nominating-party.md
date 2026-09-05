@@ -181,3 +181,36 @@ One honest gap: if a backend field becomes nullable and nobody refreshes the
 fixtures, the Python layer has nothing new to notice. Refreshing is one command
 and the daily sync could run it, but that loop is not wired yet — and pretending
 otherwise would repeat the mistake of trusting a green suite.
+
+### Closing the staleness gap
+
+The layers above still sampled: fixtures are captured from real members, so a
+field that goes null only under conditions no current member is in stays
+invisible until someone refreshes them. That is a gap that quietly widens.
+
+`tests/test_degraded_payload.py` closes it by exploring the null-space instead
+of sampling it. It hands the real `calculate_hero_profile` a cursor that finds
+the member and nothing else, which is what a fresh database, a failed backfill
+or an unrefreshed materialized view actually look like. **No database, no
+network** — it runs on every `pytest` and cannot go stale.
+
+The degradation is modelled honestly: `id`, `display_name` and
+`full_name_normalized` are NOT NULL in the schema, so the member row exists.
+A payload in which a member has no name would be a fantasy, and declaring
+`mp.name` nullable to satisfy it would weaken a real contract.
+
+It found a live-adjacent defect immediately. The degraded payload **did not
+parse**: `mp.active` and `mp.photo` derive from `is_active` and `photo_url`,
+both nullable columns, and the schema demanded a boolean and a string. No row
+has either null today — which is precisely why no hand-written fixture ever
+tried it, and why one such row would have blanked that member's profile with
+the suites green.
+
+The generated payload is committed as `contracts/fixtures/heroes-degraded.json`
+and compared against a fresh build, so a change in payload shape fails the
+Python suite instead of surprising the client. Four guards-on-the-guard keep the
+check from rotting into a no-op: the fixture set must exist, must contain more
+nulls than the ordinary member carries, must stay actually degraded (≥10 null
+paths), and every declaration must carry a reason.
+
+Sixteen paths are now declared, against nine derived from real members.
