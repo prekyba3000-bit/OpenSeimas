@@ -105,16 +105,34 @@ pushing is the check that matters, and it now has a static backstop
 - Seat map counts the no-faction member as „Nenurodyta (1)"; 140 of 141.
 - Both corrections entries served at `/api/trust/corrections`.
 
-## Open
+## Both open questions were decided and closed
 
-- **`total_forensic_adjustment`** is still a per-person aggregate on the public
-  payload, value 10 for every active member, rendered by `StebsenaView`.
-  Retiring it is a surface change and needs a design note first.
-- **„Patirtis ir aktyvumas 0.0 %" and „Viešumas 0.0 %"** on the profile of a
-  member who never took up the mandate, with provenance `direct`. Arguably a
-  measured zero, arguably the §1.2 distinction between "the source recorded
-  none" and "we have no rows". Not changed — it is a methodology decision
-  (§1.5), not a bug fix. Worth a human's view.
+Put to the human in plain language; both answered "fix it".
+
+**The per-person aggregate is gone.** `total_forensic_adjustment` has left
+`/api/v2/heroes/{id}` and the client entirely (`03e9285`). I had described it as
+rendered by `StebsenaView` — it was not: `getIntDotClass` and
+`getIntegrityTooltip` were defined there and called from nowhere, so no reader
+ever saw it. Both helpers are deleted, because unreachable code that needs one
+JSX line to become a published grade is the grade, waiting. **Nothing on the
+public payload is now an aggregate about a named person** — the degraded
+fixture shows `forensic_breakdown` with no scalar keys at all. The per-engine
+sub-objects stay: each is evidence with its own status and explanation.
+
+Shipped as two commits, deliberately. `mpProfileSchema` required the field, so
+removing it from both sides at once would have failed every profile parse
+during the 10-20 minutes the frontend lags the backend. `72f0b87` made the
+client tolerant; `03e9285` went out only after that bundle was confirmed live.
+
+**„0.0 %" for the four who never took the seat is gone** (`72f0b87`). All five
+dials now read „Narys mandato neperėmė, todėl nėra ką matuoti.", matching the
+header two inches above that already said so. Reuses `servedNoDays`, the
+predicate the header uses, so a dial and the paragraph cannot disagree.
+
+Verified live on both: Blinkevičiūtė's profile shows no percentage anywhere,
+Bilotaitė's still shows 71.3 / 75.8 / 88.7 and does not claim she never served.
+
+## Open
 - **`legislation`** needs an additive migration carrying the real project
   registration number beside `project_id`, and a decision on base project vs
   revision (`XVP-851` vs `XVP-851(2)`) before either becomes a key. Not an
