@@ -11,6 +11,7 @@ from contextlib import contextmanager
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils import fetch_with_retry  # noqa: E402
 from pipeline.common import record_fetch  # noqa: E402
+from pipeline.project_number import resolve as resolve_project
 
 # Vote ids whose result fetch failed this run. A gap nobody knows about is
 # worse than a gap on the record: these are reported and re-attempted next run
@@ -208,10 +209,18 @@ def process_sitting(sess_id, sit_id):
             tallies = _parse_tallies(totals)
 
             # Prepare Vote Record
+            # Resolved from the FINAL title, after the results header has had its
+            # chance to replace title_base. project_id keeps its legacy value
+            # untouched; the two new columns carry the project as it really is.
+            # See pipeline/project_number.py for why the title beats the
+            # attribute and why a clipped one yields nothing.
+            found = resolve_project(project_id, title)
             votes_to_insert.append((
                 vid, sitting_date_str, title, project_id, stadija, source_comment,
                 tallies['votes_for'], tallies['votes_against'], tallies['votes_abstained'],
                 tallies['votes_participated'], tallies['seats_eligible'], tallies['voted_at'],
+                found.registration if found else None,
+                found.base if found else None,
             ))
             
             # Prepare Decisions (MP Votes)
@@ -261,13 +270,16 @@ def process_sitting(sess_id, sit_id):
             extras.execute_values(cur, """
                 INSERT INTO votes (seimas_vote_id, sitting_date, title, project_id, vote_type, source_comment,
                                    votes_for, votes_against, votes_abstained,
-                                   votes_participated, seats_eligible, voted_at)
+                                   votes_participated, seats_eligible, voted_at,
+                                   project_registration_nr, project_base_nr)
                 VALUES %s
                 ON CONFLICT (seimas_vote_id)
                 DO UPDATE SET
                     title = EXCLUDED.title,
                     sitting_date = EXCLUDED.sitting_date,
                     project_id = EXCLUDED.project_id,
+                    project_registration_nr = EXCLUDED.project_registration_nr,
+                    project_base_nr = EXCLUDED.project_base_nr,
                     vote_type = EXCLUDED.vote_type,
                     source_comment = EXCLUDED.source_comment,
                     -- COALESCE so a re-run that hits a momentarily tally-less

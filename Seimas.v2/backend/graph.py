@@ -352,7 +352,8 @@ def _build_openplanter_graph_payload(cur) -> Dict:
     if uuid_list and _table_exists(cur, "votes") and _table_exists(cur, "mp_votes"):
         cur.execute(
             """
-            SELECT v.id, v.seimas_vote_id, v.sitting_date, v.title, v.project_id
+            SELECT v.id, v.seimas_vote_id, v.sitting_date, v.title,
+                   v.project_registration_nr
             FROM votes v
             WHERE EXISTS (
                 SELECT 1
@@ -378,7 +379,14 @@ def _build_openplanter_graph_payload(cur) -> Dict:
                 title = (vr.get("title") or "Vote")[:90]
                 ds = vr.get("sitting_date")
                 date_s = str(ds)[:10] if ds is not None else ""
-                proj = (vr.get("project_id") or "").strip()
+                # project_registration_nr, not project_id: the latter holds the
+                # first "Nr." in the agenda title, which for an amendment is the
+                # law being amended. This node has been labelling votes with the
+                # wrong project number — "Project XIII-804" on a vote about
+                # XVP-247 — for 3,464 of 4,392 votes. NULL where the vote is not
+                # about a single project, and the label then omits it rather
+                # than guessing.
+                proj = (vr.get("project_registration_nr") or "").strip()
                 label = f"{date_s} · {title}" if date_s else title
                 label = label[:200]
                 detail = f"Project {proj}"[:120] if proj else ""
