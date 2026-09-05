@@ -1,0 +1,90 @@
+{
+  "_selector": "former-member",
+  "_why": "Mandate ended: no current faction either, plus a mandate_end_date.",
+  "_captured_mp": "Liudas Mažylis",
+  "payload": {
+    "mp": {
+      "id": "8921b102-b9f1-4fe5-8cd3-fd98d11a1273",
+      "name": "Liudas Mažylis",
+      "party": null,
+      "photo": "https://www.lrs.lt/SIPIS/sn_foto/2024/liudas_mazylis.jpg",
+      "active": false,
+      "seimas_id": 24022,
+      "mandate_start_date": "2024-11-14",
+      "mandate_end_date": "2024-12-05"
+    },
+    "dimensions": {
+      "legislative_activity": 0.0,
+      "experience": 0.64,
+      "visibility": 0.0
+    },
+    "metrics": {
+      "bills_authored_count": 0.0,
+      "bills_initiated_total": 0.0,
+      "bills_initiated_individually": 0.0,
+      "bills_passed": 0.0,
+      "committee_leadership": 0.0,
+      "years_in_parliament": 1.8069815195071868,
+      "total_votes_cast": 74.0,
+      "speeches_given": 0.0,
+      "social_bonus": 0.0,
+      "risk_score": 0.0,
+      "forensic_penalties": {
+        "benford_penalty": 0,
+        "chrono_penalty": 0,
+        "geometry_penalty": 0,
+        "phantom_penalty": 0,
+        "loyalty_bonus": 0,
+        "total_forensic_adjustment": 0
+      },
+      "attendance_percentage": 100.0,
+      "amendments_proposed": 0.0,
+      "amendments_proposed_proxy": 0.0,
+      "bills_proposed": 0.0,
+      "party_loyalty": null,
+      "high_risk_alerts": 0
+    },
+    "metrics_provenance": {
+      "legislative_activity": "unavailable",
+      "experience": "direct",
+      "visibility": "direct"
+    },
+    "forensic_breakdown": {
+      "benford": {
+        "status": "clean",
+        "p_value": null,
+        "penalty": 0,
+        "explanation": "No Benford anomaly detected in available analysis records."
+      },
+      "chrono": {
+        "status": "unavailable",
+        "worst_zscore": null,
+        "penalty": 0,
+        "explanation": "Chrono-forensics table is unavailable."
+      },
+      "vote_geometry": {
+        "status": "unavailable",
+        "max_deviation_sigma": null,
+        "penalty": 0,
+        "explanation": "Vote geometry table is unavailable."
+      },
+      "phantom_network": {
+        "status": "unavailable",
+        "procurement_links": 0,
+        "closest_hop_count": null,
+        "debtor_links": 0,
+        "penalty": 0,
+        "explanation": "Phantom network table is unavailable."
+      },
+      "loyalty_bonus": {
+        "status": "unavailable",
+        "independent_voting_days_pct": null,
+        "bonus": 0,
+        "explanation": "This member sits in no faction, or has too few comparable votes, so agreement with a faction cannot be measured and no loyalty bonus is applied."
+      },
+      "raw_forensic_penalty_sum": 0,
+      "capped_forensic_penalty": 0,
+      "total_forensic_adjustment": 0
+    }
+  }
+}

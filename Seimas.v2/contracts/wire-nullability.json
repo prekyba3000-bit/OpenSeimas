@@ -1,0 +1,37 @@
+{
+  "_why": [
+    "Every payload path the backend may legitimately send as null, declared in one",
+    "place and read by BOTH suites.",
+    "",
+    "This file exists because the same bug shipped twice in one session. The",
+    "backend widened a value to null; the zod schema still said z.number(); the",
+    "parse failed and took the entire profile page down for 9 members. Both times",
+    "the Python suite and the TypeScript suite were fully green, because every",
+    "fixture in them was written by hand and nobody imagines the awkward case.",
+    "",
+    "The rule this encodes: widening a backend value to null is a WIRE CHANGE,",
+    "even when no field is renamed and no key moves.",
+    "",
+    "Adding a path here is one line. Forgetting to is caught by the fixture test,",
+    "which derives observed nulls from real captured payloads rather than from",
+    "anyone's memory."
+  ],
+  "endpoints": {
+    "heroes_profile": {
+      "route": "GET /api/v2/heroes/{mp_id}",
+      "client_schema": "mpProfileSchema",
+      "fixtures": "contracts/fixtures/heroes-*.json",
+      "nullable_paths": {
+        "mp.party": "The member sits in no faction. True of the Seimo Pirmininkas, who steps out of his by convention, and of every former member. 9 members today.",
+        "mp.mandate_end_date": "The mandate has not ended.",
+        "metrics.party_loyalty": "No faction to agree with, or too few comparable votes. Not a low score — no basis.",
+        "metrics.attendance_percentage": "Suppressed below the 3 eligible sitting day floor.",
+        "forensic_breakdown.loyalty_bonus.independent_voting_days_pct": "The loyalty engine is unavailable, so there is no independence rate to report. Must never be inverted from a missing figure.",
+        "forensic_breakdown.benford.p_value": "Too few digits to run the test.",
+        "forensic_breakdown.chrono.worst_zscore": "No amendment timing data.",
+        "forensic_breakdown.vote_geometry.max_deviation_sigma": "No geometry computed for this member.",
+        "forensic_breakdown.phantom_network.closest_hop_count": "No phantom-network hit, so there is no hop distance."
+      }
+    }
+  }
+}
