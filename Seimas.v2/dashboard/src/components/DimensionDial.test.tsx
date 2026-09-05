@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import userEvent from "@testing-library/user-event";
 import {
   DIMENSION_UNAVAILABLE_LT,
+  NEVER_TOOK_SEAT_NO_FIGURE_LT,
   NO_FACTION_NO_FIGURE_LT,
 } from "../utils/mpLegacyDimensions";
 import { DimensionDial } from "./DimensionDial";
@@ -56,6 +57,23 @@ describe("a dial states its own denominator", () => {
       />,
     );
     expect(screen.queryByText("0.0")).not.toBeInTheDocument();
+  });
+
+  it("says a member never took the seat rather than scoring them 0.0", () => {
+    // Four members were elected and resigned the same day, and every dimension
+    // computed to 0.0 for them. „Patirtis ir aktyvumas 0.0 %" in a row of
+    // percentages reads as worst-in-the-chamber; the truth is that they were
+    // never there, which the profile header already says two inches above.
+    render(
+      <DimensionDial
+        dimension="experience"
+        value={null}
+        unavailableReason={NEVER_TOOK_SEAT_NO_FIGURE_LT}
+      />,
+    );
+    expect(screen.getByText(NEVER_TOOK_SEAT_NO_FIGURE_LT)).toBeInTheDocument();
+    expect(screen.queryByText("0.0")).not.toBeInTheDocument();
+    expect(screen.queryByText(DIMENSION_UNAVAILABLE_LT)).not.toBeInTheDocument();
   });
 
   it("offers the how-it-is-calculated drawer on every dial", () => {

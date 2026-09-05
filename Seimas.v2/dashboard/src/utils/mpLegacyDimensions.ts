@@ -50,6 +50,23 @@ export const DIMENSION_UNAVAILABLE_LT = "Rodiklis bus rodomas, kai bus įkelti �
  *
  * LT-COPY: needs native review.
  */
+/**
+ * Shown instead of a figure for a member who never took up the mandate.
+ *
+ * Four members were elected and resigned the same day. Every dimension for
+ * them computed to 0.0 and was published as such — „Patirtis ir aktyvumas
+ * 0.0 %", „Viešumas 0.0 %" — which in a row of percentages reads as *worst in
+ * the chamber* rather than *was never here*. It is a measured zero only in the
+ * sense that nothing could have been measured.
+ *
+ * The profile header already states the fact plainly. The dials contradicted
+ * it with a number.
+ *
+ * LT-COPY: needs native review.
+ */
+export const NEVER_TOOK_SEAT_NO_FIGURE_LT =
+  "Narys mandato neperėmė, todėl nėra ką matuoti.";
+
 export const NO_FACTION_NO_FIGURE_LT =
   "Narys nepriskirtas frakcijai, todėl nėra pozicijos, su kuria būtų galima lyginti.";
 
