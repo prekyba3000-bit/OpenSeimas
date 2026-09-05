@@ -331,14 +331,19 @@ export const mpActivitySchema = z.object({
   // publish. This only says "there is more", so nothing is shown as complete
   // when it is not.
   travel_has_more: z.boolean().nullable(),
-  press_releases: z.array(
-    z.object({
-      date: z.string(),
-      title: z.string(),
-      url: z.string().nullable(),
-    }),
-  ),
-  press_has_more: z.boolean(),
+  // Nullable for the same reason travel is: the speeches table can be absent,
+  // and "we cannot tell" is not "there were none". The backend queried it
+  // unguarded until 2026-09-04 while guarding the two lists beside it.
+  press_releases: z
+    .array(
+      z.object({
+        date: z.string(),
+        title: z.string(),
+        url: z.string().nullable(),
+      }),
+    )
+    .nullable(),
+  press_has_more: z.boolean().nullable(),
   // Names and whether the post is in the constituency office. No contact
   // field exists to declare: mp_assistants has no column for one, because
   // the feed's phone numbers and addresses are dropped at the parser.
