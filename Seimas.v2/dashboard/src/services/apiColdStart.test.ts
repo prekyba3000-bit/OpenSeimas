@@ -1,5 +1,24 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { api, isApiWarm, resetApiWarmth } from "./api";
+
+/**
+ * A real /api/stats body, for a test about timeouts rather than about shape.
+ *
+ * The stub here used to be `{ total_mps: 141 }`, which was fine while the
+ * endpoint had no runtime schema and stopped being fine the moment it got one.
+ * Read from the committed degraded fixture rather than hand-written, so this
+ * file cannot drift from what the backend can actually send — hand-written
+ * stubs drifting from the wire is the failure this whole contract layer exists
+ * to stop.
+ */
+const STATS_BODY = JSON.parse(
+  readFileSync(
+    join(__dirname, "..", "..", "..", "contracts", "fixtures", "degraded-stats.json"),
+    "utf-8",
+  ),
+).payload;
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -53,7 +72,7 @@ describe("cold-start timeout budget", () => {
   });
 
   it("marks the API warm after the first success", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ total_mps: 141 }));
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(STATS_BODY));
     vi.stubGlobal("fetch", fetchMock);
 
     expect(isApiWarm()).toBe(false);
@@ -63,7 +82,7 @@ describe("cold-start timeout budget", () => {
 
   it("reverts to the short 8s timeout once warm", async () => {
     // Warm it up first.
-    const okFetch = vi.fn().mockResolvedValue(jsonResponse({ total_mps: 141 }));
+    const okFetch = vi.fn().mockResolvedValue(jsonResponse(STATS_BODY));
     vi.stubGlobal("fetch", okFetch);
     await api.getStats();
     expect(isApiWarm()).toBe(true);

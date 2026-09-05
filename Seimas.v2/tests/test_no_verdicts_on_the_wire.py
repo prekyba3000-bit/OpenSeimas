@@ -47,6 +47,54 @@ def test_dimensions_are_named_for_what_they_measure():
     }
 
 
+def test_the_payload_carries_no_verdict_one_level_down():
+    """The hole the model-fields check could not see.
+
+    `test_response_model_declares_no_rpg_or_composite_fields` reads
+    `HeroProfileResponse.model_fields` and finds `metrics` and
+    `forensic_breakdown` — both `Dict[str, Any]`. It stops there, so it asserted
+    the top level was clean while the payload carried `risk_score`,
+    `high_risk_alerts`, `forensic_penalties`, `social_bonus`,
+    `raw_forensic_penalty_sum` and `capped_forensic_penalty` about every named
+    member, live, for however long they had been there.
+
+    Written against the built payload rather than the model, and recursively,
+    because the failure was precisely that a verdict does not need a top-level
+    field to reach a reader.
+    """
+    from tests.degraded import empty_cursor
+    from backend.hero_engine import calculate_hero_profile
+
+    NOT_NULL = {
+        "id": "00000000-0000-0000-0000-000000000000",
+        "mp_id": "00000000-0000-0000-0000-000000000000",
+        "display_name": "Testinis Narys",
+        "full_name_normalized": "testinis narys",
+    }
+    payload = calculate_hero_profile(NOT_NULL["id"], empty_cursor(present=NOT_NULL))
+
+    banned = set(COMPOSITE_KEYS) | {
+        "high_risk_alerts", "forensic_penalties", "social_bonus",
+        "raw_forensic_penalty_sum", "capped_forensic_penalty",
+    }
+
+    def paths(obj, prefix=""):
+        if isinstance(obj, dict):
+            for k, v in obj.items():
+                yield f"{prefix}.{k}" if prefix else k
+                yield from paths(v, f"{prefix}.{k}" if prefix else k)
+        elif isinstance(obj, list):
+            for v in obj:
+                yield from paths(v, f"{prefix}[]")
+
+    found = [p for p in paths(payload) if p.rsplit(".", 1)[-1] in banned]
+    assert found == [], (
+        f"verdict-shaped keys on the public payload: {found}. The public API "
+        f"ships evidence and descriptive dimensions; a score about a named "
+        f"person ships nowhere, however deeply nested and whatever its value."
+    )
+
+
 def test_public_breakdown_drops_the_composite_but_keeps_the_evidence():
     raw = {
         "_composite_base_risk_score": 0.22,
@@ -61,6 +109,10 @@ def test_public_breakdown_drops_the_composite_but_keeps_the_evidence():
     assert not any(k.startswith("_composite_") for k in out)
     for key in ("final_integrity_score", "base_risk_score", "base_risk_penalty"):
         assert key not in out
+    # Dropped by name, not by prefix: these two are the same aggregation and
+    # were written without the `_composite_` that would have caught them.
+    for key in ("raw_forensic_penalty_sum", "capped_forensic_penalty"):
+        assert key not in public_breakdown({key: 0, "benford": {"status": "clean"}})
 
 
 @pytest.mark.asyncio
