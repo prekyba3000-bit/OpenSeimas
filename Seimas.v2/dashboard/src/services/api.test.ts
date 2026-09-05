@@ -194,6 +194,30 @@ describe("mpProfileSchema null tolerance", () => {
     expect(parsed.success).toBe(true);
   });
 
+  it("accepts a member who sits in no faction", async () => {
+    // Since migration 039 party is NULL for the Speaker, who steps out of his
+    // faction. `z.string().optional()` admits undefined and rejects null, so
+    // this took his entire profile page down — every other field lost to one
+    // legitimately-absent value. Goes through parse, not around it.
+    const { mpProfileSchema } = await import("./api");
+    const wire = profileWire({ attendance_percentage: 94.68, party_loyalty: null });
+    const parsed = mpProfileSchema.safeParse({
+      ...wire,
+      mp: { ...wire.mp, party: null },
+    });
+    expect(parsed.success).toBe(true);
+  });
+
+  it("still accepts a member who has one", async () => {
+    const { mpProfileSchema } = await import("./api");
+    const wire = profileWire({ attendance_percentage: 91, party_loyalty: 77.27 });
+    const parsed = mpProfileSchema.safeParse({
+      ...wire,
+      mp: { ...wire.mp, party: "„Nemuno aušros“ frakcija" },
+    });
+    expect(parsed.success).toBe(true);
+  });
+
   it("still accepts a published numeric metric", async () => {
     const { mpProfileSchema } = await import("./api");
     const parsed = mpProfileSchema.safeParse(

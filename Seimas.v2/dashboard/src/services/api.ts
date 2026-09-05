@@ -229,7 +229,12 @@ export const mpProfileSchema = z
     mp: z.object({
       id: z.string(),
       name: z.string(),
-      party: z.string().optional(),
+      // .nullable() is not decoration. `.optional()` admits undefined and
+      // rejects null, and since migration 039 the API sends party: null for a
+      // member who sits in no faction — the Speaker. Without this the whole
+      // profile fails to parse and the page renders „Užklausa neteisinga",
+      // losing every other field over one legitimately-absent value.
+      party: z.string().nullable().optional(),
       photo: z.string().optional(),
       active: z.boolean().optional(),
       seimas_id: z.union([z.string(), z.number(), z.null()]).optional(),
