@@ -70,8 +70,7 @@
         "independent_voting_days_pct": null,
         "bonus": 0,
         "explanation": "This member sits in no faction, or has too few comparable votes, so agreement with a faction cannot be measured and no loyalty bonus is applied."
-      },
-      "total_forensic_adjustment": 0
+      }
     }
   }
 }
