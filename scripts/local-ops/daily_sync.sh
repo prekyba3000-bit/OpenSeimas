@@ -79,6 +79,14 @@ echo "[$(date -Is)] daily sync start"
 # entries late, so insert-once would miss them. Write work is skipped for the
 # ~140 diaries whose fingerprint is unchanged, which is the usual case.
 .venv/bin/python -m pipeline.ingest_diary || echo "[$(date -Is)] diary ingest failed (non-fatal, previous rows kept)"
+# Legal-act projects. Built from the sitting agendas already ingested above —
+# no network call, because the endpoint the old version fetched
+# (e-seimas.lrs.lt/rs/legalactproject) has returned 404 on every variant since
+# at least 2026-09-05 and the script had therefore never once succeeded.
+#
+# Must run AFTER ingest_votes_v2 (it reads the titles that ingest writes) and
+# BEFORE tag_topics (which tags legislation rows).
+.venv/bin/python -m pipeline.ingest_legislation || echo "[$(date -Is)] legislation build failed (non-fatal, previous rows kept)"
 .venv/bin/python -m pipeline.cli tag_topics || echo "[$(date -Is)] tag_topics failed (non-fatal, same as workflow)"
 # Data-quality gate. Runs after ingestion, before anything downstream trusts
 # the data. A block_publish failure exits non-zero and the refresh job will

@@ -2,9 +2,11 @@
 
 This project's most repeated defect, four times now:
 
-  * `pipeline/ingest_legislation.py` — written, never wired. `legislation` has
-    held 0 rows for the life of the project while `backend/graph.py` and
-    `pipeline/tag_topics.py` read it.
+  * `pipeline/ingest_legislation.py` — written, never wired, and pointed at an
+    endpoint that 404s, so it had never once succeeded. `legislation` held 0
+    rows for the life of the project while `backend/graph.py` and
+    `pipeline/tag_topics.py` read it. **Fixed 2026-09-05**: rebuilt on the
+    agenda data already ingested, on the daily sync, 1,683 rows.
   * `pipeline/ingest_authored_bills.py` — wired only in a skills script no timer
     called, so `legislative_activity` was displayed beside figures that
     refreshed daily while its own input refreshed by hand.
@@ -32,17 +34,6 @@ OPS = ROOT / "scripts" / "local-ops"
 
 # Not on any schedule, on purpose. Each entry is why.
 UNWIRED_BY_DECISION = {
-    "ingest_legislation": (
-        "Source is dead and the join key is wrong. Its endpoint "
-        "e-seimas.lrs.lt/rs/legalactproject/search/find returns 404 on every "
-        "variant tried on 2026-09-05, so the script has never successfully run. "
-        "It also joins on votes.project_id, which holds the number of the law "
-        "BEING AMENDED for 3,464 of 4,392 votes — the extraction takes the first "
-        "'Nr.' in the title, and for an amendment that is the existing law, not "
-        "the project. 331 stored ids collapse several real projects onto one key; "
-        "'I-399' alone covers 44. Wiring a runner would fill a canonical-looking "
-        "table with wrongly-keyed rows. See docs/reviews/p4-legislation-runner.md."
-    ),
     "ingest_assets": (
         "No source. Asset declarations are not published in any feed this "
         "project has access to; the table exists from a migration and has never "
