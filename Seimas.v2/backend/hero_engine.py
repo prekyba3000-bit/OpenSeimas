@@ -1007,9 +1007,13 @@ def _fetch_mp_metrics(mp_id: str, db_cursor) -> Dict[str, Any] | None:
             COALESCE(s.total_votes_cast, 0) AS total_votes_cast,
             -- Not COALESCE(..., 0). Charter §1.4 forbids it in a read path by
             -- name, and this is why: a member with no row in the summary view
-            -- would be published as 0 % attendance, which states that they
+            -- would be published as zero attendance, which states that they
             -- never showed up rather than that we do not know. NULL travels;
             -- resolve_attendance keeps it NULL and the surface renders unknown.
+            -- Deliberately no per-cent sign anywhere in this comment: psycopg2
+            -- interpolates the whole query string, comments included, so one
+            -- would be read as a parameter placeholder and raise IndexError
+            -- before Postgres ever sees the query. Cost one 500 in production.
             s.attendance_percentage AS attendance_percentage,
             COALESCE(s.amendments_proposed_count, 0) AS amendments_proposed_count,
             COALESCE(sr.speeches_given, 0) AS speeches_given,
@@ -1333,9 +1337,13 @@ def fetch_graph_mp_summaries(db_cursor, active_only: bool = True) -> List[Dict[s
             COALESCE(s.total_votes_cast, 0) AS total_votes_cast,
             -- Not COALESCE(..., 0). Charter §1.4 forbids it in a read path by
             -- name, and this is why: a member with no row in the summary view
-            -- would be published as 0 % attendance, which states that they
+            -- would be published as zero attendance, which states that they
             -- never showed up rather than that we do not know. NULL travels;
             -- resolve_attendance keeps it NULL and the surface renders unknown.
+            -- Deliberately no per-cent sign anywhere in this comment: psycopg2
+            -- interpolates the whole query string, comments included, so one
+            -- would be read as a parameter placeholder and raise IndexError
+            -- before Postgres ever sees the query. Cost one 500 in production.
             s.attendance_percentage AS attendance_percentage,
             COALESCE(s.party_loyalty, 0) AS party_loyalty
         FROM politicians p
