@@ -1,79 +1,74 @@
-# RESUME — 2026-09-02
+# RESUME — 2026-09-04
 
 Branch `main`, everything pushed. Pre-push gate green on every commit.
+Suites: **274 dashboard / 216 backend** (+19 skipped).
 
-## Done this session
+## This session
 
 | Commit | What |
 | --- | --- |
 | `0b34abe` | P5 vote summaries: template, figure gate, 33 tests, 10-sample pilot |
 | `3082b52` | Corrections entry for the cause we invented (migration 038) |
 | `78d8c11` | Truncated titles marked on the vote page; dev-server fonts fixed |
+| `6b59a70` | Faction vs nominating party split (migration 039) — both sides |
+| `193be1e` | Last party placeholder out of the OpenPlanter graph payload |
+| `930c66b` | Review doc for the faction finding |
+| `af155b0` | The no-faction row rendered as the word „null" |
+| `82fffa4` | A null faction took the whole profile page down |
 
-Suites: **265 dashboard / 208 backend** (+19 skipped). Charter counts updated.
+## The faction work, in one paragraph
 
-## P5 — the state that matters
+`current_party` was a fallback chain: the faction when it resolved, the
+NOMINATING party when it did not, with nothing to tell a reader which. It
+failed to resolve for exactly the faction leaders and their deputies, because
+the ingest matched only the role string „frakcijos nar". Matching the
+department name instead, and skipping ended roles, gives 139 of 140 active
+members in 7 groups where the column held 13 values. The 140th is the Speaker,
+who steps out of his faction; he now renders as unknown rather than as whoever
+nominated him. `nominating_party` keeps the fact the old column destroyed.
+Full write-up: `faction-vs-nominating-party.md`.
 
-Built: a deterministic template that renders all 5,286 votes into plain
-Lithuanian, and a **figure gate** that runs on the finished string rather than
-on the template's internals — so it will still work when an LLM is allowed to
-rephrase. It rejects invented numbers, dropped figures, rounding („apie 100"
-for 98), and digits hardcoded into template wording. Run across the whole
-table: 0 violations.
+## Three defects I introduced and then found
 
-Not built, deliberately: nothing is published. No route serves these, no
-`summary_revisions` row was written, no surface renders them, and no LLM is
-involved. Bill summaries are blocked upstream — `legislation` still has 0 rows
-and no runner, so votes were the half with data.
+Worth listing plainly, because all three were mine and all three were found by
+opening the page rather than by a test:
 
-**The gate for publication is human, not technical.** The pilot
-(`p5-vote-summary-pilot.md`) needs a Lithuanian reader, and specifically the
-three stage glosses („pateikimo stadijoje sprendžiama, ar apskritai pradėti
-svarstyti projektą" and siblings) checked against the Seimas Statute — they are
-claims about procedure, not about our data.
+1. **Ran the migration and ingest before shipping the code**, so `/api/v2/heroes`
+   served `party: "Unknown"` for one deploy cycle. Ordering is code first, then
+   data.
+2. **„null" as a faction name.** `party_stats` is a JSON object keyed by faction,
+   and an object key cannot be null — Python stringifies it. The vote page grew
+   a row labelled „null".
+3. **The Speaker's profile went blank.** `party: z.string().optional()` rejects
+   null; `.optional()` only admits undefined. One legitimately-absent value
+   failed the parse and took every other field with it. This is charter §1.11
+   verbatim, violated in the same session that quotes it.
 
-## Two defects found and fixed
+The suites were green throughout all three. That is the argument for §1.7.
 
-1. **We published a cause the source does not give.** The vote page told
-   readers per-member results were missing because the electronic results
-   disagreed with the protocol. That sentence came from a `komentaras`
-   attribute that is one identical string on **all 5,286 votes**, including all
-   3,630 that publish everything. A field present on every row discriminates
-   nothing. Fixed in four places (the page, the seat map, its test, and this
-   session's own template, which had inherited the false premise before the
-   recon caught it). `test_absence_is_never_given_a_cause` guards the class.
-   Public corrections entry in migration 038.
+## P5 state
 
-2. **Truncated titles shown as whole names.** LRS caps titles at 200
-   characters; 571 are cut mid-phrase. Verified against the live agenda feed —
-   the cap is upstream, our ingest is faithful. Now marked on the vote page and
-   in summaries.
+Template and figure gate built; 0 violations across all 5,286 votes. Nothing is
+published — no route, no `summary_revisions` row, no surface, no LLM. Bill
+summaries stay blocked: `legislation` has 0 rows and no runner.
 
-Neither was found by grepping. Both came from reading a rendered page.
+**Publication is gated on a human, not on code.** The pilot
+(`p5-vote-summary-pilot.md`) needs a Lithuanian reader, and the three stage
+glosses need checking against the Seimas Statute — they are claims about
+parliamentary procedure, not about our data.
 
-## Blocked / needs the human
+## Open
 
-- **LT-COPY native review** — the pilot, plus the two strings added this
-  session. Inventory in `p5-vote-summaries.md`.
-- **Stage glosses vs the Seimas Statute** — see above; gates P5 publication.
+- **LT-COPY native review** — pilot plus `NO_FACTION_LT`.
 - **Legal name** — `<FILL IN>` in `NOTICE:3`, `NOTICE:18`, `README.md:69`.
-  Awaits the VšĮ entity code. Never invent it.
-- ~~**Vercel frontend URL**~~ — **resolved 2026-09-04.** Two live deployments,
-  both serving the same build: `seimas-v2.vercel.app` and
-  `open-seimas-dashboard.vercel.app`. Recorded in `Seimas.v2/README.md`. The
-  third CORS origin, `dashboard-tawny-tau-42.vercel.app`, is dead (404).
-- Five older decisions still open: VTEK approach, snapshot payload storage,
-  `ingest_votes_v2` manifest policy, faction spelling variants, forensic
-  severity badges.
+- **Vercel URL** still recorded nowhere in the repo. It is
+  `https://seimas-v2.vercel.app`; worth committing to the README next session.
+- `/api/v2/heroes` takes ~4s in production against an 8s client timeout. Not
+  breaking, but the margin is thin and it is the slowest public path.
+- Older decisions: VTEK approach, snapshot payload storage,
+  `ingest_votes_v2` manifest policy, forensic severity badges.
 
 ## Next concrete step
 
-Either (a) a human reads the pilot and the LT copy, unblocking P5 publication,
-or (b) if more code is wanted first, the `legislation` runner — it is the only
-thing standing between here and bill summaries, and P4's recon already says
-where the data would come from.
-
-One thing worth doing before publishing summaries: a permanent agreement test
-between the protocol tallies (`votes.votes_for`) and the per-member counts the
-vote page derives. They agree 3,630/3,630 today, and the summary reads one
-while the page reads the other.
+The `legislation` runner — the only thing between here and bill summaries, and
+P4's recon already says where the data comes from.
