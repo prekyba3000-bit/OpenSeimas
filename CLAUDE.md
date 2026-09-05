@@ -83,7 +83,7 @@ When two principles conflict, resolve in this order:
   changes must ship both sides within minutes, at a quiet hour, verified
   immediately after; note the coupling in the merge commit message.
 - Pre-push hook (pytest + vite build) must stay green. **[corrected]**
-  Current counts: **274 dashboard / 216 backend**. New work adds tests,
+  Current counts: **274 dashboard / 220 backend**. New work adds tests,
   never deletes them to pass.
 - Local systemd user timers own: uptime (/15), stats (/30), nightly backup
   (03:30), daily sync (06:00 Vilnius). GitHub Actions billing stays locked.

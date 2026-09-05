@@ -126,3 +126,61 @@ async def test_the_endpoint_publishes_counts_beside_every_percentage(monkeypatch
 async def test_missing_view_reports_empty_not_error(monkeypatch):
     body = await _get(monkeypatch, [], has_view=False)
     assert body["alignment"] == [] and body["total_mps"] == 0
+
+
+# --- agreement with a faction the member does not have -------------------
+
+class _Cur:
+    """Cursor stub returning one canned row per execute()."""
+
+    def __init__(self, row):
+        self._row = row
+
+    def execute(self, *_a, **_k):
+        pass
+
+    def fetchone(self):
+        return self._row
+
+
+def test_no_comparable_basis_is_none_not_zero(monkeypatch):
+    """0.0 means "agrees with his faction 0% of the time". For a member who
+    sits in no faction that is not a low score, it is a sentence about a thing
+    that does not exist. The Seimo Pirmininkas steps out of his faction, and
+    the SQL join can never match him because NULL never equals NULL."""
+    from backend import hero_engine
+
+    monkeypatch.setattr(hero_engine, "_table_exists", lambda *a, **k: False)
+    assert hero_engine._fetch_party_loyalty("x", _Cur(None)) is None
+    assert hero_engine._fetch_party_loyalty("x", _Cur({"party_loyalty": None})) is None
+
+
+def test_a_real_figure_still_comes_through(monkeypatch):
+    from backend import hero_engine
+
+    monkeypatch.setattr(hero_engine, "_table_exists", lambda *a, **k: False)
+    assert hero_engine._fetch_party_loyalty("x", _Cur({"party_loyalty": 75.84})) == 75.84
+
+
+def test_missing_loyalty_is_not_inverted_into_independence():
+    """`100 - None` would crash; `100 - 0` is worse — it turns "we cannot
+    measure this" into a perfect independence score and pays an integrity bonus
+    for it. Both breakdown paths must agree."""
+    from backend.hero_engine import _build_forensic_breakdown_fast
+
+    row = {"mp_id": "x", "display_name": "Testas"}
+    out = _build_forensic_breakdown_fast(row, None)
+    bonus = out["loyalty_bonus"]
+    assert bonus["status"] == "unavailable"
+    assert bonus["bonus"] == 0
+    assert bonus["independent_voting_days_pct"] is None
+
+
+def test_present_loyalty_still_scores_the_bonus():
+    from backend.hero_engine import _build_forensic_breakdown_fast
+
+    row = {"mp_id": "x", "display_name": "Testas"}
+    # 75% agreement -> 25% independent, inside the calibrated 10-40% band.
+    out = _build_forensic_breakdown_fast(row, 75.0)
+    assert out["loyalty_bonus"]["status"] == "warning"
+    assert out["loyalty_bonus"]["bonus"] == 10

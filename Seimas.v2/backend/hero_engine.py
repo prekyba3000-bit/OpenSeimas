@@ -1,6 +1,6 @@
 import math
 from datetime import date
-from typing import Any, Dict, Iterable, List, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 
 def _coerce_to_date(value: Any) -> date | None:
@@ -63,14 +63,19 @@ def _award_artifacts(metrics: Dict[str, float], integrity_score: float, level: i
     # with no publishable figure earns no attendance-based artifact.
     if (metrics["attendance_percentage"] or 0) >= 95:
         artifacts.append({"name": "Sentinel Sigil", "rarity": "Rare"})
-    if metrics["party_loyalty"] < 70 and level >= 2:
+    # None means we could not compute agreement at all, which is not the same
+    # as disagreeing; a member with no faction earns no dissent artifact.
+    if (metrics["party_loyalty"] is not None
+            and metrics["party_loyalty"] < 70 and level >= 2):
         artifacts.append({"name": "Cloak of Dissent", "rarity": "Rare"})
 
     return artifacts
 
 
-def _derive_alignment(party_loyalty: float, attendance_percentage: float) -> str:
-    if party_loyalty > 60:
+def _derive_alignment(party_loyalty: Optional[float], attendance_percentage: float) -> str:
+    if party_loyalty is None:
+        method_axis = "Neutral"
+    elif party_loyalty > 60:
         method_axis = "Lawful"
     elif party_loyalty < 30:
         method_axis = "Chaotic"
@@ -212,7 +217,7 @@ def _fetch_amendments_direct(mp_id: str, db_cursor) -> Tuple[float, bool]:
 
 
 def _build_forensic_breakdown(
-    mp_id: str, db_cursor, base_risk_score: float, party_loyalty_pct: float
+    mp_id: str, db_cursor, base_risk_score: float, party_loyalty_pct: Optional[float]
 ) -> Dict[str, Any]:
     base_risk_penalty = -float(base_risk_score)
 
@@ -548,28 +553,45 @@ def _build_forensic_breakdown(
                     "explanation": "No phantom network hits found for this MP.",
                 }
 
-    # Use disloyalty percentage derived from party loyalty; this avoids inversion ambiguity.
-    disloyalty_pct = _clamp(100.0 - party_loyalty_pct, 0.0, 100.0)
-    loyalty_bonus = 0
-    if 10.0 < disloyalty_pct < 40.0:
-        loyalty_bonus = 10
+    # Derived from party loyalty, which is None when there is no basis to
+    # compute it — a member who sits in no faction has nothing to be
+    # independent OF. Inverting a missing value would turn "we cannot measure
+    # this" into a 100% independence score and hand out an integrity bonus for
+    # it, which is the inversion this comment used to say it was avoiding.
+    if party_loyalty_pct is None:
+        loyalty_bonus = 0
+        loyalty_bonus_obj = {
+            "status": "unavailable",
+            "independent_voting_days_pct": None,
+            "bonus": 0,
+            "explanation": (
+                "This member sits in no faction, or has too few comparable "
+                "votes, so agreement with a faction cannot be measured and no "
+                "loyalty bonus is applied."
+            ),
+        }
+    else:
+        disloyalty_pct = _clamp(100.0 - party_loyalty_pct, 0.0, 100.0)
+        loyalty_bonus = 0
+        if 10.0 < disloyalty_pct < 40.0:
+            loyalty_bonus = 10
 
-    loyalty_bonus_obj = {
-        "status": "warning" if loyalty_bonus > 0 else "clean",
-        "independent_voting_days_pct": round(disloyalty_pct, 2),
-        "bonus": loyalty_bonus,
-        "explanation": (
-            (
-                f"Estimated independent voting rate is {disloyalty_pct:.1f}%; "
-                "this is independent but not fully detached, so integrity bonus is applied."
-            )
-            if loyalty_bonus > 0
-            else (
-                f"Estimated independent voting rate is {disloyalty_pct:.1f}%; "
-                "outside the calibrated 10-40% independent range, so no loyalty bonus is applied."
-            )
-        ),
-    }
+        loyalty_bonus_obj = {
+            "status": "warning" if loyalty_bonus > 0 else "clean",
+            "independent_voting_days_pct": round(disloyalty_pct, 2),
+            "bonus": loyalty_bonus,
+            "explanation": (
+                (
+                    f"Estimated independent voting rate is {disloyalty_pct:.1f}%; "
+                    "this is independent but not fully detached, so integrity bonus is applied."
+                )
+                if loyalty_bonus > 0
+                else (
+                    f"Estimated independent voting rate is {disloyalty_pct:.1f}%; "
+                    "outside the calibrated 10-40% independent range, so no loyalty bonus is applied."
+                )
+            ),
+        }
 
     raw_penalty_sum = (
         benford["penalty"]
@@ -600,13 +622,24 @@ def _build_forensic_breakdown(
     }
 
 
-def _fetch_party_loyalty(mp_id: str, db_cursor) -> float:
+def _fetch_party_loyalty(mp_id: str, db_cursor) -> Optional[float]:
+    """Agreement with the member's own faction, or None when there is no basis.
+
+    None is a real answer here, not a missing one. A member who sits in no
+    faction — the Seimo Pirmininkas, who steps out of his — has nothing to
+    agree with, and the join below can never match him because NULL never
+    equals NULL. Returning 0.0 for that published a figure meaning "agrees with
+    his faction 0% of the time" about a man who has no faction.
+
+    The same is true of a member with too few comparable votes: no basis is not
+    the same as total disagreement.
+    """
     if _table_exists(db_cursor, "mp_stats_summary"):
         summary_columns = _fetch_table_columns(db_cursor, "mp_stats_summary")
         if "party_loyalty" in {c.lower() for c in summary_columns}:
             db_cursor.execute(
                 """
-                SELECT COALESCE(party_loyalty, 0) AS party_loyalty
+                SELECT party_loyalty
                 FROM mp_stats_summary
                 WHERE mp_id = %s::uuid
                 """,
@@ -614,7 +647,8 @@ def _fetch_party_loyalty(mp_id: str, db_cursor) -> float:
             )
             row = db_cursor.fetchone()
             if row:
-                return float(row["party_loyalty"] or 0)
+                value = row["party_loyalty"]
+                return float(value) if value is not None else None
 
     db_cursor.execute(
         """
@@ -681,7 +715,7 @@ def _fetch_party_loyalty(mp_id: str, db_cursor) -> float:
             CASE
                 WHEN lb.total_comparable_votes > 0 THEN
                     ROUND((lb.aligned_votes::numeric / lb.total_comparable_votes) * 100, 2)
-                ELSE 0
+                ELSE NULL
             END AS party_loyalty
         FROM loyalty_base lb
         WHERE lb.politician_id = %s::uuid
@@ -689,7 +723,9 @@ def _fetch_party_loyalty(mp_id: str, db_cursor) -> float:
         (mp_id,),
     )
     row = db_cursor.fetchone()
-    return float(row["party_loyalty"]) if row else 0.0
+    if not row or row["party_loyalty"] is None:
+        return None
+    return float(row["party_loyalty"])
 
 
 # ─── Score formulas ──────────────────────────────────────────────────────────
@@ -1325,7 +1361,7 @@ def _build_geometry_from_row(row: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def _build_forensic_breakdown_fast(row: Dict[str, Any], party_loyalty_pct: float) -> Dict[str, Any]:
+def _build_forensic_breakdown_fast(row: Dict[str, Any], party_loyalty_pct: Optional[float]) -> Dict[str, Any]:
     """Forensic breakdown computed from a single mp_leaderboard_metrics row.
 
     benford_analyses / amendment_profiles / phantom_* tables are empty or absent
@@ -1354,24 +1390,41 @@ def _build_forensic_breakdown_fast(row: Dict[str, Any], party_loyalty_pct: float
     }
     vote_geometry = _build_geometry_from_row(row)
 
-    disloyalty_pct = _clamp(100.0 - party_loyalty_pct, 0.0, 100.0)
-    loyalty_bonus = 10 if 10.0 < disloyalty_pct < 40.0 else 0
-    loyalty_bonus_obj = {
-        "status": "warning" if loyalty_bonus > 0 else "clean",
-        "independent_voting_days_pct": round(disloyalty_pct, 2),
-        "bonus": loyalty_bonus,
-        "explanation": (
-            (
-                f"Estimated independent voting rate is {disloyalty_pct:.1f}%; "
-                "this is independent but not fully detached, so integrity bonus is applied."
-            )
-            if loyalty_bonus > 0
-            else (
-                f"Estimated independent voting rate is {disloyalty_pct:.1f}%; "
-                "outside the calibrated 10-40% independent range, so no loyalty bonus is applied."
-            )
-        ),
-    }
+    # Same rule as the slow path: a missing loyalty figure must not invert into
+    # a 100% independence score. The two paths have to agree — a profile and a
+    # leaderboard disagreeing about the same member is how this file earned its
+    # "one definition each" comment.
+    if party_loyalty_pct is None:
+        loyalty_bonus = 0
+        loyalty_bonus_obj = {
+            "status": "unavailable",
+            "independent_voting_days_pct": None,
+            "bonus": 0,
+            "explanation": (
+                "This member sits in no faction, or has too few comparable "
+                "votes, so agreement with a faction cannot be measured and no "
+                "loyalty bonus is applied."
+            ),
+        }
+    else:
+        disloyalty_pct = _clamp(100.0 - party_loyalty_pct, 0.0, 100.0)
+        loyalty_bonus = 10 if 10.0 < disloyalty_pct < 40.0 else 0
+        loyalty_bonus_obj = {
+            "status": "warning" if loyalty_bonus > 0 else "clean",
+            "independent_voting_days_pct": round(disloyalty_pct, 2),
+            "bonus": loyalty_bonus,
+            "explanation": (
+                (
+                    f"Estimated independent voting rate is {disloyalty_pct:.1f}%; "
+                    "this is independent but not fully detached, so integrity bonus is applied."
+                )
+                if loyalty_bonus > 0
+                else (
+                    f"Estimated independent voting rate is {disloyalty_pct:.1f}%; "
+                    "outside the calibrated 10-40% independent range, so no loyalty bonus is applied."
+                )
+            ),
+        }
 
     raw_penalty_sum = (
         benford["penalty"] + chrono["penalty"] + vote_geometry["penalty"] + phantom_network["penalty"]
