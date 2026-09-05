@@ -1,41 +1,50 @@
-"""What the API sends when almost every table is empty — and the guarantee that
-the client can still render it.
+"""What every validated endpoint sends when the database finds nothing.
 
-This closes the gap the fixture-based contract test could not. Those fixtures
-sample real members, so a field that only goes null under conditions no current
-member happens to be in stays invisible until someone refreshes them. Here the
-payload is built by handing the real code path a cursor that returns nothing,
-which explores the whole null-space at once rather than sampling it.
+Fixtures captured from real members SAMPLE the null-space: a field that only
+goes null under conditions no current member is in stays invisible until
+someone refreshes them. These payloads are built by handing the real route
+functions a cursor that returns nothing, which explores that space instead.
 
-It needs no database and no network, so it runs on every `pytest` and cannot go
-stale.
+No database and no network, so this runs on every `pytest` and cannot go stale.
+That is the whole point — it is the layer the captured fixtures could not be.
 
-The degradation modelled is deliberate: the member row EXISTS (id,
-display_name and full_name_normalized are NOT NULL in the schema, so they are
-never absent) while every auxiliary table is empty. That is the realistic worst
-case — a fresh database, a failed backfill, a dropped materialized view — not a
-fantasy in which a member has no name.
+Each payload is committed as a golden file under contracts/fixtures/ and
+compared against a fresh build, so a change in shape fails here rather than
+reaching the client as a surprise. `wireContract.test.ts` then parses the same
+files with the matching zod schema: if a schema cannot read a maximally
+degraded payload, one empty table blanks that surface for everyone.
 
-The generated payload is committed as contracts/fixtures/heroes-degraded.json
-and checked against a fresh build here, so a change in payload shape fails this
-test rather than silently drifting. The client suite then parses that same file:
-if the schema cannot read a maximally-degraded payload, one empty table blanks
-the profile page for everyone.
+Regenerate after an intended shape change:
+
+    .venv/bin/python -m tests.regen_degraded
+
+Two things this has already caught, neither visible to any hand-written or
+member-captured fixture:
+
+  - `mp.active` and `mp.photo` come from nullable columns and the schema
+    demanded a boolean and a string. No row has them null today.
+  - `/api/mps/{id}/activity` queried `speeches` unguarded while guarding the
+    two lists beside it, so an absent table meant a 500 there and a clean
+    degradation everywhere else — and `press_releases: []` could not be told
+    apart from "we cannot see the table".
 """
 from __future__ import annotations
 
 import json
 from pathlib import Path
+from unittest import mock
 
-from backend.hero_engine import calculate_hero_profile
+import pytest
+
+from tests.degraded import empty_db, null_paths
 
 ROOT = Path(__file__).resolve().parents[1]
-DEGRADED = ROOT / "contracts" / "fixtures" / "heroes-degraded.json"
-
+FIXTURE_DIR = ROOT / "contracts" / "fixtures"
 MP_ID = "00000000-0000-0000-0000-000000000000"
 
-# The three columns the schema marks NOT NULL. Everything else reads as absent.
-PRESENT = {
+
+# politicians marks exactly these NOT NULL, so they survive any degradation.
+NOT_NULL = {
     "id": MP_ID,
     "mp_id": MP_ID,
     "display_name": "Testinis Narys",
@@ -43,91 +52,103 @@ PRESENT = {
 }
 
 
-class _NullRow(dict):
-    """Truthy, and every column reads NULL unless the schema forbids it."""
+def _profile() -> dict:
+    from backend.hero_engine import calculate_hero_profile
+    from tests.degraded import empty_cursor
 
-    def __getitem__(self, key):
-        return PRESENT.get(key)
-
-    def get(self, key, default=None):
-        return PRESENT.get(key, default)
-
-    def __bool__(self):
-        return True
+    return calculate_hero_profile(MP_ID, empty_cursor(present=NOT_NULL))
 
 
-class _EmptyCursor:
-    """Every query finds the member and nothing else."""
+def _route(name: str, tables_present: bool):
+    import backend.routes_public as rp
 
-    def execute(self, *args, **kwargs):
-        return None
-
-    def fetchone(self):
-        return _NullRow()
-
-    def fetchall(self):
-        return []
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *args):
-        return False
+    with mock.patch.object(rp, "get_db_conn", empty_db(tables_present)):
+        return {
+            "activity": lambda: rp.get_mp_activity(MP_ID),
+            "diary": lambda: rp.get_mp_diary(MP_ID),
+            "faction-alignment": lambda: rp.get_mp_faction_alignment(MP_ID),
+        }[name]()
 
 
-def build_degraded_payload() -> dict:
-    return calculate_hero_profile(MP_ID, _EmptyCursor())
+# (fixture stem, client zod schema, builder)
+CASES: tuple[tuple[str, str, object], ...] = (
+    ("heroes-degraded", "mpProfileSchema", _profile),
+    ("degraded-activity-empty", "mpActivitySchema", lambda: _route("activity", True)),
+    ("degraded-activity-absent", "mpActivitySchema", lambda: _route("activity", False)),
+    ("degraded-diary-empty", "mpDiarySchema", lambda: _route("diary", True)),
+    ("degraded-diary-absent", "mpDiarySchema", lambda: _route("diary", False)),
+    ("degraded-alignment-empty", "factionAlignmentSchema",
+     lambda: _route("faction-alignment", True)),
+    ("degraded-alignment-absent", "factionAlignmentSchema",
+     lambda: _route("faction-alignment", False)),
+)
 
 
-def null_paths(obj, prefix: str = ""):
-    if isinstance(obj, dict):
-        for key, value in obj.items():
-            yield from null_paths(value, f"{prefix}.{key}" if prefix else key)
-    elif obj is None:
-        yield prefix
+def golden(stem: str) -> Path:
+    return FIXTURE_DIR / f"{stem}.json"
 
 
-def test_an_empty_database_does_not_raise():
-    """The profile endpoint must degrade, not 500. Every one of these tables has
-    been empty at some point in this project's life."""
-    payload = build_degraded_payload()
-    assert payload["mp"]["id"] == MP_ID
+@pytest.mark.parametrize("stem,schema,build", CASES)
+def test_an_empty_database_does_not_raise(stem, schema, build):
+    """Every one of these tables has been empty at some point in this project's
+    life. A route that raises instead of degrading is a 500 on a public page."""
+    assert build() is not None
 
 
-def test_no_metric_is_invented_when_nothing_backs_it():
-    """The trust floor, at the widest possible setting: with no data at all, no
-    metric may arrive as a number. 0.0 here would be a fabricated figure about a
-    named person on every degraded surface."""
-    payload = build_degraded_payload()
-    nulls = set(null_paths(payload))
-    for metric in ("party_loyalty",):
-        assert f"metrics.{metric}" in nulls, (
-            f"metrics.{metric} produced a value from an empty database"
+@pytest.mark.parametrize("stem,schema,build", CASES)
+def test_golden_file_matches_a_fresh_build(stem, schema, build):
+    path = golden(stem)
+    assert path.exists(), f"missing golden file: {path.name} — run tests.regen_degraded"
+    committed = json.loads(path.read_text(encoding="utf-8"))
+    assert committed["payload"] == build(), (
+        f"{stem}: the degraded payload shape changed. Regenerate with "
+        f"`python -m tests.regen_degraded` and check the client schema still "
+        f"parses it — that is the step that has been missed twice."
+    )
+    assert committed["schema"] == schema, f"{stem}: golden file names the wrong schema"
+
+
+def test_no_metric_is_invented_from_an_empty_database():
+    """The trust floor at its widest setting: with no data at all, no metric may
+    arrive as a number. A 0.0 here is a fabricated figure about a named person
+    on every degraded surface."""
+    nulls = set(null_paths(_profile()))
+    assert "metrics.party_loyalty" in nulls, "party_loyalty produced a value from nothing"
+
+    alignment = _route("faction-alignment", True)
+    assert alignment["alignment_pct"] is None, "alignment_pct produced a value from nothing"
+
+
+def test_absent_and_empty_are_different_payloads():
+    """`missing` vs `unpublished` (charter §1.2), at the endpoint level.
+
+    A table we cannot see and a table with no rows for this member are different
+    facts. If these two payloads were identical the distinction would exist only
+    in the comments.
+    """
+    for name in ("activity", "diary"):
+        absent = _route(name, tables_present=False)
+        empty = _route(name, tables_present=True)
+        assert absent != empty, (
+            f"/{name} returns the same payload whether the table is absent or "
+            f"merely empty — 'we cannot tell' is being rendered as 'there are none'"
         )
 
 
-def test_committed_degraded_fixture_matches_a_fresh_build():
-    """A golden file, so a change in payload shape fails here instead of
-    reaching the client as a surprise.
-
-    If this fails and the change was intended, rewrite the file:
-        .venv/bin/python -m pytest tests/test_degraded_payload.py --regen
-    """
-    fresh = build_degraded_payload()
-    assert DEGRADED.exists(), f"missing golden file: {DEGRADED}"
-    committed = json.loads(DEGRADED.read_text(encoding="utf-8"))["payload"]
-    assert committed == fresh, (
-        "the degraded payload shape changed. Regenerate the golden file and "
-        "check the client schema still parses it — that is the step that has "
-        "been missed twice."
-    )
+def test_every_list_that_can_be_unknown_is_null_when_absent():
+    """The specific asymmetry that shipped: travel and staff were guarded by
+    to_regclass while press releases were not."""
+    absent = _route("activity", tables_present=False)
+    for key in ("travel", "press_releases", "staff"):
+        assert absent[key] is None, (
+            f"activity.{key} is {absent[key]!r} when its table is absent; it "
+            f"should be null, because [] asserts we looked and found none"
+        )
 
 
-def test_the_degraded_payload_is_actually_degraded():
-    """Guards the guard: if the stub ever starts returning real-looking data,
-    this test would pass while checking nothing."""
-    nulls = set(null_paths(build_degraded_payload()))
-    assert len(nulls) >= 10, (
-        f"only {len(nulls)} null paths in a payload built from an empty "
-        f"database — the stub is no longer modelling degradation"
-    )
+def test_the_payloads_are_actually_degraded():
+    """Guards the guard: if the stub ever starts returning real-looking data
+    these tests would pass while checking nothing."""
+    assert len(set(null_paths(_profile()))) >= 10, "profile is no longer degraded"
+    absent = _route("activity", tables_present=False)
+    assert all(absent[k] is None for k in ("travel", "press_releases", "staff"))

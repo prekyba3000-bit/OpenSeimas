@@ -115,7 +115,12 @@ export function MpActivityPanel({ data }: { data: MpActivity | null | undefined 
           Nario paskelbti pranešimai. Rodome, kad jie buvo paskelbti — ne ką jie verti.
         </p>
 
-        {press.length === 0 ? (
+        {press === null ? (
+          /* Unknown, not empty — same three-way branch as travel above. The
+             speeches table can be absent, and "we cannot tell" is not "this
+             member issued none". */
+          <p className="mt-4 text-sm text-muted-foreground">Duomenų nėra.</p>
+        ) : press.length === 0 ? (
           <p className="mt-4 text-sm text-muted-foreground">Pranešimų neužfiksuota.</p>
         ) : (
           <ul className="mt-4 space-y-3 max-h-96 overflow-y-auto">

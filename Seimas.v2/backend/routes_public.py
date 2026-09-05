@@ -481,6 +481,13 @@ def get_mp_activity(mp_id: str, travel_limit: int = 100, press_limit: int = 100)
                     for r in cur.fetchall()
                 ]
 
+            # speeches was queried unguarded while travel and staff beside it
+            # were not, so an absent table meant a 500 here and a clean
+            # degradation there — and an empty list could not be told apart
+            # from "we cannot see the table".
+            cur.execute("SELECT to_regclass('public.speeches') AS t")
+            has_press = cur.fetchone()["t"] is not None
+
             cur.execute(
                 """
                 SELECT speech_date, speech_title, speech_url
@@ -489,14 +496,14 @@ def get_mp_activity(mp_id: str, travel_limit: int = 100, press_limit: int = 100)
                 ORDER BY speech_date DESC LIMIT %s
                 """,
                 (mp_id, press_limit + 1),
-            )
+            ) if has_press else None
             press = [
                 {
                     "date": str(r["speech_date"]),
                     "title": r["speech_title"],
                     "url": r["speech_url"],
                 }
-                for r in cur.fetchall()
+                for r in (cur.fetchall() if has_press else [])
             ]
 
             # Staff: the employment relationship only. mp_assistants has no
@@ -531,8 +538,8 @@ def get_mp_activity(mp_id: str, travel_limit: int = 100, press_limit: int = 100)
                 # the client renders them differently.
                 "travel": travel[:travel_limit] if has_travel else None,
                 "travel_has_more": travel_more if has_travel else None,
-                "press_releases": press[:press_limit],
-                "press_has_more": press_more,
+                "press_releases": press[:press_limit] if has_press else None,
+                "press_has_more": press_more if has_press else None,
                 "staff": staff,
             }
 

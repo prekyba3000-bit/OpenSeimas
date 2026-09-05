@@ -214,3 +214,54 @@ nulls than the ordinary member carries, must stay actually degraded (≥10 null
 paths), and every declaration must carry a reason.
 
 Sixteen paths are now declared, against nine derived from real members.
+
+### Extending the guard to every validated endpoint
+
+The degraded-payload check initially covered only the profile. The same class
+could bite anywhere the client parses a response, so it now covers all four
+schemas — `mpProfileSchema`, `mpActivitySchema`, `mpDiarySchema`,
+`factionAlignmentSchema` — across seven generated payloads.
+
+Two degradation modes are generated per route, because they mean different
+things and the routes branch on them:
+
+- **table absent** — a fresh database, a migration not applied. Several routes
+  return an explicit „we cannot tell" shape.
+- **table present but empty** — a failed backfill, an unrefreshed matview. More
+  dangerous, because the route takes its normal path and produces a
+  real-shaped payload full of holes.
+
+`test_absent_and_empty_are_different_payloads` asserts the two are not
+identical, which is charter §1.2 checked at the endpoint rather than in a
+comment.
+
+**It found the asymmetry it was built to find.** `/api/mps/{id}/activity`
+guarded `mp_travel` and `mp_assistants` with `to_regclass` but queried
+`speeches` unguarded — so an absent table meant a 500 there and a clean
+degradation beside it, and `press_releases: []` could not be told apart from
+„we cannot see the table". The function's own comment already stated the rule
+it was breaking. Fixed in three places: the route now guards and returns null,
+the schema accepts it, and `MpActivityPanel` grew the same three-way branch
+travel already had (it did `press.length` and would have thrown on null).
+
+#### Getting the stub honest
+
+Two false findings came out of the first version, both worth recording because
+a test that invents bugs is worse than no test:
+
+1. Returning `None` for a `SELECT count(*)` made faction-alignment look like it
+   raised on an empty database. Real Postgres returns one row of zeros for an
+   aggregate over nothing, so the crash could not happen.
+2. The fix disqualified any query containing `GROUP BY` — which matched a
+   `GROUP BY` in an unrelated **subquery** and reinstated the same false alarm.
+
+The heuristic now inspects only the select list before the first `FROM`, and is
+deliberately biased toward false negatives: a missed crash is a gap, an invented
+one sends someone chasing a bug that cannot happen.
+
+The stub also honours the three columns `politicians` marks `NOT NULL`. A
+payload where a member has no name is a fantasy, and declaring `mp.name`
+nullable to satisfy it would weaken a real contract to make a test pass.
+
+Verified by reverting the `press_releases` schema fix: exactly one test fails,
+naming the fixture and the reason.
