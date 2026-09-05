@@ -70,32 +70,6 @@ export default function StebsenaView() {
   const [sortKey, setSortKey] = useState<SortKey>('rank');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
-  const getIntDotClass = (adjustment: number) => {
-    // A four-step severity ramp, not a traffic light: clean → attention →
-    // clay. Nothing here is a pass/fail verdict on a person.
-    if (adjustment === 0) return 'bg-vote-for';
-    if (adjustment >= -20) return 'bg-attention/60';
-    if (adjustment >= -40) return 'bg-attention';
-    return 'bg-destructive';
-  };
-
-  const getIntegrityTooltip = (row: MpRow) => {
-    const adjustment = row.forensicBreakdown?.totalForensicAdjustment ?? 0;
-    if (adjustment >= 0) {
-      return 'Forensinių baudų netaikoma (arba duomenų nepakanka baudai).';
-    }
-
-    const engines: Array<{ label: string; penalty?: number }> = [
-      { label: 'Benford', penalty: row.forensicBreakdown?.benford?.penalty },
-      { label: 'Chrono', penalty: row.forensicBreakdown?.chrono?.penalty },
-      { label: 'Balsavimo geometrija', penalty: row.forensicBreakdown?.voteGeometry?.penalty },
-      { label: 'Phantom', penalty: row.forensicBreakdown?.phantomNetwork?.penalty },
-    ];
-    const topEngine = [...engines].sort((a, b) => (a.penalty ?? 0) - (b.penalty ?? 0))[0];
-    const reason = topEngine?.penalty && topEngine.penalty < 0 ? topEngine.label : 'forensinių signalų suma';
-    return `Vientisumas sumažintas maždaug ${Math.abs(adjustment)} tšk. dėl: ${reason}.`;
-  };
-
   useEffect(() => {
     if (!isFetching) {
       setSlowNetwork(false);

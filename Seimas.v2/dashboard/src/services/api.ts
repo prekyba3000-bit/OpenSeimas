@@ -188,7 +188,12 @@ type _RawForensicBreakdown = {
     bonus: number;
     explanation: string;
   };
-  total_forensic_adjustment: number;
+  /**
+   * Optional to match the schema, which tolerates its absence while the backend
+   * still sends it. Removed from both in the next commit — see the note on the
+   * schema field.
+   */
+  total_forensic_adjustment?: number;
 };
 
 // ── Zod (validates wire shape / Layer A) ────────────────────────────────────
@@ -222,7 +227,12 @@ const rawForensicBreakdownSchema: z.ZodType<_RawForensicBreakdown> = z.object({
     bonus: z.number(),
     explanation: z.string(),
   }),
-  total_forensic_adjustment: z.number(),
+  // Optional so the client parses payloads with or without it. The backend
+  // stops sending it in the commit after this one: the two deploy separately
+  // and the frontend lags by 10-20 minutes, so a required field removed on
+  // both sides at once would fail every profile parse in the gap. Tolerate
+  // first, remove second.
+  total_forensic_adjustment: z.number().optional(),
 });
 
 export const mpProfileSchema = z

@@ -8,7 +8,10 @@ import MpProfileCard from '../components/MpProfileCard';
 import { WikiPanel } from '../components/WikiPanel';
 import { MpReplies } from '../components/MpReplies';
 import { DimensionDial } from '../components/DimensionDial';
-import { NO_FACTION_NO_FIGURE_LT } from '../utils/mpLegacyDimensions';
+import {
+  NEVER_TOOK_SEAT_NO_FIGURE_LT,
+  NO_FACTION_NO_FIGURE_LT,
+} from '../utils/mpLegacyDimensions';
 import { hasFaction } from '../utils/faction';
 import { AttendanceTrajectoryStrip } from '../components/AttendanceTrajectory';
 import { MpActivityPanel } from '../components/MpActivityPanel';
@@ -279,13 +282,20 @@ export const MpProfileLayout = ({
                   <DimensionDial
                     key={dim}
                     dimension={dim}
-                    value={readMpDimension(profile, dim)}
                     coverage={dimensionCoverage(dim, trajectory)}
                     evidence={dimensionEvidence(dim, profile)}
+                    // Both reasons are things the page already knows and the
+                    // dial did not. Same predicates the header uses, so a dial
+                    // and the paragraph above it cannot contradict each other.
+                    value={
+                      servedNoDays(profile.mp) ? null : readMpDimension(profile, dim)
+                    }
                     unavailableReason={
-                      dim === 'partyLoyalty' && !hasFaction(profile.mp.party)
-                        ? NO_FACTION_NO_FIGURE_LT
-                        : null
+                      servedNoDays(profile.mp)
+                        ? NEVER_TOOK_SEAT_NO_FIGURE_LT
+                        : dim === 'partyLoyalty' && !hasFaction(profile.mp.party)
+                          ? NO_FACTION_NO_FIGURE_LT
+                          : null
                     }
                   />
                 ))}
