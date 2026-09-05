@@ -34,6 +34,7 @@ import { LT } from '../i18n/lt';
 import { NO_CHOICE_RECORDED_LT } from '../utils/perMemberChoices';
 import { SITE_NAME } from '../utils/routeTitles';
 import { ltPlural } from '../utils/ltPlural';
+import { factionLabel } from '../utils/faction';
 
 type ProfileTab = 'apzvalga' | 'balsavimai' | 'apygarda' | 'biografija';
 
@@ -163,7 +164,10 @@ export const MpProfileLayout = ({
     );
   }
 
-  const partyLabel = profile.mp.party?.trim() || 'Nepriklausomas (-a)';
+  // The old label asserted a political stance. The source records that a
+  // faction membership ended, not that the member declared independence —
+  // and it is the Speaker, who steps out of his faction by convention.
+  const partyLabel = factionLabel(profile.mp.party);
   const isActive = profile.mp.active !== false;
   const fallbackPhoto =
     'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%231f2937" width="100" height="100"/><text x="50" y="58" text-anchor="middle" fill="%239ca3af" font-size="34">MP</text></svg>';

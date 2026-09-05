@@ -397,7 +397,7 @@ export function SeimasMap({
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-bold text-foreground">{revealedMp.name}</p>
                 <p className="truncate text-xs text-muted-foreground">
-                  {revealedMp.party || 'Nepriklausomas (-a)'}
+                  {factionLabel(revealedMp.party)}
                 </p>
                 <p className="mt-0.5 text-xs text-muted-foreground">
                   {revealedMp.vote_count} {ltPlural(revealedMp.vote_count, 'balsas', 'balsai', 'balsų')}
