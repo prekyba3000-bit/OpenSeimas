@@ -1,6 +1,7 @@
 import type { MpSummary, VoteDetail } from "../services/api";
 import { getPartyColor, getPartyMeta } from "../utils/partyColors";
 import { perMemberChoiceState } from "../utils/perMemberChoices";
+import { factionLabel } from "../utils/faction";
 
 export type SeatMode = "frakcijos" | "balsavimas" | "dalyvavimas";
 
@@ -40,7 +41,7 @@ const ABSENT_COLOR = "transparent";
 export function factionEncoding(mps: MpSummary[]): SeatEncoding {
   const counts = new Map<string, number>();
   for (const m of mps) {
-    const p = m.party || "Nepriklausomi";
+    const p = factionLabel(m.party);
     counts.set(p, (counts.get(p) ?? 0) + 1);
   }
   const legend = [...counts.entries()]

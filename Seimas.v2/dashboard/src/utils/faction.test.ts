@@ -49,3 +49,13 @@ describe('the no-faction key as it arrives on the wire', () => {
     expect(factionLabel('Nemuno aušros frakcija')).toBe('Nemuno aušros frakcija');
   });
 });
+
+describe('one label, every surface', () => {
+  it('does not assert the member is independent', () => {
+    // Three surfaces used to print „Nepriklausomas (-a)" / „Nepriklausomi".
+    // The source records that a faction membership ended, not that the member
+    // declared independence — and it is the Speaker, who steps out by
+    // convention. Three labels for one state is also the drift §1.2 forbids.
+    expect(NO_FACTION_LT.toLowerCase()).not.toContain('nepriklausom');
+  });
+});
