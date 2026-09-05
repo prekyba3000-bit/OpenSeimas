@@ -1,7 +1,7 @@
 # RESUME — 2026-09-05
 
 Branch `main`, everything pushed. Pre-push gate green on every commit.
-Suites: **324 dashboard / 262 backend** (+19 skipped). tsc 11, all vendored `ui/`.
+Suites: **325 dashboard / 262 backend** (+19 skipped). tsc 11, all vendored `ui/`.
 
 ## This session
 
@@ -13,6 +13,9 @@ Suites: **324 dashboard / 262 backend** (+19 skipped). tsc 11, all vendored `ui/
 | `4497398` | Nightly wire-fixture drift check; legislation runner recorded as not-wired |
 | `eefc281` | A wrong reason on nine members' profiles |
 | `040_*.sql` | Corrections entries for the two defects that reached production |
+| `5c8f128` | Corrections entries and the session state |
+| `72f0b87` | „0.0 %" off the four who never took the seat; client made tolerant |
+| `03e9285` | The last per-person aggregate leaves the public payload |
 
 All three assigned tasks are done. Two of them turned out to be the same
 subject — something exists, nothing checks it — and the guards written for
