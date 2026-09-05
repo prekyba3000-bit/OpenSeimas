@@ -8,6 +8,8 @@ import MpProfileCard from '../components/MpProfileCard';
 import { WikiPanel } from '../components/WikiPanel';
 import { MpReplies } from '../components/MpReplies';
 import { DimensionDial } from '../components/DimensionDial';
+import { NO_FACTION_NO_FIGURE_LT } from '../utils/mpLegacyDimensions';
+import { hasFaction } from '../utils/faction';
 import { AttendanceTrajectoryStrip } from '../components/AttendanceTrajectory';
 import { MpActivityPanel } from '../components/MpActivityPanel';
 import { MpDiaryTimeline } from '../components/MpDiaryTimeline';
@@ -280,6 +282,11 @@ export const MpProfileLayout = ({
                     value={readMpDimension(profile, dim)}
                     coverage={dimensionCoverage(dim, trajectory)}
                     evidence={dimensionEvidence(dim, profile)}
+                    unavailableReason={
+                      dim === 'partyLoyalty' && !hasFaction(profile.mp.party)
+                        ? NO_FACTION_NO_FIGURE_LT
+                        : null
+                    }
                   />
                 ))}
               </div>
@@ -287,7 +294,7 @@ export const MpProfileLayout = ({
 
             <AttendanceTrajectoryStrip data={trajectory} />
 
-              <MpFactionAlignment mpId={profile.mp.id} />
+              <MpFactionAlignment mpId={profile.mp.id} party={profile.mp.party} />
 
               <MpActivityPanel data={activity} />
 

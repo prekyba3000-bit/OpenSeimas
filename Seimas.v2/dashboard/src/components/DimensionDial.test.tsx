@@ -2,7 +2,10 @@ import React from "react";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import userEvent from "@testing-library/user-event";
-import { DIMENSION_UNAVAILABLE_LT } from "../utils/mpLegacyDimensions";
+import {
+  DIMENSION_UNAVAILABLE_LT,
+  NO_FACTION_NO_FIGURE_LT,
+} from "../utils/mpLegacyDimensions";
 import { DimensionDial } from "./DimensionDial";
 import { AttendanceTrajectoryStrip } from "./AttendanceTrajectory";
 import type { AttendanceTrajectory } from "../services/api";
@@ -20,6 +23,38 @@ describe("a dial states its own denominator", () => {
   it("renders the unknown state, never 0.0, for a suppressed dimension", () => {
     render(<DimensionDial dimension="legislativeActivity" value={null} />);
     expect(screen.getByText(/bus rodomas, kai bus įkelti/i)).toBeInTheDocument();
+    expect(screen.queryByText("0.0")).not.toBeInTheDocument();
+  });
+
+  it("prefers a caller's specific reason over the generic promise", () => {
+    // The default sentence promises the figure arrives once source data is
+    // loaded. For a member in no faction that promise is false — there is no
+    // faction position to compare against, so no ingest produces a number.
+    // Seen on Blinkevičiūtė's live profile, and true for 9 of 148 members.
+    render(
+      <DimensionDial
+        dimension="partyLoyalty"
+        value={null}
+        unavailableReason={NO_FACTION_NO_FIGURE_LT}
+      />,
+    );
+    expect(screen.getByText(NO_FACTION_NO_FIGURE_LT)).toBeInTheDocument();
+    expect(screen.queryByText(DIMENSION_UNAVAILABLE_LT)).not.toBeInTheDocument();
+  });
+
+  it("falls back to the generic sentence when no reason is given", () => {
+    render(<DimensionDial dimension="partyLoyalty" value={null} unavailableReason={null} />);
+    expect(screen.getByText(DIMENSION_UNAVAILABLE_LT)).toBeInTheDocument();
+  });
+
+  it("still never shows 0.0 when a specific reason is given", () => {
+    render(
+      <DimensionDial
+        dimension="partyLoyalty"
+        value={null}
+        unavailableReason={NO_FACTION_NO_FIGURE_LT}
+      />,
+    );
     expect(screen.queryByText("0.0")).not.toBeInTheDocument();
   });
 

@@ -21,6 +21,18 @@ export interface DimensionDialProps {
    * „Duomenų nėra" — never 0, which would read as "initiated nothing".
    */
   evidence?: Array<{ label: string; value: number | null }>;
+  /**
+   * Why this dimension has no figure, when the caller knows something more
+   * specific than the default.
+   *
+   * The default promises the number is coming once source data is loaded. For
+   * „Sutapimas su frakcija" on a member who sits in no faction, no number is
+   * coming while they hold that position — there is no faction position to
+   * compare against. „No source yet" and „not applicable to this member" are
+   * different facts, and sharing one sentence between them tells 9 of 148
+   * members' readers to expect something that will never arrive.
+   */
+  unavailableReason?: string | null;
 }
 
 /**
@@ -34,7 +46,13 @@ export interface DimensionDialProps {
  * A dimension with no populated source renders the established unknown state
  * — never 0.0, which in a row of percentages reads as "worst".
  */
-export function DimensionDial({ dimension, value, coverage, evidence }: DimensionDialProps) {
+export function DimensionDial({
+  dimension,
+  value,
+  coverage,
+  evidence,
+  unavailableReason,
+}: DimensionDialProps) {
   const [open, setOpen] = React.useState(false);
   const explainer = DIMENSION_EXPLAINERS[dimension];
   const known = typeof value === 'number';
@@ -53,7 +71,7 @@ export function DimensionDial({ dimension, value, coverage, evidence }: Dimensio
         </p>
       ) : (
         <p className="text-sm text-muted-foreground leading-relaxed">
-          {DIMENSION_UNAVAILABLE_LT}
+          {unavailableReason || DIMENSION_UNAVAILABLE_LT}
         </p>
       )}
 
