@@ -35,6 +35,22 @@ def _require_admin_auth(authorization):
     return core._require_admin_auth(authorization)
 
 
+def _date_or_none(value):
+    """A date column on the wire, or null — never the four characters „None".
+
+    `str(None)` is `'None'`, and every date this module sends was built with a
+    bare `str()`. `votes.sitting_date` is a nullable column, so a null date
+    would have arrived at the client as a plausible-looking string sitting in a
+    date slot, which charter §1.1 forbids more strictly than it forbids a gap.
+    No row is null today; that is what makes this the kind of defect that ships.
+
+    Written as a helper rather than fixed at the one call site that the degraded
+    fixtures happened to expose, because the failure class is „str() applied to
+    a nullable column", and it had six instances.
+    """
+    return None if value is None else str(value)
+
+
 router = APIRouter()
 
 
@@ -129,7 +145,7 @@ def get_activity():
                     # DEPRECATED: use vote_choice.
                     "action": f"Voted {row['vote_choice']}",
                     "context": (row["title"][:50] + "...") if len(row["title"]) > 50 else row["title"],
-                    "time": str(row["sitting_date"]),
+                    "time": _date_or_none(row["sitting_date"]),
                 }
                 for row in rows
             ]
@@ -347,7 +363,7 @@ def compare_mps(ids: str):
                 divergent_votes.append({
                     "vote_id": vote_id,
                     "title": (vote_row["title"][:80] + "...") if len(vote_row["title"]) > 80 else vote_row["title"],
-                    "date": str(vote_row["sitting_date"]),
+                    "date": _date_or_none(vote_row["sitting_date"]),
                     "votes": mp_votes_map,
                 })
 
@@ -430,7 +446,7 @@ def get_mp_votes(mp_id: str, limit: int = 20):
             return [
                 {
                     "title": (row["title"][:80] + "...") if len(row["title"]) > 80 else row["title"],
-                    "date": str(row["sitting_date"]),
+                    "date": _date_or_none(row["sitting_date"]),
                     "choice": row["vote_choice"],
                 }
                 for row in rows
@@ -499,7 +515,7 @@ def get_mp_activity(mp_id: str, travel_limit: int = 100, press_limit: int = 100)
             ) if has_press else None
             press = [
                 {
-                    "date": str(r["speech_date"]),
+                    "date": _date_or_none(r["speech_date"]),
                     "title": r["speech_title"],
                     "url": r["speech_url"],
                 }
@@ -692,7 +708,7 @@ def get_mp_faction_alignment(mp_id: str, limit: int = 25, offset: int = 0,
                 "votes": [
                     {
                         "vote_id": r["seimas_vote_id"],
-                        "date": str(r["sitting_date"]),
+                        "date": _date_or_none(r["sitting_date"]),
                         "title": r["title"],
                         "choice": r["choice"],
                         "faction_position": r["position"],
@@ -846,7 +862,7 @@ def get_votes(limit: int = 50, offset: int = 0):
             return [
                 {
                     "id": str(row["id"]),
-                    "date": str(row["sitting_date"]),
+                    "date": _date_or_none(row["sitting_date"]),
                     "title": row["title"],
                     "result": row["result_type"],
                 }
@@ -902,7 +918,7 @@ def get_vote(vote_id: str):
 
             return {
                 "id": str(vote["id"]),
-                "date": str(vote["sitting_date"]),
+                "date": _date_or_none(vote["sitting_date"]),
                 "title": vote["title"],
                 "description": vote["description"],
                 "url": vote["url"],

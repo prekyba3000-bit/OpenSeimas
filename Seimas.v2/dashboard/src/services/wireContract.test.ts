@@ -2,10 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import {
+  dashboardStatsSchema,
   factionAlignmentSchema,
   mpActivitySchema,
   mpDiarySchema,
   mpProfileSchema,
+  mpSummaryListSchema,
+  voteDetailSchema,
 } from './api';
 
 /**
@@ -53,11 +56,20 @@ const all = readdirSync(join(ROOT, 'fixtures'))
 /** Fixtures for the profile endpoint — real captures plus its degraded build. */
 const fixtures = all.filter((f) => f.name.startsWith('heroes-'));
 
-const SCHEMAS: Record<string, { safeParse: (v: unknown) => { success: boolean; error?: unknown } }> = {
+type CheckableSchema = {
+  safeParse: (v: unknown) => { success: boolean; error?: unknown };
+  parse: (v: unknown) => unknown;
+};
+
+const SCHEMAS: Record<string, CheckableSchema> = {
   mpProfileSchema,
   mpActivitySchema,
   mpDiarySchema,
   factionAlignmentSchema,
+  // The v1 endpoints, which had no runtime schema at all until 2026-09-05.
+  dashboardStatsSchema,
+  mpSummaryListSchema,
+  voteDetailSchema,
 };
 
 /**
@@ -71,6 +83,28 @@ const SCHEMAS: Record<string, { safeParse: (v: unknown) => { success: boolean; e
  * it is how mp.active, mp.photo and press_releases were found.
  */
 const degraded = all.filter((f) => typeof f.schema === 'string');
+
+/**
+ * Keys the backend sends that this client declines to declare, on purpose.
+ *
+ * Listing them here rather than declaring them keeps the drop deliberate and
+ * reviewable: anything dropped that is NOT on this list fails the guard below.
+ * Each entry is a descriptive count no surface renders today — none is a score,
+ * a rank, or a label. If a surface starts needing one, declare it in the schema
+ * and delete the line; the list should only ever shrink.
+ */
+const DELIBERATELY_UNDECLARED = new Set([
+  // Ingest bookkeeping, not a fact about the member.
+  '.mp.last_synced_at',
+  // Bill and amendment counts. `legislation` holds 0 rows and these are fed
+  // from a shadow source (P4 recon), so nothing displays them until the
+  // canonical source question is settled — declaring them would invite a
+  // surface to render a figure whose provenance is still open.
+  '.metrics.bills_passed',
+  '.metrics.bills_proposed',
+  '.metrics.amendments_proposed',
+  '.metrics.amendments_proposed_proxy',
+]);
 
 function setPath(obj: unknown, path: string, value: unknown): unknown {
   const clone = structuredClone(obj) as Record<string, unknown>;
@@ -109,7 +143,15 @@ describe('the wire contract', () => {
     // A deleted fixture would make the checks below vacuously pass.
     const schemas = new Set(degraded.map((d) => d.schema));
     expect(schemas).toEqual(
-      new Set(['mpProfileSchema', 'mpActivitySchema', 'mpDiarySchema', 'factionAlignmentSchema']),
+      new Set([
+        'mpProfileSchema',
+        'mpActivitySchema',
+        'mpDiarySchema',
+        'factionAlignmentSchema',
+        'dashboardStatsSchema',
+        'mpSummaryListSchema',
+        'voteDetailSchema',
+      ]),
     );
   });
 
@@ -126,6 +168,48 @@ describe('the wire contract', () => {
             JSON.stringify((parsed.error as { issues?: unknown }).issues, null, 2),
         );
       }
+    },
+  );
+
+  it.each(degraded.map((d) => [d.name, d] as const))(
+    'strips no key the backend sent from %s',
+    (_name, fixture) => {
+      // The one failure a successful parse cannot report. z.object() drops
+      // undeclared keys silently, so a field the backend adds — or one nobody
+      // thought to declare — vanishes between the wire and the render with
+      // every test green. That is how metrics_provenance was emptied and three
+      // dials disappeared in production.
+      //
+      // The first run of this guard found eleven dropped keys on the profile,
+      // six of which were verdict-shaped — risk_score, high_risk_alerts,
+      // forensic_penalties, social_bonus and two penalty sums, live on a public
+      // payload about every named member. Those are gone from the backend now
+      // (hero_engine.public_metrics), which is why they are not in the list
+      // below. Everything that remains is a descriptive figure this client has
+      // simply never rendered.
+      const schema = SCHEMAS[fixture.schema as string];
+      const dropped = (sent: unknown, got: unknown, path = ''): string[] => {
+        if (Array.isArray(sent)) {
+          return Array.isArray(got) && sent.length && got.length
+            ? dropped(sent[0], got[0], `${path}[]`)
+            : [];
+        }
+        if (sent === null || typeof sent !== 'object') return [];
+        const g = (got ?? {}) as Record<string, unknown>;
+        return Object.keys(sent as Record<string, unknown>).flatMap((k) =>
+          k in g
+            ? dropped((sent as Record<string, unknown>)[k], g[k], `${path}.${k}`)
+            : [`${path}.${k}`],
+        );
+      };
+      const missing = dropped(fixture.payload, schema.parse(fixture.payload)).filter(
+        (p) => !DELIBERATELY_UNDECLARED.has(p),
+      );
+      expect(
+        missing,
+        `${fixture.schema} silently dropped ${missing.join(', ')} — the backend ` +
+          `sends these and the surface will never see them`,
+      ).toEqual([]);
     },
   );
 

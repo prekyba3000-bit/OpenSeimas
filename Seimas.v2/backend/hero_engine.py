@@ -826,7 +826,14 @@ def resolve_attendance(db_cursor, mp_id: str, v1_value):
 
     if effective_attendance_version(db_cursor) >= 2 and v2_value is not None:
         return float(v2_value)
-    return float(v1_value or 0)
+    # `float(v1_value or 0)` until 2026-09-05. Absent data and a measured zero
+    # are not the same fact, and collapsing them published „0,0 %" — the single
+    # most damaging thing this platform can assert about a named member — for
+    # anyone the summary view had not yet covered. Reachable whenever a newly
+    # sworn-in replacement appears in `politicians` before the matviews refresh,
+    # which has happened here before. The degraded fixture had been recording it
+    # as `attendance_percentage: 0.0` in the repo the whole time.
+    return None if v1_value is None else float(v1_value)
 
 
 def attendance_overrides(db_cursor) -> Dict[str, Any]:
@@ -866,6 +873,61 @@ def attendance_overrides(db_cursor) -> Dict[str, Any]:
     return out
 
 
+# Verdict-shaped keys that must not cross the wire, whatever their value.
+#
+# Found on 2026-09-05 by a guard asking a different question: which keys does
+# the client's zod schema silently drop? All six were live on
+# /api/v2/heroes/{id} for every named member. Nothing rendered them — the schema
+# had dropped them all along — but charter §1.3 forbids a composite about a
+# named person "on any public surface OR IN ANY PUBLIC API PAYLOAD", and the
+# media kit invites external API use, so an integrator could have built the
+# league table the platform refuses to build.
+#
+# They hid because `HeroProfileResponse.metrics` and `.forensic_breakdown` are
+# `Dict[str, Any]`. The existing guard reads `HeroProfileResponse.model_fields`,
+# which sees `metrics` and stops there: the response model filtered the top
+# level and nothing filtered one level down.
+#
+# The values were all 0.0 in production, which is the other half of the problem
+# — `risk_score: 0.0` beside `attendance_percentage: null` and
+# `party_loyalty: null` is a score published for a member nothing was measured
+# about (§1.1).
+_VERDICT_METRIC_KEYS = frozenset({
+    # A per-person risk score. The composite this project retired, by name.
+    "risk_score",
+    # A count of "alerts" raised against a person.
+    "high_risk_alerts",
+    # Penalties attributed to a person, engine by engine.
+    "forensic_penalties",
+    # 25 points for having social links. A reward score, not an observation;
+    # `visibility` already carries what it feeds.
+    "social_bonus",
+})
+
+_VERDICT_BREAKDOWN_KEYS = frozenset({
+    "raw_forensic_penalty_sum",
+    "capped_forensic_penalty",
+})
+
+
+def public_metrics(metrics: Dict[str, Any]) -> Dict[str, Any]:
+    """The metrics minus the verdict.
+
+    Counterpart to `public_breakdown`. The descriptive figures stay — votes
+    cast, speeches, attendance, party loyalty, bills, committee leadership, years
+    served — each of which a reader can trace to a denominator. What leaves is
+    the scoring layer built on top of them.
+
+    `total_forensic_adjustment` deliberately survives inside the per-engine
+    breakdown: `StebsenaView` reads it and `mpProfileSchema` requires it, so
+    dropping it here would blank a page rather than clean a payload. Whether an
+    "adjustment" belongs on a public payload at all is a live question, recorded
+    in docs/reviews/verdict-keys-on-the-wire.md, and it is a surface decision
+    rather than a projection one.
+    """
+    return {k: v for k, v in metrics.items() if k not in _VERDICT_METRIC_KEYS}
+
+
 def public_breakdown(breakdown: Dict[str, Any]) -> Dict[str, Any]:
     """The forensic breakdown minus the composite.
 
@@ -875,8 +937,15 @@ def public_breakdown(breakdown: Dict[str, Any]) -> Dict[str, Any]:
     public API ships evidence and descriptive dimensions; verdicts ship
     nowhere. The per-engine sub-objects (benford, chrono, vote_geometry,
     phantom_network, loyalty_bonus) are evidence and stay.
+
+    `raw_forensic_penalty_sum` and `capped_forensic_penalty` are dropped by name
+    rather than by prefix: they are the same aggregation as the `_composite_`
+    keys and were written without the prefix that would have caught them.
     """
-    return {k: v for k, v in breakdown.items() if not k.startswith("_composite_")}
+    return {
+        k: v for k, v in breakdown.items()
+        if not k.startswith("_composite_") and k not in _VERDICT_BREAKDOWN_KEYS
+    }
 
 
 def _fetch_mp_metrics(mp_id: str, db_cursor) -> Dict[str, Any] | None:
@@ -936,7 +1005,12 @@ def _fetch_mp_metrics(mp_id: str, db_cursor) -> Dict[str, Any] | None:
             p.bills_initiated_total,
             p.bills_initiated_individually,
             COALESCE(s.total_votes_cast, 0) AS total_votes_cast,
-            COALESCE(s.attendance_percentage, 0) AS attendance_percentage,
+            -- Not COALESCE(..., 0). Charter §1.4 forbids it in a read path by
+            -- name, and this is why: a member with no row in the summary view
+            -- would be published as 0 % attendance, which states that they
+            -- never showed up rather than that we do not know. NULL travels;
+            -- resolve_attendance keeps it NULL and the surface renders unknown.
+            s.attendance_percentage AS attendance_percentage,
             COALESCE(s.amendments_proposed_count, 0) AS amendments_proposed_count,
             COALESCE(sr.speeches_given, 0) AS speeches_given,
             COALESCE(cr.committee_leadership_roles, 0) AS committee_leadership_roles,
@@ -1235,7 +1309,7 @@ def calculate_hero_profile(mp_id: str, db_cursor) -> Dict[str, Any]:
             "experience": round(_clamp(wis_score), 2),
             "visibility": round(_clamp(cha_score), 2),
         },
-        "metrics": metrics,
+        "metrics": public_metrics(metrics),
         "metrics_provenance": metrics_provenance,
         "forensic_breakdown": public_breakdown(forensic_breakdown),
     }
@@ -1257,7 +1331,12 @@ def fetch_graph_mp_summaries(db_cursor, active_only: bool = True) -> List[Dict[s
             p.bills_initiated_total,
             p.bills_initiated_individually,
             COALESCE(s.total_votes_cast, 0) AS total_votes_cast,
-            COALESCE(s.attendance_percentage, 0) AS attendance_percentage,
+            -- Not COALESCE(..., 0). Charter §1.4 forbids it in a read path by
+            -- name, and this is why: a member with no row in the summary view
+            -- would be published as 0 % attendance, which states that they
+            -- never showed up rather than that we do not know. NULL travels;
+            -- resolve_attendance keeps it NULL and the surface renders unknown.
+            s.attendance_percentage AS attendance_percentage,
             COALESCE(s.party_loyalty, 0) AS party_loyalty
         FROM politicians p
         LEFT JOIN mp_stats_summary s ON s.mp_id = p.id
@@ -1586,7 +1665,7 @@ def calculate_all_hero_profiles_fast(
                 "experience": round(_clamp(wis_score), 2),
                 "visibility": round(_clamp(cha_score), 2),
             },
-            "metrics": metrics,
+            "metrics": public_metrics(metrics),
             "metrics_provenance": metrics_provenance,
             "forensic_breakdown": public_breakdown(forensic_breakdown),
         })

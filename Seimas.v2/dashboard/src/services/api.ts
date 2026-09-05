@@ -32,20 +32,6 @@ export const MONITORING_API_URL = "/v2/heroes/leaderboard";
 // ── Response types matching backend ──────────────────────────────────────────
 // Wire DTOs: DashboardStats, ActivityItem, MpSummary, MpDetail, MpVoteRecord, VoteSummary → @open-seimas/contracts
 
-export interface VoteDetail {
-  id: string;
-  date: string;
-  title: string;
-  description: string | null;
-  url: string | null;
-  result_type: string | null;
-  stats: Record<string, number>;
-  party_stats: Record<string, Record<string, number>>;
-  // mp_id lets a client join a vote to a seat without matching on
-  // display_name. Optional because a cached response from before the field
-  // existed will not carry it.
-  votes: { mp_id?: string; name: string; party: string; choice: string | null }[];
-}
 
 export interface ComparisonResult {
   mps: { id: string; name: string; party: string; photo: string }[];
@@ -53,7 +39,8 @@ export interface ComparisonResult {
   divergent_votes: {
     vote_id: string;
     title: string;
-    date: string;
+    /** `votes.sitting_date` is nullable. See ActivityItem.time. */
+    date: string | null;
     votes: Record<string, string>;
   }[];
 }
@@ -337,8 +324,12 @@ export const mpActivitySchema = z.object({
   press_releases: z
     .array(
       z.object({
-        date: z.string(),
-        title: z.string(),
+        // `speeches` marks exactly two columns NOT NULL — id and speech_type —
+        // so every field the panel reads from it is nullable. date and title
+        // were declared non-null against nullable columns: no row is null
+        // today, and the first one to be would have emptied this panel.
+        date: z.string().nullable(),
+        title: z.string().nullable(),
         url: z.string().nullable(),
       }),
     )
@@ -393,8 +384,12 @@ export const factionAlignmentSchema = z.object({
   votes: z.array(
     z.object({
       vote_id: z.number(),
-      date: z.string(),
-      title: z.string(),
+      // votes.sitting_date and votes.title are nullable columns; `choice` is
+      // not, because the query filters vote_choice IS NOT NULL before counting
+      // — 408,827 of 744,495 rows carry no choice and none of them are
+      // comparable.
+      date: z.string().nullable(),
+      title: z.string().nullable(),
       choice: z.string(),
       faction_position: z.string(),
       faction_voters: z.number(),
@@ -407,6 +402,120 @@ export const factionAlignmentSchema = z.object({
 });
 
 export type FactionAlignment = z.infer<typeof factionAlignmentSchema>;
+
+
+// ── The v1 endpoints, which went unvalidated until 2026-09-05 ────────────────
+//
+// /api/stats, /api/mps and /api/votes/{id} went through `request<T>()` with a
+// TypeScript type and no runtime schema. A TypeScript type is erased at build
+// time, so it asserts nothing about what actually arrives: when the wire and
+// the interface disagreed, nothing failed — the value simply rendered wrong.
+//
+// Two disagreements were live in production when these were written, both
+// created by the faction work and both invisible to the compiler:
+//
+//   - /api/mps sent `party: null` for 9 of 148 members (the Speaker, who sits
+//     in no faction, and 8 former members) against a declared `party: string`.
+//   - /api/votes/{id} sent `votes[].party: null` for the same reason.
+//
+// Declaring them here makes a future disagreement fail loudly at the boundary
+// instead of quietly at the pixel. Note the trade this makes, deliberately: a
+// parse failure empties the surface rather than misdrawing it. Charter §1.1
+// prefers a blank to a plausible-looking wrong number, and the degraded
+// fixtures in contracts/fixtures/ exist to keep the blank from being reachable
+// by anything the backend is actually allowed to send.
+
+// Wire contract for /api/stats. Every field is a COUNT or a formatted count,
+// and an aggregate over an empty table returns 0 rather than no row, so none of
+// these can be null however empty the database is — which is why the degraded
+// fixture for this endpoint is all zeroes rather than all nulls.
+export const dashboardStatsSchema = z.object({
+  seats_total: z.number(),
+  mps_active: z.number(),
+  mps_all_time: z.number(),
+  seats_vacant: z.number(),
+  // Misnamed on the wire — it has always carried the active count. Declared so
+  // the schema does not strip it from consumers still reading it; prefer
+  // mps_active. See mpCounts.ts, which owns the choice between them.
+  total_mps: z.number(),
+  // Pre-formatted with thousands separators by the backend, hence strings.
+  historical_votes: z.string(),
+  individual_votes: z.string(),
+  sitting_days: z.number(),
+});
+
+// Wire contract for /api/mps.
+export const mpSummarySchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  normalized_name: z.string(),
+  // Nullable, and this is the field that motivated the whole file. `party` on
+  // this endpoint is the parliamentary FACTION (nominating party lives in a
+  // separate column since 2026-09-04), and a member can sit in none: the
+  // Speaker steps out of his faction for the term, and former members left
+  // theirs when their mandate ended. Render through faction.ts, never raw —
+  // the string „null" reached a production page once already this way.
+  party: z.string().nullable(),
+  // politicians.is_active is a nullable boolean. Prefer asking the API for
+  // ?status=active over reading this flag: the status filter is derived from
+  // the mandate dates, so it cannot drift the way a stored boolean can.
+  is_active: z.boolean().nullable(),
+  photo_url: z.string().nullable(),
+  // Sent by the backend and read by nothing in this client today. Declared
+  // because z.object() strips undeclared keys silently: leaving it out would
+  // delete it from the payload, and the next consumer to want it would find an
+  // endpoint that appears not to send it.
+  social_links: z.record(z.string(), z.unknown()).optional(),
+  vote_count: z.number(),
+  // Null below the three-eligible-sitting-day floor. Never 0 — that reads as
+  // "never showed up" rather than "not enough data", and four members are in
+  // that position today.
+  attendance: z.number().nullable(),
+  vote_mode: z.string().nullable(),
+  mandate_start_date: z.string().nullable().optional(),
+  mandate_end_date: z.string().nullable().optional(),
+});
+
+export const mpSummaryListSchema = z.array(mpSummarySchema);
+
+// Wire contract for /api/votes/{id}.
+export const voteDetailSchema = z.object({
+  id: z.string(),
+  // votes.sitting_date and votes.title are nullable columns. Neither is null
+  // on any of the 5,286 rows today, but the endpoint stringified the date
+  // unconditionally, so a null would have arrived as the four characters
+  // „None" — a plausible-looking value in a date slot, which is the one thing
+  // §1.1 forbids outright. The backend now sends null and the schema says so.
+  date: z.string().nullable(),
+  title: z.string().nullable(),
+  description: z.string().nullable(),
+  url: z.string().nullable(),
+  result_type: z.string().nullable(),
+  // Tallies keyed by vote choice, and party_stats keyed by faction name. Both
+  // can carry the literal key „null": a JSON object key cannot BE null, so
+  // Python stringifies a None choice or a None faction on the way out. That is
+  // not a defect to schema away — it is what an absent per-member record looks
+  // like on 408,827 of 744,495 rows — so the key type stays open and the
+  // surface decides. hasAggregateTallies() and faction.ts own that decision.
+  stats: z.record(z.string(), z.number()),
+  party_stats: z.record(z.string(), z.record(z.string(), z.number())),
+  votes: z.array(
+    z.object({
+      // Lets a client join a vote to a seat without matching on display_name.
+      // Optional because a cached response from before the field existed will
+      // not carry it.
+      mp_id: z.string().optional(),
+      name: z.string(),
+      // Nullable for the same reason as mpSummarySchema.party.
+      party: z.string().nullable(),
+      // Null where the source recorded no choice for this member on this vote.
+      // Distinct from „Nedalyvavo", which is a recorded choice.
+      choice: z.string().nullable(),
+    }),
+  ),
+});
+
+export type VoteDetail = z.infer<typeof voteDetailSchema>;
 
 const mpLeaderboardRawSchema = z.array(mpProfileSchema);
 const mpSearchResponseRawSchema = z.object({
@@ -845,7 +954,8 @@ export interface Freshness {
 // ── Public API ───────────────────────────────────────────────────────────────
 
 export const api = {
-  getStats: () => request<DashboardStats>("/stats"),
+  getStats: () =>
+    request<DashboardStats>("/stats", { parse: (data) => dashboardStatsSchema.parse(data) }),
 
   getActivity: () => request<ActivityItem[]>("/activity"),
 
@@ -856,7 +966,9 @@ export const api = {
    * since votes and attendance denominators depend on their records.
    */
   getMps: (status: "active" | "former" | "all" = "active") =>
-    request<MpSummary[]>(`/mps?status=${status}`),
+    request<MpSummary[]>(`/mps?status=${status}`, {
+      parse: (data) => mpSummaryListSchema.parse(data),
+    }),
 
   getMp: (id: string) => request<MpDetail>(`/mps/${id}`),
 
@@ -899,7 +1011,8 @@ export const api = {
 
   getSessions: () => request<SessionsResponse>("/meta/sessions"),
 
-  getVote: (id: string) => request<VoteDetail>(`/votes/${id}`),
+  getVote: (id: string) =>
+    request<VoteDetail>(`/votes/${id}`, { parse: (data) => voteDetailSchema.parse(data) }),
 
   compareMps: (ids: string[]) =>
     request<ComparisonResult>(`/mps/compare?ids=${ids.join(",")}`),
