@@ -1,7 +1,7 @@
 # RESUME — 2026-09-05
 
 Branch `main`, everything pushed. Pre-push gate green on every commit.
-Suites: **325 dashboard / 262 backend** (+19 skipped). tsc 11, all vendored `ui/`.
+Suites: **325 dashboard / 298 backend** (+19 skipped). tsc 11, all vendored `ui/`.
 
 ## This session
 
@@ -16,6 +16,9 @@ Suites: **325 dashboard / 262 backend** (+19 skipped). tsc 11, all vendored `ui/
 | `5c8f128` | Corrections entries and the session state |
 | `72f0b87` | „0.0 %" off the four who never took the seat; client made tolerant |
 | `03e9285` | The last per-person aggregate leaves the public payload |
+| `e1959b4` | Lithuanian copy review pack (PDF) for a native reviewer |
+| `28002f9` | `legislation` filled: 1,683 rows, and the key that blocked it |
+| `041_*.sql` | project_registration_nr / project_base_nr, additively |
 
 All three assigned tasks are done. Two of them turned out to be the same
 subject — something exists, nothing checks it — and the guards written for
@@ -29,15 +32,24 @@ asserted what actually arrived. Two live mismatches, both left by the faction
 work: `/api/mps` declared `party: string` while sending null for 9 of 148
 members, and `/api/votes/{id}` did the same inside `votes[]`.
 
-**2. The legislation runner — deliberately not wired.** Three things had to be
-true and none is. Its source (`e-seimas.lrs.lt/rs/legalactproject/search/find`)
-404s on every variant including the bare path, so the script has never
-successfully run. It joins on `votes.project_id`, which for **3,464 of 4,392**
-votes holds the number of the law *being amended* — the extraction takes the
-first „Nr." in the title and the project's own number is later, in brackets.
-331 stored ids collapse several real projects onto one key; `I-399` covers 44.
-And the one live alternative covers **19.6%** of what was voted on.
-Write-up: `p4-legislation-runner.md`.
+**2. The legislation runner — first refused, then rebuilt and filled.** Three
+things blocked it and only the first was known: no runner; a source
+(`e-seimas.lrs.lt/rs/legalactproject/search/find`) that 404s on every variant
+including the bare path, so the script had never once succeeded; and a join key
+that for **3,464 of 4,392** votes holds the law *being amended* rather than the
+project. `I-399`, the Statute, stood for 44 projects at once.
+
+Rebuilt on the sitting agendas already ingested — no network call at all.
+**`legislation` now holds 1,683 rows**, all titled, none with an invented
+summary or url. 3,853 votes join cleanly. Two further defects were found by
+measuring against all 5,286 real titles: preferring the `registracijos_nr`
+attribute silently discards the revision (the title carries one 415 times, the
+attribute never), and LRS clips titles at exactly 200 characters — 588 of them —
+so a clipped title ends mid-number and the fragment is often a real, unrelated
+project. Additive only: `votes.project_id` is not rewritten (§4.5) and instead
+carries a COMMENT saying what it really holds.
+Write-ups: `p4-legislation-runner.md` (why it was refused),
+`p4-legislation-fix.md` (how it was filled).
 
 **3. `refresh_wire_fixtures.py --check` runs nightly** in `daily_sync.sh`. It
 writes nothing — recaptures payload shapes and reports drift — because the sync
@@ -136,10 +148,13 @@ Verified live on both: Blinkevičiūtė's profile shows no percentage anywhere,
 Bilotaitė's still shows 71.3 / 75.8 / 88.7 and does not claim she never served.
 
 ## Open
-- **`legislation`** needs an additive migration carrying the real project
-  registration number beside `project_id`, and a decision on base project vs
-  revision (`XVP-851` vs `XVP-851(2)`) before either becomes a key. Not an
-  in-place rewrite of 3,464 historical rows — that is §4.5.
+- **P5 bill summaries are unblocked on data.** `legislation` has 1,683 titled
+  rows and votes join to it. Bills still need their own template and the same
+  figure gate the vote summaries have.
+- **`votes.project_id` remains wrong for 3,464 rows.** Nothing reads it any
+  more; correcting it in place is §4.5 and needs a human decision.
+- **`tag_topics` will tag 1,683 legislation rows** on its next nightly run,
+  having had nothing to tag since the project began. Worth a look afterwards.
 - **LT-COPY native review** — the P5 pilot, `NO_FACTION_LT`, and the two new
   strings added this session.
 - **Legal name** — `<FILL IN>` in `NOTICE:3`, `NOTICE:18`, `README.md:69`.
