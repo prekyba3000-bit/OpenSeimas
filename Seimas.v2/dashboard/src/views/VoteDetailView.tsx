@@ -13,6 +13,7 @@ import { ProblemDetailsNotice } from '../components/ProblemDetailsNotice';
 import { formatLtDateLong } from '../utils/ltDate';
 import { NoPerMemberData } from '../components/NoPerMemberData';
 import { isTruncatedTitle, TITLE_TRUNCATED_LT } from '../utils/voteTitle';
+import { factionLabel } from '../utils/faction';
 import {
     perMemberChoiceState,
     hasAggregateTallies,
@@ -63,9 +64,11 @@ const VoteDetailView = ({ voteId }: { voteId: string }) => {
         if (!vote?.party_stats) return [];
         return Object.entries(vote.party_stats)
             .map(([party, stats]) => ({
-                party,
-                short: getPartyShort(party),
-                color: getPartyColor(party),
+                // party_stats is keyed by faction name, and the no-faction key
+                // arrives as the string "null" — JSON object keys cannot be null.
+                party: factionLabel(party),
+                short: getPartyShort(factionLabel(party)),
+                color: getPartyColor(factionLabel(party)),
                 ...stats,
                 total: Object.values(stats).reduce((a, b) => a + b, 0),
             }))

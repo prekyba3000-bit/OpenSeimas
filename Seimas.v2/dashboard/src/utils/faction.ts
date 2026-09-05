@@ -20,12 +20,25 @@
  */
 export const NO_FACTION_LT = 'Frakcija nenurodyta';
 
+/**
+ * Values that all mean "this member sits in no faction".
+ *
+ * `'null'` is not paranoia. `/api/votes/{id}` returns `party_stats` as an
+ * object keyed by faction name, and a JSON object key cannot BE null — Python
+ * stringifies the None key on the way out, so the wire carries the four
+ * characters n-u-l-l. The vote page rendered that verbatim as a faction row
+ * labelled „null" the moment current_party became NULL for the Speaker.
+ *
+ * `'Unknown'` is the old English placeholder, kept here so any surface still
+ * receiving it lands on the same label.
+ */
+const ABSENT = new Set(['', 'null', 'undefined', 'Unknown']);
+
 export function factionLabel(party?: string | null): string {
   const trimmed = (party ?? '').trim();
-  return trimmed === '' || trimmed === 'Unknown' ? NO_FACTION_LT : trimmed;
+  return ABSENT.has(trimmed) ? NO_FACTION_LT : trimmed;
 }
 
 export function hasFaction(party?: string | null): boolean {
-  const trimmed = (party ?? '').trim();
-  return trimmed !== '' && trimmed !== 'Unknown';
+  return !ABSENT.has((party ?? '').trim());
 }
