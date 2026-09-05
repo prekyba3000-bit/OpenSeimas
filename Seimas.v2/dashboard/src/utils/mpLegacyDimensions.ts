@@ -40,6 +40,20 @@ export const CIVIC_DIMENSION_LABELS_LT: Record<MpCivicDimension, string> = {
 export const DIMENSION_UNAVAILABLE_LT = "Rodiklis bus rodomas, kai bus įkelti šaltinio duomenys.";
 
 /**
+ * Shown instead of the above when the member sits in no faction.
+ *
+ * The default sentence says the figure arrives once source data is loaded.
+ * That is a promise, and for these members it is false: with no faction there
+ * is no faction position, so no amount of ingested data produces a number.
+ * Nine of 148 are in that state — the Speaker, who steps out of his faction
+ * for the term, and the eight former members.
+ *
+ * LT-COPY: needs native review.
+ */
+export const NO_FACTION_NO_FIGURE_LT =
+  "Narys nepriskirtas frakcijai, todėl nėra pozicijos, su kuria būtų galima lyginti.";
+
+/**
  * Wire keys for the three chamber-relative dimensions.
  *
  * These were RPG stat abbreviations — STR, WIS, CHA, plus INT holding the

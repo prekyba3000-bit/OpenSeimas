@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 
 import { api } from '../services/api';
+import { hasFaction } from '../utils/faction';
 import { formatLtDateLong } from '../utils/ltDate';
 
 const PAGE = 25;
@@ -20,8 +21,21 @@ const PAGE = 25;
  *
  * Votes where fewer than ten of the faction voted are excluded rather than
  * scored: there is no majority to compare against.
+ *
+ * `party` is needed because `comparable_votes === 0` has more than one cause
+ * and they are not interchangeable to a reader. Without it this panel told
+ * every member with no comparable votes that their faction was too small —
+ * including the 9 who sit in no faction at all, whose profile header two
+ * inches above says „Frakcija nenurodyta". Saying „your faction is too small"
+ * to someone in no faction is not a missing number, it is a wrong reason.
  */
-export function MpFactionAlignment({ mpId }: { mpId: string }) {
+export function MpFactionAlignment({
+  mpId,
+  party,
+}: {
+  mpId: string;
+  party?: string | null;
+}) {
   const [only, setOnly] = useState<'diverged' | 'all'>('diverged');
   const [page, setPage] = useState(0);
 
@@ -50,8 +64,18 @@ export function MpFactionAlignment({ mpId }: { mpId: string }) {
 
       {data.comparable_votes === 0 ? (
         <p className="text-sm text-muted-foreground mt-1">
-          Nėra balsavimų, kuriuose frakcijos poziciją būtų galima nustatyti — frakcija
-          per maža. Skaičiaus nerodome.
+          {/* LT-COPY: needs native review */}
+          {hasFaction(party) ? (
+            <>
+              Nėra balsavimų, kuriuose frakcijos poziciją būtų galima nustatyti —
+              frakcija per maža. Skaičiaus nerodome.
+            </>
+          ) : (
+            <>
+              Šis narys nepriskirtas jokiai frakcijai, todėl nėra pozicijos, su kuria
+              būtų galima lyginti. Tai ne trūkstami duomenys.
+            </>
+          )}
         </p>
       ) : (
         <>

@@ -64,10 +64,41 @@ describe('MpFactionAlignment', () => {
       alignment_pct: null, comparable_votes: 0, aligned_votes: 0,
       votes: [], has_more: false,
     });
-    wrap(<MpFactionAlignment mpId="x" />);
+    wrap(<MpFactionAlignment mpId="x" party="Liberalų sąjūdžio frakcija" />);
     await waitFor(() =>
       expect(screen.getByText(/frakcija\s+per maža/)).toBeInTheDocument(),
     );
+  });
+
+  it('does not blame a faction the member does not have', async () => {
+    // Found on the live profile of Vilija Blinkevičiūtė, whose header reads
+    // „Frakcija nenurodyta" two inches above a panel telling her that her
+    // faction was too small. Nine members are in that state — the Speaker and
+    // the eight former members — and the reason given was false for all of
+    // them. A wrong explanation is not a smaller error than a wrong number.
+    vi.spyOn(api, 'getMpFactionAlignment').mockResolvedValue({
+      alignment_pct: null, comparable_votes: 0, aligned_votes: 0,
+      votes: [], has_more: false,
+    });
+    const { container } = wrap(<MpFactionAlignment mpId="x" party={null} />);
+    await waitFor(() =>
+      expect(screen.getByText(/nepriskirtas jokiai frakcijai/)).toBeInTheDocument(),
+    );
+    expect(container.textContent ?? '').not.toMatch(/per maža/);
+  });
+
+  it('treats the stringified null faction as no faction here too', async () => {
+    // `party_stats` keys arrive as the four characters n-u-l-l; hasFaction owns
+    // that form, and this panel must not be the one surface that forgets.
+    vi.spyOn(api, 'getMpFactionAlignment').mockResolvedValue({
+      alignment_pct: null, comparable_votes: 0, aligned_votes: 0,
+      votes: [], has_more: false,
+    });
+    const { container } = wrap(<MpFactionAlignment mpId="x" party="null" />);
+    await waitFor(() =>
+      expect(screen.getByText(/nepriskirtas jokiai frakcijai/)).toBeInTheDocument(),
+    );
+    expect(container.textContent ?? '').not.toMatch(/per maža/);
   });
 
   it('withholds a percentage that would be noise, but still lists the votes', async () => {
