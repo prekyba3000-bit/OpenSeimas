@@ -15,6 +15,9 @@ Suites: **274 dashboard / 216 backend** (+19 skipped).
 | `930c66b` | Review doc for the faction finding |
 | `af155b0` | The no-faction row rendered as the word „null" |
 | `82fffa4` | A null faction took the whole profile page down |
+| `63f574c` | 0.0 % agreement with a faction he does not have |
+| `78588f5` | One label for no faction, not three |
+| `203ce39` | The loyalty engine's null blanked the page again |
 
 ## The faction work, in one paragraph
 
@@ -39,10 +42,17 @@ opening the page rather than by a test:
 2. **„null" as a faction name.** `party_stats` is a JSON object keyed by faction,
    and an object key cannot be null — Python stringifies it. The vote page grew
    a row labelled „null".
-3. **The Speaker's profile went blank.** `party: z.string().optional()` rejects
-   null; `.optional()` only admits undefined. One legitimately-absent value
-   failed the parse and took every other field with it. This is charter §1.11
-   verbatim, violated in the same session that quotes it.
+3. **The Speaker's profile went blank — twice.** `party: z.string().optional()`
+   rejects null, and four commits later
+   `loyalty_bonus.independent_voting_days_pct: z.number()` did the same thing
+   again. Charter §1.11, violated twice in the session that quotes it. The
+   lesson that generalises: **widening a backend value to null is a wire change
+   even when no field is renamed and no key moves.**
+4. **A published 0.0 %.** „Sutapimas su frakcija — 0.0 %" for a member with no
+   faction, with provenance already null beside it. Worse, both forensic paths
+   computed `100 - loyalty`, so the missing figure would have inverted into a
+   100 % independence score and earned an integrity bonus for being
+   unmeasurable.
 
 The suites were green throughout all three. That is the argument for §1.7.
 
@@ -63,8 +73,16 @@ parliamentary procedure, not about our data.
 - **Legal name** — `<FILL IN>` in `NOTICE:3`, `NOTICE:18`, `README.md:69`.
 - **Vercel URL** still recorded nowhere in the repo. It is
   `https://seimas-v2.vercel.app`; worth committing to the README next session.
-- `/api/v2/heroes` takes ~4s in production against an 8s client timeout. Not
-  breaking, but the margin is thin and it is the slowest public path.
+- `/api/v2/heroes` takes 2–4.6s in production against an 8s client timeout. Not
+  breaking, but the margin is thin and it is the slowest public path. Every
+  „Tinklas lėtas" seen during this session was a Render cold start immediately
+  after a deploy, not a defect.
+- **The unavailable-dial copy over-promises.** „Sutapimas su frakcija" now
+  reads „Rodiklis bus rodomas, kai bus įkelti šaltinio duomenys" — but for the
+  Speaker no figure is coming while he holds the chair, because he sits in no
+  faction. „No source yet" and „not applicable to this member" are different
+  facts sharing one message. Left deliberately: routing a per-member reason
+  into the dial is a design change, not a copy fix.
 - Older decisions: VTEK approach, snapshot payload storage,
   `ingest_votes_v2` manifest policy, forensic severity badges.
 
