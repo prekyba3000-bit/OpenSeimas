@@ -907,6 +907,17 @@ _VERDICT_METRIC_KEYS = frozenset({
 _VERDICT_BREAKDOWN_KEYS = frozenset({
     "raw_forensic_penalty_sum",
     "capped_forensic_penalty",
+    # The last aggregate on the payload. Kept on 2026-09-05 only because
+    # `mpProfileSchema` required it and dropping it would have blanked the
+    # profile rather than cleaned the payload; the client was made tolerant
+    # first, in 72f0b87, and it goes now.
+    #
+    # No reader ever saw it. The two StebsenaView helpers that would have drawn
+    # it — a four-step severity ramp keyed to the penalty total, and a tooltip
+    # reading „Vientisumas sumažintas maždaug N tšk." — were defined and called
+    # from nowhere. The per-engine sub-objects stay: each is evidence a reader
+    # can open. Their sum is the verdict.
+    "total_forensic_adjustment",
 })
 
 
@@ -918,12 +929,12 @@ def public_metrics(metrics: Dict[str, Any]) -> Dict[str, Any]:
     served — each of which a reader can trace to a denominator. What leaves is
     the scoring layer built on top of them.
 
-    `total_forensic_adjustment` deliberately survives inside the per-engine
-    breakdown: `StebsenaView` reads it and `mpProfileSchema` requires it, so
-    dropping it here would blank a page rather than clean a payload. Whether an
-    "adjustment" belongs on a public payload at all is a live question, recorded
-    in docs/reviews/verdict-keys-on-the-wire.md, and it is a surface decision
-    rather than a projection one.
+    `total_forensic_adjustment` survived the first pass because
+    `mpProfileSchema` required it and dropping it would have blanked the profile
+    rather than cleaned the payload. The client was made tolerant first
+    (72f0b87) and it is gone now — see `_VERDICT_BREAKDOWN_KEYS`. Nothing on the
+    payload is an aggregate about a person any more; the per-engine sub-objects
+    remain because each is evidence a reader can open.
     """
     return {k: v for k, v in metrics.items() if k not in _VERDICT_METRIC_KEYS}
 

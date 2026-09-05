@@ -88,7 +88,6 @@ const mockMpProfile = {
             bonus: 5,
             explanation: 'Voted against party line on 24.6% of voting days, indicating independent judgment.',
         },
-        totalForensicAdjustment: -8,
     },
 } as unknown as MpProfile;
 
