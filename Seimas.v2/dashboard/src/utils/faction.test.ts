@@ -35,3 +35,17 @@ describe('hasFaction', () => {
     expect(hasFaction('Unknown')).toBe(false);
   });
 });
+
+describe('the no-faction key as it arrives on the wire', () => {
+  it('treats the stringified null key as absence', () => {
+    // /api/votes/{id} returns party_stats keyed by faction name. A JSON object
+    // key cannot be null, so Python's None key stringifies to "null" and the
+    // vote page rendered a faction row labelled „null".
+    expect(factionLabel('null')).toBe(NO_FACTION_LT);
+    expect(hasFaction('null')).toBe(false);
+  });
+
+  it('does not mistake a real faction containing those letters', () => {
+    expect(factionLabel('Nemuno aušros frakcija')).toBe('Nemuno aušros frakcija');
+  });
+});
