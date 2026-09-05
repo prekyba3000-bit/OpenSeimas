@@ -27,22 +27,11 @@
       "years_in_parliament": 1.8069815195071868,
       "total_votes_cast": 2133.0,
       "speeches_given": 268.0,
-      "social_bonus": 0.0,
-      "risk_score": 0.0,
-      "forensic_penalties": {
-        "benford_penalty": 0,
-        "chrono_penalty": 0,
-        "geometry_penalty": 0,
-        "phantom_penalty": 0,
-        "loyalty_bonus": 0,
-        "total_forensic_adjustment": 0
-      },
       "attendance_percentage": 94.68,
       "amendments_proposed": 0.0,
       "amendments_proposed_proxy": 0.0,
       "bills_proposed": 39.0,
-      "party_loyalty": null,
-      "high_risk_alerts": 0
+      "party_loyalty": null
     },
     "metrics_provenance": {
       "legislative_activity": "direct",
@@ -82,8 +71,6 @@
         "bonus": 0,
         "explanation": "This member sits in no faction, or has too few comparable votes, so agreement with a faction cannot be measured and no loyalty bonus is applied."
       },
-      "raw_forensic_penalty_sum": 0,
-      "capped_forensic_penalty": 0,
       "total_forensic_adjustment": 0
     }
   }

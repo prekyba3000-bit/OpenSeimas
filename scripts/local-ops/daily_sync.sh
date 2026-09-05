@@ -85,6 +85,23 @@ echo "[$(date -Is)] daily sync start"
 # hold, leaving the last-good data served.
 .venv/bin/python scripts/dq_check_runner.py || echo "[$(date -Is)] dq checks reported a blocking failure"
 
+# Wire-contract drift. The captured fixtures under contracts/fixtures/ are the
+# only test evidence taken from the live API rather than from someone's
+# imagination — and they are the one layer that can rot silently, because both
+# suites read the committed files and pass happily on a payload the backend
+# stopped sending. Nothing else notices.
+#
+# --check writes nothing: it recaptures the same payload shapes and compares
+# which keys exist and which are null. Writing from here would swap one silence
+# for another, since this sync makes no commits and a refreshed fixture would
+# just sit dirty in the working tree.
+#
+# Non-fatal by design. Drift means the fixtures need recapturing and the schemas
+# re-checked by a person — it does not mean today's ingest was bad, and failing
+# the sync over it would stop data collection to report a test-evidence problem.
+.venv/bin/python -m scripts.refresh_wire_fixtures --check \
+  || echo "[$(date -Is)] wire fixtures drifted from the live API — recapture with scripts.refresh_wire_fixtures and re-run both suites"
+
 
 # Mirror the workflow's data commit; --no-verify skips the pre-push quality gate
 # because this push is data-only (the gate is for code pushes).

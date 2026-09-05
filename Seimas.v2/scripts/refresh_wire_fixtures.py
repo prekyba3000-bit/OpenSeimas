@@ -13,6 +13,20 @@ Run against production (read-only):
 Then run both suites. If a newly-captured payload has a null the contract does
 not declare, `tests/test_wire_contract.py` fails and tells you to declare it;
 declaring it makes the dashboard test check that the zod schema accepts it.
+
+    DB_DSN=... .venv/bin/python -m scripts.refresh_wire_fixtures --check
+
+`--check` writes nothing. It captures the same payloads and compares their
+SHAPE against the committed fixtures — which keys exist, and which are null —
+reporting drift instead of recording it. That is the mode the daily sync runs,
+because a fixture is only evidence while it still matches the API it was
+captured from, and nothing else notices when it stops. The suites cannot: they
+read the committed files and pass happily on a payload the backend no longer
+sends.
+
+Writing from a cron would be worse than useless — the sync makes no commits, so
+a refreshed fixture would sit dirty in the working tree until someone noticed,
+which is the same silence in a different place.
 """
 from __future__ import annotations
 
@@ -61,11 +75,83 @@ def fetch(mp_id: str) -> dict:
         return json.loads(r.read())
 
 
+def shape(obj, prefix: str = "") -> set[str]:
+    """Every key path in a payload, with the null ones marked.
+
+    Comparing shapes rather than values is deliberate: a member's speech count
+    changes daily and means nothing here, while a key appearing, vanishing or
+    turning null is exactly what breaks a schema.
+    """
+    out: set[str] = set()
+    if isinstance(obj, dict):
+        for key, value in obj.items():
+            path = f"{prefix}.{key}" if prefix else key
+            out.add(f"{path}=null" if value is None else path)
+            out |= shape(value, path)
+    elif isinstance(obj, list) and obj:
+        out |= shape(obj[0], f"{prefix}[]")
+    return out
+
+
+def check() -> int:
+    """Compare live payload shapes against the committed fixtures. Writes nothing."""
+    conn = psycopg2.connect(os.environ["DB_DSN"])
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+
+    drifted = checked = 0
+    for name, _why, sql in SELECTORS:
+        path = FIXTURE_DIR / f"heroes-{name}.json"
+        if not path.exists():
+            print(f"  {name}: no committed fixture, skipped")
+            continue
+        try:
+            cur.execute(sql)
+        except psycopg2.Error as exc:
+            conn.rollback()
+            print(f"  {name}: query failed ({exc.__class__.__name__}), skipped")
+            continue
+        row = cur.fetchone()
+        if not row:
+            print(f"  {name}: no member matches this shape today, skipped")
+            continue
+
+        committed = json.loads(path.read_text(encoding="utf-8"))["payload"]
+        live = fetch(str(row["id"]))
+        checked += 1
+
+        gone = shape(committed) - shape(live)
+        added = shape(live) - shape(committed)
+        if gone or added:
+            drifted += 1
+            print(f"  {name}: DRIFT vs {path.name}")
+            for item in sorted(gone):
+                print(f"      only in the fixture: {item}")
+            for item in sorted(added):
+                print(f"      only on the wire   : {item}")
+        else:
+            print(f"  {name}: matches")
+
+    if drifted:
+        print(
+            f"\n{drifted} of {checked} fixtures no longer match the API. Re-run "
+            f"without --check to recapture, then run both suites — a key that "
+            f"appeared needs declaring in the zod schema or it is silently "
+            f"stripped, and one that turned null needs declaring or it blanks "
+            f"the surface."
+        )
+        return 1
+    print(f"\n{checked} fixtures still match the API.")
+    return 0
+
+
 def main() -> int:
     dsn = os.environ.get("DB_DSN")
     if not dsn:
         print("DB_DSN is not set", file=sys.stderr)
         return 2
+
+    if "--check" in sys.argv[1:]:
+        return check()
 
     FIXTURE_DIR.mkdir(parents=True, exist_ok=True)
     conn = psycopg2.connect(dsn)
