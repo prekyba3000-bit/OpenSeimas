@@ -434,22 +434,53 @@ def get_mp(mp_id: str):
             }
 
 
+# The subjects a vote can be tagged with. Kept in one place so the route can
+# reject an unknown one rather than silently returning an empty list, which
+# reads as "your member never voted on this" instead of "that is not a topic".
+VOTE_TOPICS = (
+    "bustas", "pajamos", "sveikata", "svietimas",
+    "transportas", "saugumas", "aplinka", "valdymas",
+)
+
+
 @router.get("/api/mps/{mp_id}/votes")
-def get_mp_votes(mp_id: str, limit: int = 20):
-    """Get recent votes for an MP."""
+def get_mp_votes(mp_id: str, limit: int = 20, topic: Optional[str] = None):
+    """Get recent votes for an MP, optionally only those on one subject."""
+    if topic is not None and topic not in VOTE_TOPICS:
+        raise HTTPException(
+            status_code=422,
+            detail=f"topic must be one of: {', '.join(VOTE_TOPICS)}",
+        )
+
     with get_db_conn() as conn:
         if not conn:
             raise HTTPException(status_code=500, detail="Database connection failed")
 
         with conn.cursor() as cur:
-            cur.execute("""
-                SELECT v.title, v.sitting_date, mv.vote_choice
+            # vote_topics.vote_id references votes.seimas_vote_id, not votes.id
+            # — the same join key mp_votes uses. Aggregated rather than joined
+            # row-per-tag so a vote tagged twice stays one vote in the list.
+            topic_filter = (
+                "AND EXISTS (SELECT 1 FROM vote_topics f "
+                "WHERE f.vote_id = v.seimas_vote_id AND f.topic = %(topic)s)"
+                if topic else ""
+            )
+            cur.execute(f"""
+                SELECT v.seimas_vote_id, v.title, v.sitting_date, mv.vote_choice,
+                       COALESCE(
+                           array_agg(vt.topic ORDER BY vt.topic)
+                           FILTER (WHERE vt.topic IS NOT NULL),
+                           ARRAY[]::text[]
+                       ) AS topics
                 FROM mp_votes mv
                 JOIN votes v ON mv.vote_id = v.seimas_vote_id
-                WHERE mv.politician_id = %s::uuid
-                ORDER BY v.sitting_date DESC
-                LIMIT %s
-            """, (mp_id, limit))
+                LEFT JOIN vote_topics vt ON vt.vote_id = v.seimas_vote_id
+                WHERE mv.politician_id = %(mp)s::uuid
+                {topic_filter}
+                GROUP BY v.seimas_vote_id, v.title, v.sitting_date, mv.vote_choice
+                ORDER BY v.sitting_date DESC, v.seimas_vote_id DESC
+                LIMIT %(limit)s
+            """, {"mp": mp_id, "limit": limit, "topic": topic})
             rows = cur.fetchall()
 
             return [
@@ -457,9 +488,83 @@ def get_mp_votes(mp_id: str, limit: int = 20):
                     "title": (row["title"][:80] + "...") if len(row["title"]) > 80 else row["title"],
                     "date": _date_or_none(row["sitting_date"]),
                     "choice": row["vote_choice"],
+                    # What the vote was tagged as, so a reader can see why it
+                    # matched rather than trusting the filter blindly.
+                    "topics": list(row["topics"] or []),
                 }
                 for row in rows
             ]
+
+
+@router.get("/api/mps/{mp_id}/vote-topics")
+def get_mp_vote_topics(mp_id: str):
+    """How many of this member's votes fall under each subject.
+
+    A count of votes on a subject, not a stance on it. Nothing here says
+    whether the member supported or opposed anything, and the counts are not
+    comparable between members — a member who joined mid-term has fewer of
+    everything.
+
+    Two numbers per subject, and both are needed. `votes` is how many votes on
+    that subject happened while the member held a seat — very nearly identical
+    for every member, because `mp_votes` carries a row per member per vote
+    whether or not they took part. `recorded` is how many of those carry an
+    actual choice for them, and that is the member-specific fact: on housing,
+    one member shows 86 and 27.
+
+    Publishing `votes` alone would look member-specific and not be. Publishing
+    `recorded` alone would hide its denominator. Neither is a participation
+    rate — attendance is measured elsewhere, against eligible sitting days, and
+    a missing choice here often means the source published no per-member
+    result for that vote at all.
+
+    `tagged` and `total` travel with them because the tagging is deterministic
+    keyword matching over vote titles and it misses things: a housing vote
+    whose title never says so is simply untagged.
+    """
+    with get_db_conn() as conn:
+        if not conn:
+            raise HTTPException(status_code=500, detail="Database connection failed")
+
+        with conn.cursor() as cur:
+            if not _table_exists(cur, "vote_topics"):
+                # Distinct from "this member has no tagged votes": we cannot
+                # tell, so nothing is asserted.
+                return {"topics": None, "tagged": None, "total": None}
+
+            cur.execute("""
+                SELECT vt.topic,
+                       count(DISTINCT v.seimas_vote_id) AS votes,
+                       count(DISTINCT v.seimas_vote_id)
+                           FILTER (WHERE mv.vote_choice IS NOT NULL) AS recorded
+                FROM mp_votes mv
+                JOIN votes v ON mv.vote_id = v.seimas_vote_id
+                JOIN vote_topics vt ON vt.vote_id = v.seimas_vote_id
+                WHERE mv.politician_id = %s::uuid
+                GROUP BY vt.topic
+                ORDER BY vt.topic
+            """, (mp_id,))
+            counts = {
+                row["topic"]: {"votes": row["votes"], "recorded": row["recorded"]}
+                for row in cur.fetchall()
+            }
+
+            cur.execute("""
+                SELECT count(DISTINCT v.seimas_vote_id) AS total,
+                       count(DISTINCT v.seimas_vote_id)
+                           FILTER (WHERE vt.vote_id IS NOT NULL) AS tagged
+                FROM mp_votes mv
+                JOIN votes v ON mv.vote_id = v.seimas_vote_id
+                LEFT JOIN vote_topics vt ON vt.vote_id = v.seimas_vote_id
+                WHERE mv.politician_id = %s::uuid
+            """, (mp_id,))
+            totals = cur.fetchone()
+
+            return {
+                "topics": counts,
+                "tagged": totals["tagged"],
+                "total": totals["total"],
+            }
 
 
 @router.get("/api/mps/{mp_id}/activity")

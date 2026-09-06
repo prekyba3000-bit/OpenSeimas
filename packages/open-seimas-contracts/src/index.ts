@@ -120,12 +120,29 @@ export interface MpDetail {
   vote_count: number;
 }
 
+/**
+ * `?:` on the nullable fields is the tsc workaround documented on MpSummary,
+ * not a claim the keys can be absent — the API sends all of them on every row.
+ * With `strict: false`, z.infer renders a nullable key as optional, so a
+ * required field here cannot be satisfied by the schema that parses it.
+ */
 export interface MpVoteRecord {
   /** `votes.title` is nullable. */
-  title: string | null;
+  title?: string | null;
   /** `votes.sitting_date` is nullable. See ActivityItem.time. */
-  date: string | null;
-  choice: string;
+  date?: string | null;
+  /**
+   * Null where the source published no per-member result for this vote —
+   * 408,827 of 744,495 rows. Was declared non-null while the API sent null,
+   * the same class of mismatch `party` carried on /api/mps.
+   */
+  choice?: string | null;
+  /**
+   * Subjects this vote was tagged with, from deterministic keyword matching
+   * over the title. Empty for the 2,733 votes no keyword matched — that is
+   * "untagged", not "about nothing".
+   */
+  topics?: string[];
 }
 
 export interface VoteSummary {

@@ -62,6 +62,22 @@ export const LT = {
       "Apygardos duomenų nėra.",
     sourceNote: "Šaltinis: VRK 2024 m. Seimo rinkimų duomenys.",
   },
+  // LT-COPY: needs native review
+  voteTopics: {
+    title: "Filtruoti pagal temą",
+    all: "Visos temos",
+    // Explains "27/86" without implying a participation rate or a stance.
+    countExplainer:
+      "Skaičiai rodo: kiek balsavimų šia tema užfiksuotas nario pasirinkimas " +
+      "iš visų tos temos balsavimų per jo kadenciją. Tai nėra nei lankomumo " +
+      "rodiklis, nei nario pozicija — dažniausiai pasirinkimo nėra todėl, kad " +
+      "šaltinis nepaskelbė, kaip balsavo kiekvienas narys.",
+    coverage: (tagged: number, total: number) =>
+      `Temos priskiriamos automatiškai pagal balsavimo pavadinime esančius ` +
+      `žodžius — tema priskirta ${tagged} balsavimams iš ${total}. Dalis ` +
+      `balsavimų temos neturi.`,
+    emptyForTopic: "Šia tema balsavimų nerasta.",
+  },
   votesView: {
     title: "Parlamento balsavimai",
     subtitle: "Naršykite istorinius balsavimo įrašus",

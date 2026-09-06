@@ -530,6 +530,43 @@ export const voteDetailSchema = z.object({
 
 export type VoteDetail = z.infer<typeof voteDetailSchema>;
 
+// Wire contract for /api/mps/{id}/votes.
+export const mpVoteRecordSchema = z.object({
+  title: z.string().nullable(),
+  date: z.string().nullable(),
+  // Nullable: the source published no per-member result for 408,827 of
+  // 744,495 rows, and this was declared non-null against that.
+  choice: z.string().nullable(),
+  // Optional as well as defaulted, so a cached response from before the
+  // field existed still parses.
+  topics: z.array(z.string()).optional().default([]),
+});
+
+export const mpVoteRecordListSchema = z.array(mpVoteRecordSchema);
+
+/**
+ * Wire contract for /api/mps/{id}/vote-topics.
+ *
+ * Two numbers per subject on purpose. `votes` is how many votes on that
+ * subject happened while the member held a seat — near-identical for every
+ * member. `recorded` is how many carry an actual choice for them. Showing
+ * either alone misleads: the first looks personal and is not, the second
+ * hides its denominator.
+ *
+ * All three top-level fields are nullable together: when `vote_topics` is
+ * absent from the database we cannot tell, which is different from a member
+ * having no tagged votes.
+ */
+export const mpVoteTopicsSchema = z.object({
+  topics: z
+    .record(z.string(), z.object({ votes: z.number(), recorded: z.number() }))
+    .nullable(),
+  tagged: z.number().nullable(),
+  total: z.number().nullable(),
+});
+
+export type MpVoteTopics = z.infer<typeof mpVoteTopicsSchema>;
+
 const mpLeaderboardRawSchema = z.array(mpProfileSchema);
 const mpSearchResponseRawSchema = z.object({
   query: z.string(),
@@ -984,8 +1021,16 @@ export const api = {
 
   getMp: (id: string) => request<MpDetail>(`/mps/${id}`),
 
-  getMpVotes: (id: string, limit = 20) =>
-    request<MpVoteRecord[]>(`/mps/${id}/votes?limit=${limit}`),
+  getMpVotes: (id: string, limit = 20, topic?: string | null) =>
+    request<MpVoteRecord[]>(
+      `/mps/${id}/votes?limit=${limit}${topic ? `&topic=${encodeURIComponent(topic)}` : ""}`,
+      { parse: (data) => mpVoteRecordListSchema.parse(data) },
+    ),
+
+  getMpVoteTopics: (id: string) =>
+    request<MpVoteTopics>(`/mps/${id}/vote-topics`, {
+      parse: (data) => mpVoteTopicsSchema.parse(data),
+    }),
 
   getVotes: (limit = 50, offset = 0) =>
     request<VoteSummary[]>(`/votes?limit=${limit}&offset=${offset}`),

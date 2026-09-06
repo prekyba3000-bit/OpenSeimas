@@ -16,6 +16,7 @@ import { AttendanceTrajectoryStrip } from '../components/AttendanceTrajectory';
 import { MpActivityPanel } from '../components/MpActivityPanel';
 import { MpDiaryTimeline } from '../components/MpDiaryTimeline';
 import { MpFactionAlignment } from '../components/MpFactionAlignment';
+import { VoteTopicFilter, TOPIC_LABELS_LT } from '../components/VoteTopicFilter';
 import {
   CIVIC_DIMENSION_ORDER,
   type MpCivicDimension,
@@ -31,6 +32,7 @@ import {
   type ForensicFlag,
   MpProfile,
   MpVoteRecord,
+  type MpVoteTopics,
 } from '../services/api';
 import { toastErrorDeduped } from '../utils/toastDeduped';
 import { ProblemDetailsNotice } from '../components/ProblemDetailsNotice';
@@ -108,6 +110,9 @@ interface MpProfileLayoutProps {
   profile: MpProfile | null;
   votes: MpVoteRecord[];
   votesLoading: boolean;
+  voteTopics?: MpVoteTopics | null;
+  selectedTopic?: string | null;
+  onSelectTopic?: (topic: string | null) => void;
   loading?: boolean;
   error?: string | null;
   errorDetails?: unknown;
@@ -121,6 +126,9 @@ export const MpProfileLayout = ({
   activity = null,
   votes,
   votesLoading,
+  voteTopics = null,
+  selectedTopic = null,
+  onSelectTopic,
   loading = false,
   error = null,
   errorDetails = null,
@@ -314,10 +322,23 @@ export const MpProfileLayout = ({
 
         {tab === 'balsavimai' && (
           <div className="space-y-3">
+            {onSelectTopic && (
+              <VoteTopicFilter
+                breakdown={voteTopics}
+                selected={selectedTopic}
+                onSelect={onSelectTopic}
+              />
+            )}
             {votesLoading ? (
               <p className="text-sm text-muted-foreground">Kraunama balsavimų istorija…</p>
             ) : votes.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Balsavimų istorija tuščia arba dar neįkelta.</p>
+              <p className="text-sm text-muted-foreground">
+                {/* A topic with no matches is a different fact from an empty
+                    voting record, and says so. */}
+                {selectedTopic
+                  ? LT.voteTopics.emptyForTopic
+                  : 'Balsavimų istorija tuščia arba dar neįkelta.'}
+              </p>
             ) : (
               <ul className="divide-y divide-border rounded-xl border border-border bg-card">
                 {votes.map((v) => (
@@ -326,6 +347,13 @@ export const MpProfileLayout = ({
                     <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
                       <span>{formatLtDateLong(v.date) ?? v.date}</span>
                       <span className="text-foreground">{formatVoteChoiceLabel(v.choice)}</span>
+                      {/* The tags this vote carries, so a filtered list shows
+                          why each row matched rather than asking for trust. */}
+                      {(v.topics ?? []).map((slug) => (
+                        <span key={slug} className="rounded border border-border px-1.5">
+                          {TOPIC_LABELS_LT[slug] ?? slug}
+                        </span>
+                      ))}
                     </div>
                   </li>
                 ))}
@@ -402,9 +430,22 @@ const MpProfileView = ({ mpId }: { mpId: string }) => {
     enabled: Boolean(mpId),
   });
 
+  // The chosen subject is part of the query key: picking one refetches from
+  // the server rather than filtering the loaded page, so a topic with matches
+  // outside the most recent 40 votes still shows them.
+  const [voteTopic, setVoteTopic] = useState<string | null>(null);
+
   const votesQuery = useQuery({
-    queryKey: ['mps', mpId, 'votes'],
-    queryFn: () => api.getMpVotes(mpId, 40),
+    queryKey: ['mps', mpId, 'votes', voteTopic],
+    queryFn: () => api.getMpVotes(mpId, 40, voteTopic),
+    enabled: Boolean(mpId) && profileQuery.isSuccess,
+  });
+
+  // Additive, like the trajectory below: the votes list renders without it,
+  // minus the filter. A breakdown failure must not blank the tab.
+  const voteTopicsQuery = useQuery({
+    queryKey: ['mps', mpId, 'vote-topics'],
+    queryFn: () => api.getMpVoteTopics(mpId),
     enabled: Boolean(mpId) && profileQuery.isSuccess,
   });
 
@@ -463,6 +504,9 @@ const MpProfileView = ({ mpId }: { mpId: string }) => {
       trajectory={trajectoryQuery.data ?? null}
       activity={activityQuery.data ?? null}
       votes={votes}
+      voteTopics={voteTopicsQuery.data}
+      selectedTopic={voteTopic}
+      onSelectTopic={setVoteTopic}
       votesLoading={votesLoading}
       loading={loading}
       error={error}
