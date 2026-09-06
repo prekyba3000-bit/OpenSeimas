@@ -35,6 +35,8 @@ _MP_ROWS = [
         "is_active": False, "photo_url": None, "mandate_start_date": None,
         "mandate_end_date": None, "vote_count": 0, "attendance": None,
         "most_frequent_vote": None,
+        "constituency_number": None,
+        "constituency_name": None, "election_type": None,
     },
     {
         "id": NORMAL_ID, "display_name": "Agnė Bilotaitė",
@@ -42,6 +44,8 @@ _MP_ROWS = [
         "is_active": True, "photo_url": None, "mandate_start_date": None,
         "mandate_end_date": None, "vote_count": 1420, "attendance": 70.97,
         "most_frequent_vote": "Už",
+        "constituency_number": 3,
+        "constituency_name": "Antakalnio", "election_type": "single_mandate",
     },
 ]
 

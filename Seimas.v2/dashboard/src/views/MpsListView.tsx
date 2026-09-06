@@ -9,6 +9,7 @@ import { Button } from '../components/Button';
 import { MpCard } from '../components/MpCard';
 import { sortMps, SORT_OPTIONS, SortOption } from '../utils/sorting';
 import { SEIMAS_SEATS_TOTAL } from '../utils/mpCounts';
+import { ConstituencyPicker } from '../components/ConstituencyPicker';
 import { ProblemDetailsNotice } from '../components/ProblemDetailsNotice';
 import { ConnectingNotice, ConnectionError, isConnectionProblem } from '../components/ConnectionState';
 import { LT } from '../i18n/lt';
@@ -144,6 +145,10 @@ const MpsListView = () => {
                     </span>
                 </div>
             </div>
+
+            {/* Before the browse-everyone controls: most readers want one
+                member — theirs — and this is the shortest path to them. */}
+            <ConstituencyPicker mps={mps} onSelect={(mp) => handleMpClick(mp.id)} />
 
             {/* Smart Search & Filter Bar */}
             <Card className="p-4" style={{ backgroundColor: 'hsl(var(--muted))' }}>

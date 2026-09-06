@@ -13,6 +13,9 @@
       "vote_count": 0,
       "attendance": null,
       "vote_mode": null,
+      "constituency_number": null,
+      "constituency_name": null,
+      "election_type": null,
       "mandate_start_date": null,
       "mandate_end_date": null
     }

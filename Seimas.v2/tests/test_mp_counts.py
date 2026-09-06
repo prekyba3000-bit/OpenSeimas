@@ -160,6 +160,13 @@ def _row(name, start, end):
         "vote_count": 0,
         "attendance": 0,
         "most_frequent_vote": None,
+        # Present because the route SELECTs them. A hand-written row that
+        # omits a column the query returns is the drift this project keeps
+        # paying for: the route indexes the key directly, as it should for a
+        # RealDictCursor, and only a stub can be missing it.
+        "constituency_number": None,
+        "constituency_name": None,
+        "election_type": None,
     }
 
 

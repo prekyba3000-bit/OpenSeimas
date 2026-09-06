@@ -335,9 +335,26 @@ export const MpProfileLayout = ({
         )}
 
         {tab === 'apygarda' && (
-          <div>
-            {/* TODO(v4): render district when MpDetail / MpSummary exposes apygarda or constituency field */}
-            <p className="text-sm text-muted-foreground">Apygardos duomenys bus čia.</p>
+          <div className="rounded-xl border border-border bg-card p-5 space-y-2">
+            {/* Three distinct states, deliberately worded differently: won a
+                district, elected from a list (no district exists to show),
+                and never elected in 2024 at all. Only the third is missing
+                data; collapsing them would turn two facts into a gap. */}
+            {profile.mp.constituency_number != null && profile.mp.constituency_name ? (
+              <p className="text-sm text-foreground">
+                {LT.constituency.wonDistrict(
+                  profile.mp.constituency_name,
+                  profile.mp.constituency_number,
+                )}
+              </p>
+            ) : profile.mp.election_type === 'multimandate' ? (
+              <p className="text-sm text-foreground">{LT.constituency.partyList}</p>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                {LT.constituency.noElectionRecord}
+              </p>
+            )}
+            <p className="text-xs text-muted-foreground">{LT.constituency.sourceNote}</p>
           </div>
         )}
 

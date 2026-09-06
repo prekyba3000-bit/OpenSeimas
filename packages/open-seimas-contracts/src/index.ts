@@ -95,6 +95,19 @@ export interface MpSummary {
   mandate_start_date?: string | null;
   /** ISO date the mandate ended; null while still serving. */
   mandate_end_date?: string | null;
+  /**
+   * The single-mandate district this member WON (1-71), and its name.
+   *
+   * Null for the 70 members elected from a party list, who represent no
+   * district at all — that is a fact about how they were elected, not missing
+   * data, and a surface must not render it as a gap. Do not confuse with the
+   * district a candidate merely RAN in: 71 of 141 seats are single-mandate,
+   * and losing candidates ran in those same districts.
+   */
+  constituency_number?: number | null;
+  constituency_name?: string | null;
+  /** 'single_mandate' | 'multimandate', or null for a mid-term replacement. */
+  election_type?: string | null;
 }
 
 export interface MpDetail {

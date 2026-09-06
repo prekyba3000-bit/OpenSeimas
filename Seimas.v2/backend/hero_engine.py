@@ -1012,6 +1012,9 @@ def _fetch_mp_metrics(mp_id: str, db_cursor) -> Dict[str, Any] | None:
             p.last_synced_at,
             p.mandate_start_date,
             p.mandate_end_date,
+            p.constituency_number,
+            p.constituency_name,
+            p.election_type,
             COALESCE(p.bills_authored_count, 0) AS bills_authored_count,
             p.bills_initiated_total,
             p.bills_initiated_individually,
@@ -1307,6 +1310,12 @@ def calculate_hero_profile(mp_id: str, db_cursor) -> Dict[str, Any]:
             if mp_row.get("mandate_start_date") else None,
             "mandate_end_date": mp_row["mandate_end_date"].isoformat()
             if mp_row.get("mandate_end_date") else None,
+            # The single-mandate district this member WON, or null for the 70
+            # elected from a party list, who represent no district. Null there
+            # is a fact about how they were elected, not missing data.
+            "constituency_number": mp_row.get("constituency_number"),
+            "constituency_name": mp_row.get("constituency_name"),
+            "election_type": mp_row.get("election_type"),
         },
         # The RPG layer is gone: level, xp, alignment („Lawful Good" attached
         # to a named politician), and artifacts. Nothing rendered them, but

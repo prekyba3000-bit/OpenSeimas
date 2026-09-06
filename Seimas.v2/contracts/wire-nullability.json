@@ -37,7 +37,10 @@
         "mp.mandate_start_date": "Mandate window unknown — an empty or partially-ingested members table.",
         "mp.last_synced_at": "Never synced; only reachable on a fresh database.",
         "metrics.bills_initiated_total": "The authored-bills feed has not run, so the count is unknown rather than zero.",
-        "metrics.bills_initiated_individually": "Same feed. Zero here would claim the member initiated nothing alone, which is the stronger claim migration 021 warned about."
+        "metrics.bills_initiated_individually": "Same feed. Zero here would claim the member initiated nothing alone, which is the stronger claim migration 021 warned about.",
+        "mp.constituency_number": "Elected from a party list, so the member represents no single-mandate district. 70 of 141 seats. Not missing data — rendering it as a gap would imply a district exists and we failed to find it.",
+        "mp.constituency_name": "Same as mp.constituency_number.",
+        "mp.election_type": "A mid-term replacement who took a vacated seat and so was not elected in the 2024 election at all. 6 members."
       }
     }
   }

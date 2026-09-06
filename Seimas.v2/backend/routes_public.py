@@ -237,6 +237,9 @@ def get_mps(status: str = "active"):
                     p.photo_url,
                     p.mandate_start_date,
                     p.mandate_end_date,
+                    p.constituency_number,
+                    p.constituency_name,
+                    p.election_type,
                     {social_col}
                     {stats_cols}
                 FROM politicians p
@@ -261,6 +264,12 @@ def get_mps(status: str = "active"):
                     "vote_count": row["vote_count"],
                     "attendance": _resolved_attendance(str(row["id"]), row["attendance"], overrides),
                     "vote_mode": row["most_frequent_vote"],
+                    # Which single-mandate district this member WON, or null for
+                    # the 70 elected from a party list, who represent no
+                    # district at all. Null is not missing data for them.
+                    "constituency_number": row["constituency_number"],
+                    "constituency_name": row["constituency_name"],
+                    "election_type": row["election_type"],
                     # Let the client say *when* a former member served instead
                     # of only that they are "inactive".
                     "mandate_start_date": row["mandate_start_date"].isoformat()

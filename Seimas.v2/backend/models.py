@@ -18,6 +18,14 @@ class HeroMpResponse(BaseModel):
     # when they served rather than only that they are inactive.
     mandate_start_date: Optional[str] = None
     mandate_end_date: Optional[str] = None
+    # The single-mandate district this member won. Null for the 70 elected
+    # from a party list, who represent no district — a fact about how they
+    # were elected, not an absence of data. Declared here because
+    # model_config sets extra="ignore": an undeclared field the engine
+    # returns is dropped from the response silently.
+    constituency_number: Optional[int] = None
+    constituency_name: Optional[str] = None
+    election_type: Optional[str] = None
 
 
 class HeroDimensionsResponse(BaseModel):

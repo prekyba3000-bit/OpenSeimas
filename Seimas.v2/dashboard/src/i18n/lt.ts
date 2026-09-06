@@ -32,6 +32,24 @@ export const LT = {
     unreachableBody: "Nepavyko pasiekti serverio. Patikrinkite ryšį ir bandykite dar kartą.",
     retry: "Bandyti dar kartą",
   },
+  // LT-COPY: needs native review
+  constituency: {
+    pickerTitle: "Raskite savo apygardos narį",
+    pickerPlaceholder: "Pasirinkite apygardą",
+    // Says why only 71 appear, so the other 70 do not read as missing.
+    pickerNote: (n: number) =>
+      `Sąraše — ${n} vienmandatės apygardos. Likusieji Seimo nariai išrinkti ` +
+      `pagal partijų sąrašus ir atskiros apygardos neatstovauja.`,
+    // Shown on a member's profile.
+    wonDistrict: (name: string, nr: number) =>
+      `Išrinkta(s) vienmandatėje ${name} (Nr. ${nr}) apygardoje.`,
+    partyList: "Išrinkta(s) pagal partijos sąrašą — atskiros apygardos neatstovauja.",
+    // A mid-term replacement: took a vacated seat, so was not elected in 2024.
+    noElectionRecord:
+      "Šis narys 2024 m. rinkimuose neišrinktas — mandatą perėmė kadencijos eigoje. " +
+      "Apygardos duomenų nėra.",
+    sourceNote: "Šaltinis: VRK 2024 m. Seimo rinkimų duomenys.",
+  },
   votesView: {
     title: "Parlamento balsavimai",
     subtitle: "Naršykite istorinius balsavimo įrašus",

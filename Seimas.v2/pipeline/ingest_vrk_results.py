@@ -1,195 +1,208 @@
+"""Fill how each member was elected: single-mandate district, or party list.
+
+This is what makes „Mano Seimo narys" possible — a reader in Telšiai can be
+shown the member who actually won Telšiai, rather than a list of 141 strangers.
+
+## Why this no longer reads the Rezultatai dataset
+
+The previous version fetched
+`atviriduomenys.vrk.lt/datasets/gov/vrk/Rezultatai` and aggregated per-polling-
+station vote counts. Verified 2026-09-06: that dataset returns `{"_data":[]}` —
+**registered and empty**, with or without any filter. Same pattern the source
+map already recorded for `lrsk/balsavimai`: a schema published is not a dataset
+delivered. Its sibling `Isrinkti` (elected members) is empty too. So the script
+had never produced a row, which is why all 148 politicians had NULL
+constituency data.
+
+`Kandidatai` in the same catalogue *does* carry data and joins cleanly on
+`rink_kandidato_id` = our `vrk_candidate_id`. It is not used here, and the
+reason matters: its `apyg_nr` is the district a candidate **ran in**, not the
+one they won. Saulius Skvernelis ran in Lazdynų (Nr. 9) and was elected off the
+party list; filing him as "Lazdynų's member" would be a false statement about a
+named person, and would also hide whoever actually won that seat.
+
+## The source used instead
+
+Each candidate's VRK page states the outcome in one line:
+
+    Išrinktas vienmandatėje Kaišiadorių–Elektrėnų (Nr. 59) apygardoje II ture
+    Išrinkta pagal sąrašą
+
+The first names the district actually won. The second says the member holds no
+district at all. A page with neither line is a member who did not enter through
+the 2024 election — a replacement who took a vacated seat — and is left NULL
+rather than guessed at.
+
+## What is deliberately not written
+
+`vote_share` stays NULL. The only source for vote counts was the empty
+Rezultatai dataset, so there is no per-candidate figure to store. The previous
+version would have written a member's own district vote share for
+single-mandate winners and their **party's national list share** for everyone
+else — two different facts in one column, rendered identically, which is the
+exact defect migration 039 had to undo for `current_party`. A party's number is
+not a person's number, and there is no honest way to put both under one name.
+
+    .venv/bin/python -m pipeline.ingest_vrk_results           # write
+    .venv/bin/python -m pipeline.ingest_vrk_results --dry-run # report only
 """
-Ingest 2024 Seimas election results from VRK open data.
+from __future__ import annotations
 
-Source: https://atviriduomenys.vrk.lt/datasets/gov/vrk/Rezultatai
-The dataset is per-polling-station per-candidate. We aggregate by candidate
-across all stations and write per-MP election context into politicians:
-
-  - election_type: 'single_mandate' if the MP has personal vote rows in
-    Rezultatai (saraso_id IS NULL), else 'multimandate' (won purely via
-    party list, no individual apygarda race).
-  - constituency_number / constituency_name: dominant apygarda (the one
-    where they got the most votes). NULL for multimandate.
-  - vote_share: for single_mandate, candidate's share of valid single-
-    mandate ballots in that apygarda. For multimandate, their party's
-    national list share. Stored as a fraction in [0, 1].
-  - vrk_election_id: 2150 (2024 Seimas I turas).
-
-Caveats:
-  - The PirmumoBalsai (preference votes) dataset has no 2024 Seimas data
-    yet, so we can't compute per-candidate preference vote share within a
-    party list. Multimandate vote_share = party's list share.
-  - Isrinkti (elected) dataset is also missing 2024 Seimas, so we infer
-    election_type from presence of Rezultatai rows rather than from an
-    authoritative VRK seat-allocation record.
-  - II turas (rink_turo_id=2148) currently returns 3 rows from the API —
-    likely incomplete publication. We use I turas only.
-"""
-
+import argparse
 import os
+import re
 import sys
-import json
-from collections import defaultdict
-from urllib.request import Request, urlopen
+import time
 
 import psycopg2
+from bs4 import BeautifulSoup
+from psycopg2.extras import RealDictCursor, execute_values
 
-DB_DSN = os.getenv("DB_DSN") or os.getenv("DATABASE_URL")
-VRK_API = "https://atviriduomenys.vrk.lt/datasets/gov/vrk/Rezultatai/:format/jsonl"
-ELECTION_ID = 2150  # 2024 Seimas I turas
+from utils import fetch_with_retry
 
-# politicians.current_party uses LRS frakcija names (e.g., "...frakcija");
-# VRK's saraso_pavad omits "frakcija". Map by stable substring.
-PARTY_KEY_TO_VRK_NEEDLE = {
-    "socialdemokratų": "socialdemokratų partija",
-    "Tėvynės sąjungos": "Tėvynės sąjunga",
-    "Nemuno aušros": "Nemuno Aušra",
-    "Liberalų": "Liberalų sąjūdis",
-    "Demokratų": "Demokratų sąjunga",
-    "valstiečių": "valstiečių",
-}
+DB_DSN = os.getenv("DB_DSN")
+ANKETA_URL = (
+    "https://rezultatai.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/"
+    "kandidatai/KandidatasAnketa_rkndId-{vrk_id}.html"
+)
+# 2024 Seimas election, first round — the id this project already records.
+VRK_ELECTION_ID = 2150
 
-
-def fetch_rezultatai():
-    """Fetch the full I-turas dataset as a list of dicts."""
-    url = (
-        f"{VRK_API}?rink_turo_id={ELECTION_ID}"
-        "&select(rink_kandidato_id,saraso_id,saraso_pavad,apyg_nr,apyg_pavad,balsu_viso)"
-        "&limit(60000)"
-    )
-    req = Request(url, headers={"User-Agent": "OpenSeimas/1.0 (transparency project)"})
-    with urlopen(req, timeout=180) as resp:
-        return [json.loads(line) for line in resp if line.strip()]
+# „Išrinktas vienmandatėje <name> (Nr. <n>) apygardoje <round> ture".
+# The name is non-greedy and may contain an en dash („Kaišiadorių–Elektrėnų")
+# or a space („Panevėžio vakarinė"), so it is bounded by the bracketed number
+# rather than by whitespace.
+_DISTRICT = re.compile(
+    r"I[šs]rinkt\w*\s+vienmandat[ėe]je\s+(.+?)\s*\(Nr\.\s*(\d+)\)\s*apygardoje",
+    re.IGNORECASE,
+)
+_PARTY_LIST = re.compile(
+    r"I[šs]rinkt\w*\s+pagal\s+s[ąa]ra[šs][ąa]", re.IGNORECASE
+)
 
 
-def aggregate(rows):
+def parse_election_outcome(html: bytes) -> dict | None:
+    """How this candidate entered the Seimas, or None if the page says nothing.
+
+    None is not a parse failure — a member who took a vacated seat mid-term was
+    never elected in 2024 and correctly has no outcome to record.
     """
-    Returns:
-      candidate_apyg[cid] = {apyg_nr: votes}
-      candidate_apyg_names[cid] = {apyg_nr: name}
-      apyg_total[apyg_nr] = sum of all single-mandate votes there
-      party_total[saraso_pavad] = total party-list votes nationally
-    """
-    candidate_apyg = defaultdict(lambda: defaultdict(int))
-    candidate_apyg_names = defaultdict(dict)
-    apyg_total = defaultdict(int)
-    party_total = defaultdict(int)
+    text = BeautifulSoup(html, "html.parser").get_text(" | ", strip=True)
 
-    for r in rows:
-        cid = r.get("rink_kandidato_id")
-        sid = r.get("saraso_id")
-        apyg = r.get("apyg_nr")
-        votes = r.get("balsu_viso") or 0
-
-        if cid and sid is None:
-            # Single-mandate row.
-            candidate_apyg[cid][apyg] += votes
-            candidate_apyg_names[cid][apyg] = r.get("apyg_pavad")
-            apyg_total[apyg] += votes
-        elif sid is not None and cid is None and r.get("saraso_pavad"):
-            party_total[r["saraso_pavad"]] += votes
-
-    return candidate_apyg, candidate_apyg_names, apyg_total, party_total
-
-
-def party_share(current_party, party_total):
-    """Resolve LRS frakcija name → VRK saraso name → national share, or None."""
-    if not current_party or current_party == "Unknown":
-        return None
-    national = sum(party_total.values()) or 1
-    for needle_lt, needle_vrk in PARTY_KEY_TO_VRK_NEEDLE.items():
-        if needle_lt in current_party:
-            for saraso, votes in party_total.items():
-                if needle_vrk in saraso:
-                    return votes / national
+    match = _DISTRICT.search(text)
+    if match:
+        return {
+            "election_type": "single_mandate",
+            "constituency_name": match.group(1).strip(),
+            "constituency_number": int(match.group(2)),
+        }
+    if _PARTY_LIST.search(text):
+        return {
+            "election_type": "multimandate",
+            "constituency_name": None,
+            "constituency_number": None,
+        }
     return None
 
 
-def main():
+def fetch_outcome(vrk_id: str) -> dict | None:
+    resp = fetch_with_retry(ANKETA_URL.format(vrk_id=vrk_id), timeout=30)
+    return parse_election_outcome(resp.content)
+
+
+def run(dry_run: bool = False) -> int:
     if not DB_DSN:
-        print("ERROR: DB_DSN not set")
-        sys.exit(1)
-
-    print(f"Fetching VRK Rezultatai for rink_turo_id={ELECTION_ID}…")
-    rows = fetch_rezultatai()
-    print(f"  {len(rows)} rows")
-
-    candidate_apyg, candidate_apyg_names, apyg_total, party_total = aggregate(rows)
-    print(
-        f"  {len(candidate_apyg)} single-mandate candidates, "
-        f"{len(apyg_total)} apygardas, "
-        f"{len(party_total)} parties"
-    )
+        print("ERROR: DB_DSN not set", file=sys.stderr)
+        return 2
 
     conn = psycopg2.connect(DB_DSN)
-    try:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                SELECT id, vrk_candidate_id, current_party
-                FROM politicians
-                WHERE is_active = TRUE AND vrk_candidate_id IS NOT NULL
-                """
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    # Every linked member, not only the currently active ones: which district a
+    # member won in 2024 is a fixed historical fact, and a former member who
+    # held a seat is still the answer to "who represented this district".
+    cur.execute(
+        "SELECT id, display_name, vrk_candidate_id FROM politicians "
+        "WHERE vrk_candidate_id IS NOT NULL ORDER BY display_name"
+    )
+    politicians = cur.fetchall()
+    print(f"politicians with a VRK id: {len(politicians)}")
+
+    to_write = []
+    no_outcome = []
+    failures = []
+
+    for i, p in enumerate(politicians, 1):
+        try:
+            outcome = fetch_outcome(p["vrk_candidate_id"])
+        except Exception as exc:  # noqa: BLE001 — one bad fetch must not stop the run
+            failures.append((p["display_name"], repr(exc)))
+            continue
+        if outcome is None:
+            no_outcome.append(p["display_name"])
+            continue
+        to_write.append(
+            (
+                str(p["id"]),
+                outcome["election_type"],
+                outcome["constituency_number"],
+                outcome["constituency_name"],
+                VRK_ELECTION_ID,
             )
-            mps = cur.fetchall()
-            print(f"  matching {len(mps)} active MPs with vrk_candidate_id…")
+        )
+        if i % 25 == 0:
+            print(f"  fetched {i}/{len(politicians)}...", flush=True)
+        time.sleep(0.3)
 
-            updated_sm = 0
-            updated_mm = 0
-            unresolved = 0
-            for mp_uuid, vrk_id_str, current_party in mps:
-                try:
-                    vrk_id = int(vrk_id_str)
-                except (TypeError, ValueError):
-                    continue
+    single = sum(1 for r in to_write if r[1] == "single_mandate")
+    party = sum(1 for r in to_write if r[1] == "multimandate")
+    print(f"single-mandate district winners: {single}")
+    print(f"elected from a party list      : {party}")
+    print(f"no 2024 outcome on the page    : {len(no_outcome)} {no_outcome[:6]}")
+    print(f"fetch failures                 : {len(failures)}")
+    for name, err in failures[:10]:
+        print(f"    {name}: {err}")
 
-                if vrk_id in candidate_apyg:
-                    # Single-mandate run — pick dominant apygarda.
-                    by_apyg = candidate_apyg[vrk_id]
-                    dominant = max(by_apyg.items(), key=lambda kv: kv[1])
-                    apyg_nr, votes = dominant
-                    apyg_name = candidate_apyg_names[vrk_id][apyg_nr]
-                    share = votes / apyg_total[apyg_nr] if apyg_total[apyg_nr] else None
-                    cur.execute(
-                        """
-                        UPDATE politicians SET
-                            election_type = 'single_mandate',
-                            constituency_number = %s,
-                            constituency_name = %s,
-                            vote_share = %s,
-                            vrk_election_id = %s
-                        WHERE id = %s
-                        """,
-                        (apyg_nr, apyg_name, share, ELECTION_ID, mp_uuid),
-                    )
-                    updated_sm += 1
-                else:
-                    # No single-mandate rows — multimandate-only winner.
-                    share = party_share(current_party, party_total)
-                    cur.execute(
-                        """
-                        UPDATE politicians SET
-                            election_type = 'multimandate',
-                            constituency_number = NULL,
-                            constituency_name = NULL,
-                            vote_share = %s,
-                            vrk_election_id = %s
-                        WHERE id = %s
-                        """,
-                        (share, ELECTION_ID, mp_uuid),
-                    )
-                    updated_mm += 1
-                    if share is None:
-                        unresolved += 1
+    if dry_run:
+        print("\n--dry-run: nothing written")
+        return 0
 
-            conn.commit()
-    finally:
-        conn.close()
+    execute_values(
+        cur,
+        """
+        UPDATE politicians AS p SET
+            election_type = d.election_type,
+            constituency_number = d.constituency_number,
+            constituency_name = d.constituency_name,
+            vrk_election_id = d.vrk_election_id
+        FROM (VALUES %s) AS d(id, election_type, constituency_number,
+                              constituency_name, vrk_election_id)
+        WHERE p.id = d.id::uuid
+        """,
+        to_write,
+        template="(%s, %s, %s::integer, %s, %s::integer)",
+    )
+    conn.commit()
 
-    print(f"  single_mandate: {updated_sm}")
-    print(f"  multimandate:   {updated_mm}")
-    print(f"  multimandate unresolved party share: {unresolved}")
+    cur.execute(
+        "SELECT count(constituency_number) AS districts, "
+        "count(election_type) AS typed FROM politicians"
+    )
+    row = cur.fetchone()
+    print(f"\nwrote {len(to_write)} outcomes")
+    print(f"  politicians with a district : {row['districts']}")
+    print(f"  politicians with a type     : {row['typed']}")
+
+    cur.close()
+    conn.close()
+    return 0
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--dry-run", action="store_true")
+    args = parser.parse_args()
+    return run(dry_run=args.dry_run)
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

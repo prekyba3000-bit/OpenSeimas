@@ -88,6 +88,14 @@ export type MpProfile = {
     mandate_start_date?: string | null;
     /** ISO date the mandate ended; null while still serving. */
     mandate_end_date?: string | null;
+    /**
+     * The single-mandate district this member WON (1-71). Null for the 70
+     * elected from a party list, who represent no district — render that as
+     * the fact it is, never as missing data.
+     */
+    constituency_number?: number | null;
+    constituency_name?: string | null;
+    election_type?: string | null;
   };
   forensicBreakdown: ForensicBreakdown;
   evidence: string[];
@@ -242,6 +250,9 @@ export const mpProfileSchema = z
       seimas_id: z.union([z.string(), z.number(), z.null()]).optional(),
       mandate_start_date: z.string().nullable().optional(),
       mandate_end_date: z.string().nullable().optional(),
+      constituency_number: z.number().nullable().optional(),
+      constituency_name: z.string().nullable().optional(),
+      election_type: z.string().nullable().optional(),
     }),
     dimensions: z.object({
       legislative_activity: z.number(),
@@ -471,6 +482,11 @@ export const mpSummarySchema = z.object({
   vote_mode: z.string().nullable(),
   mandate_start_date: z.string().nullable().optional(),
   mandate_end_date: z.string().nullable().optional(),
+  // The single-mandate district WON (1-71). Null for the 70 party-list
+  // members, who represent no district — a fact, not a gap.
+  constituency_number: z.number().nullable().optional(),
+  constituency_name: z.string().nullable().optional(),
+  election_type: z.string().nullable().optional(),
 });
 
 export const mpSummaryListSchema = z.array(mpSummarySchema);
