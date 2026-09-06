@@ -32,19 +32,6 @@ export const LT = {
     unreachableBody: "Nepavyko pasiekti serverio. Patikrinkite ryšį ir bandykite dar kartą.",
     retry: "Bandyti dar kartą",
   },
-  wiki: {
-    loading: "Wiki kraunama",
-    missingTitle: "Paskelbto wiki rinkinio nėra",
-    missingBody:
-      "Rodomi rodikliai ir forensinė suvestinė vis tiek remiasi duomenų bazės ir API signalais. Jei byla bus sugeneruota ir įdėta į /wikis/, ji automatiškai atsiras čia.",
-    methodologyLink: "Kaip skaičiuojami rodikliai",
-    reportTitle: "Wiki suvestinė (biografija)",
-    identityMismatchTitle: "Tapatybės nesutapimas",
-    identityMismatchBody:
-      "Šio wiki turinio tapatybė neatitinka MP profilio. Turinys nerodomas saugumo sumetimais.",
-    staleBanner: (hoursAgo: number) =>
-      `Įspėjimas: ši forensinė ataskaita sugeneruota prieš ${hoursAgo} val. ir gali būti pasenusi.`,
-  },
   votesView: {
     title: "Parlamento balsavimai",
     subtitle: "Naršykite istorinius balsavimo įrašus",

@@ -1,9 +1,67 @@
-# RESUME — 2026-09-05
+# RESUME — 2026-09-06
 
-Branch `main`, everything pushed. Pre-push gate green on every commit.
-Suites: **325 dashboard / 298 backend** (+19 skipped). tsc 11, all vendored `ui/`.
+Branch `main`, everything pushed. Suites: **314 dashboard / 298 backend**
+(+19 skipped). tsc 11, all vendored `ui/`.
 
-## This session
+## Read this first: an AI-generated risk label was live in the public repo
+
+The task was "fill the empty tables." Recon for it found
+`dashboard/src/components/WikiPanel.tsx`, wired into every MP profile, fetching
+a per-member report ending in a **Risk Level: Low/Medium/High/Critical**. That
+report generator had already run once: `dashboard/public/wikis/index.json` —
+committed since the repo's first commit, on a **public** GitHub repo — rated
+five named members, four "High". A second removed set,
+`docs/wiki-archive/`, held plain biographical pages for more members plus a
+note that an "integrity threshold" flagging pass had been attempted and failed.
+
+The individual report bodies were never committed, so the live Vercel site
+404'd on them — no visitor was shown a rating today. But `index.json` **was**
+committed to the path the frontend serves, and the feature was one `git add`
+away from live for the project's entire history. Same failure the corrections
+log already names twice (heroes-villains, Gėdos siena) — reached further,
+because it lived in a static JSON asset a source grep never sees.
+`noVerdictsInStaticData.test.ts`, built specifically to catch this class after
+the Gėdos siena incident, was already running and missed it: `risk_level`
+wasn't in its forbidden-key list.
+
+**Fixed**: component, service, tests, both file sets, and the i18n block
+removed; a corrections entry (`ai-wiki-risk-labels`) is live at
+`/api/trust/corrections`, describing the mechanism without naming who was
+rated; the guard's vocabulary now includes `risk_level` and
+`integrity_score`, and its own vacuous-pass check no longer depends on a real
+file existing. Full write-up: `empty-tables-audit-2026-09-06.md`.
+
+**Not done, and not mine to do**: git history still carries `index.json` —
+it has been public since the first commit, so rewriting history now would not
+un-publish it, and rewriting shared history is destructive enough to need the
+human's call, not an autonomous one.
+
+## The original question, answered
+
+- **`legislation_topics`**: already filled itself — the nightly sync composed
+  correctly with last session's `ingest_legislation` fix. 1,098 tags, 975 of
+  1,683 bills. No action needed.
+- **`assets` / `interests`**: a real, live, legally-distinct-from-VTEK source
+  exists (VRK candidate declarations, verified live) but is gated behind a
+  feasibility note per the standing W3 rule — not written yet. The blocker is
+  `vrk_candidate_id`, 0/148 populated, and the one script that could populate
+  it (`link_vrk.py`) matches by name only, no disambiguation — unsafe to run
+  on personal financial data as-is.
+- **`vote_geometry`, `benford_analyses`**: STOP per §4.6. `vote_geometry` is
+  one command away from working (needs no new data) and is exactly why it's
+  not run — it would switch on a live per-MP anomaly flag with no design
+  review. `benford_analyses` and three other tables read from a fully
+  disconnected legacy engine subsystem (`skaidrumas/analysis/*.py`) whose own
+  docstrings say "Factional Betrayal Detection" and "shadow coalitions" —
+  recommend not reviving, not just not filling.
+- Everything else empty is either correctly superseded or not an ingest
+  target at all (app-feature tables).
+
+## Yesterday — 2026-09-05
+
+Suites ended that session at 325 dashboard / 298 backend.
+
+## That session
 
 | Commit | What |
 | --- | --- |

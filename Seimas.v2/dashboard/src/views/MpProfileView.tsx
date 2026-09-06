@@ -5,7 +5,6 @@ import { ArrowLeft } from 'lucide-react';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import MpProfileCard from '../components/MpProfileCard';
-import { WikiPanel } from '../components/WikiPanel';
 import { MpReplies } from '../components/MpReplies';
 import { DimensionDial } from '../components/DimensionDial';
 import {
@@ -41,7 +40,7 @@ import { SITE_NAME } from '../utils/routeTitles';
 import { ltPlural } from '../utils/ltPlural';
 import { factionLabel } from '../utils/faction';
 
-type ProfileTab = 'apzvalga' | 'balsavimai' | 'apygarda' | 'biografija';
+type ProfileTab = 'apzvalga' | 'balsavimai' | 'apygarda';
 
 const FORENSIC_ENGINES: ForensicFlag['engine'][] = [
   'benford',
@@ -101,7 +100,6 @@ const TAB_LABELS: Record<ProfileTab, string> = {
   apzvalga: 'Apžvalga',
   balsavimai: 'Balsavimai',
   apygarda: 'Apygarda',
-  biografija: 'Biografija',
 };
 
 interface MpProfileLayoutProps {
@@ -343,11 +341,6 @@ export const MpProfileLayout = ({
           </div>
         )}
 
-        {tab === 'biografija' && (
-          <div className="[&>section]:mt-0">
-            <WikiPanel mpId={profile.mp.id} />
-          </div>
-        )}
       </div>
     </div>
   );
