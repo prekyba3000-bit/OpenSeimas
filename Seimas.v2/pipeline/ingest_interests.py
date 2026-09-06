@@ -29,6 +29,16 @@ substring. That view was built and has never had a row to show, because
 — mostly foreign employers — matching the column's own documented meaning
 (migration 012), not a parsing failure.
 
+`declarant_relation` ("self" or "spouse") is written both inside `description`
+and, since migration 043, as its own column — a fact worth distinguishing at
+all is a fact worth querying directly rather than only recoverable by parsing
+JSON. `mp_supplier_links` surfaces it per row, because a contract linked
+through an MP's own declared employer and one linked only through their
+spouse's are different facts a reader needs to be able to tell apart; neither
+is evidence of anything on its own, and this project does not compute one
+into a "conflict of interest" score for either the member or their spouse —
+the spouse is a private individual with no public role to hold to account.
+
     .venv/bin/python -m pipeline.ingest_interests           # write
     .venv/bin/python -m pipeline.ingest_interests --dry-run # report only
 """
@@ -167,7 +177,15 @@ def run(dry_run: bool = False) -> int:
             payload["declarant_relation"] = r["declarant_relation"]
             description = json.dumps({r["type"]: payload}, ensure_ascii=True)
             to_insert.append(
-                (pid, r["type"], description, r["org_name"], r["org_code"], r["org_name"])
+                (
+                    pid,
+                    r["type"],
+                    description,
+                    r["org_name"],
+                    r["org_code"],
+                    r["org_name"],
+                    r["declarant_relation"],
+                )
             )
 
     # Full replace per run: declarations are a point-in-time filing, not an
@@ -182,7 +200,7 @@ def run(dry_run: bool = False) -> int:
             """
             INSERT INTO interests
                 (politician_id, interest_type, description, organization_name,
-                 organization_code, parsed_organization_name)
+                 organization_code, parsed_organization_name, declarant_relation)
             VALUES %s
             """,
             to_insert,
