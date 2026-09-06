@@ -1,6 +1,6 @@
 # RESUME — 2026-09-06
 
-Branch `main`, everything pushed. Suites: **326 dashboard / 317 backend**
+Branch `main`, everything pushed. Suites: **335 dashboard / 330 backend**
 (+19 skipped). tsc 11, all vendored `ui/`.
 
 ## Read this first: an AI-generated risk label was live in the public repo
@@ -73,6 +73,36 @@ corrected in the test file's own docstring.
 Verified live: picker → Antakalnio → Ingrida Šimonytė, and the Apygarda tab
 renders all three states distinctly (won a district / party list / no 2024
 record).
+
+## Votes by subject — the second half of the same hook
+
+Pick Būstas on a member's profile, see how they voted on housing. Deterministic
+keyword tagging that was already in the database; no model, nothing scored.
+
+**The counts needed the most care.** `mp_votes` carries a row per member per
+vote whether or not they took part, and 408,827 of 744,495 rows have no
+recorded choice. So "86 housing votes" is near-identical for every member and
+is not a fact about any of them; "27 with a recorded choice" is. The chip reads
+**27/86** — the larger alone looks personal without being so, the smaller alone
+hides its denominator.
+
+Neither is a participation rate, and the copy says so outright. Nothing
+aggregates choices into a stance: „supports housing 80 %" is the verdict this
+data would most easily become, and it is not built.
+
+Coverage stated on the surface: 2,553 of 5,286 votes carry any topic, because
+tagging matches keywords in titles and misses things. An unknown topic returns
+422 rather than an empty list, which would read as „your member never voted on
+this"; a test pins the route's topic list against the tagger's dictionary so
+they cannot drift.
+
+Also fixed `MpVoteRecord.choice`, declared non-null while the API sent null on
+31 % of rows — same class as `party` on `/api/mps`. That route had no runtime
+schema at all; it has one now.
+
+Verified live on Šimonytė: all 8 chips with both numbers, filter returns real
+housing votes with her actual choices and visible tags, and rows the source
+never published render „Nėra duomenų".
 
 ## The earlier question, answered
 
