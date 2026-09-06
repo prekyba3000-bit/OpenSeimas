@@ -1,6 +1,6 @@
 # RESUME — 2026-09-06
 
-Branch `main`, everything pushed. Suites: **314 dashboard / 298 backend**
+Branch `main`, everything pushed. Suites: **326 dashboard / 317 backend**
 (+19 skipped). tsc 11, all vendored `ui/`.
 
 ## Read this first: an AI-generated risk label was live in the public repo
@@ -36,7 +36,45 @@ it has been public since the first commit, so rewriting history now would not
 un-publish it, and rewriting shared history is destructive enough to need the
 human's call, not an autonomous one.
 
-## The original question, answered
+## „Mano Seimo narys" is live
+
+The hook the platform was missing: a reader picks their district and gets the
+one member they can actually vote for or against, instead of a table of 141
+strangers. It needed `constituency_number`, which was NULL for all 148.
+
+The old ingest read VRK's `Rezultatai` dataset — **registered and empty**,
+`{"_data":[]}` with or without filters, same pattern as `lrsk/balsavimai`. Its
+sibling `Isrinkti` is empty too. So the script had never written a row.
+
+Rewritten to read the outcome line on each candidate's VRK page
+(„Išrinktas vienmandatėje Kaišiadorių–Elektrėnų (Nr. 59) apygardoje"). Result:
+**71 district winners, 69 party-list, 6 mid-term replacements** — 71 being the
+constitutional number of single-mandate seats, landing on 1–71 with no gaps or
+duplicates. Three independent confirmations the parse is right.
+
+**Not** taken from the `Kandidatai` dataset, which has data and joins cleanly:
+its `apyg_nr` is the district a candidate RAN in. Skvernelis ran in Lazdynų and
+was elected off the list; Žirmūnų went to Kuzmickienė, not to Aasrum who
+contested it and is not an MP.
+
+`vote_share` deliberately stays NULL — the old code would have written a
+personal district share for some members and their PARTY's national share for
+others, under one column name. That is the migration-039 defect exactly.
+
+**A defect found by opening the page, with the suites green.** The picker
+listed 70 districts and claimed the rest were party-list members. Nalšios
+šiaurinė (Nr. 52) lost its member on 2026-05-28 with no replacement — the
+vacant seat `/api/stats` already reported as 140 of 141 — so reading the active
+roster made the district vanish rather than show as vacant. The claim was false
+twice over: the remainder also holds 6 mid-term replacements. Fixed; all 71
+appear, the vacant one says „vieta laisva", and the same false sentence was
+corrected in the test file's own docstring.
+
+Verified live: picker → Antakalnio → Ingrida Šimonytė, and the Apygarda tab
+renders all three states distinctly (won a district / party list / no 2024
+record).
+
+## The earlier question, answered
 
 - **`legislation_topics`**: already filled itself — the nightly sync composed
   correctly with last session's `ingest_legislation` fix. 1,098 tags, 975 of
