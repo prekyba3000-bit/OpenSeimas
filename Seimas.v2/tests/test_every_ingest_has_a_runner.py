@@ -35,11 +35,19 @@ OPS = ROOT / "scripts" / "local-ops"
 # Not on any schedule, on purpose. Each entry is why.
 UNWIRED_BY_DECISION = {
     "ingest_assets": (
-        "No source. Asset declarations are not published in any feed this "
-        "project has access to; the table exists from a migration and has never "
-        "had a writer. Declared-interest data also most invites verdict-shaped "
-        "presentation, so per the W3 rule it needs a feasibility note before "
-        "ingest code, not a timer."
+        "Fixed 2026-09-06: VRK's candidate asset declaration pages are a real, "
+        "live, legally-distinct-from-VTEK source (docs/reviews/"
+        "empty-tables-audit-2026-09-06.md) and the table is filled — 146 rows, "
+        "verified against the live source. Not scheduled because a 2024 "
+        "candidacy filing is fixed for the term; there is nothing new to fetch "
+        "before the next election. Needs politicians.vrk_candidate_id "
+        "(pipeline.link_vrk) to have run first."
+    ),
+    "ingest_interests": (
+        "Same source family and same reason as ingest_assets: filled — 760 "
+        "rows across 146 members, feeding the mp_supplier_links view built by "
+        "migration 013 — and not scheduled because the underlying candidacy "
+        "filing cannot change before the next election."
     ),
     "ingest_amendments": (
         "Superseded. amendment_profiles is empty and the amendments dimension "
