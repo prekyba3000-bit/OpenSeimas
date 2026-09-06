@@ -36,10 +36,22 @@ export const LT = {
   constituency: {
     pickerTitle: "Raskite savo apygardos narį",
     pickerPlaceholder: "Pasirinkite apygardą",
-    // Says why only 71 appear, so the other 70 do not read as missing.
+    // Says why the other members are absent, so it does not read as a gap.
+    // Deliberately does NOT say "the rest were elected from party lists" —
+    // that was the first wording and it was false: the remainder also
+    // includes members who took a vacated seat mid-term and were not elected
+    // in 2024 at all.
     pickerNote: (n: number) =>
-      `Sąraše — ${n} vienmandatės apygardos. Likusieji Seimo nariai išrinkti ` +
-      `pagal partijų sąrašus ir atskiros apygardos neatstovauja.`,
+      `Sąraše — ${n} vienmandatės apygardos. Kiti Seimo nariai apygardai ` +
+      `neatstovauja: dauguma jų išrinkti pagal partijų sąrašus.`,
+    // One district's member left and has not been replaced — the empty seat
+    // in „140 iš 141 vietų". Naming it is the point: a reader there should
+    // learn the seat is vacant, not find their district missing.
+    vacantNote: (n: number) =>
+      n === 1
+        ? `Vienoje apygardoje šiuo metu nario nėra — vieta laisva.`
+        : `${n} apygardose šiuo metu nario nėra — vietos laisvos.`,
+    seatVacantShort: "vieta laisva",
     // Shown on a member's profile.
     wonDistrict: (name: string, nr: number) =>
       `Išrinkta(s) vienmandatėje ${name} (Nr. ${nr}) apygardoje.`,

@@ -10,10 +10,13 @@ import { LT } from '../i18n/lt';
  * representative rather than skimming a table of 141 strangers, and this is
  * the shortest path to that: one choice, one person, no ranking involved.
  *
- * Only the 71 single-mandate districts appear. The other 70 members were
- * elected from a party list and represent no district — offering them here
- * would invite the reader to believe otherwise. The note under the control
- * says so rather than leaving the absence to be guessed at.
+ * Takes the FULL roster, not the active one. The first version took the
+ * active list and silently listed 70 districts, because Nalšios šiaurinė
+ * (Nr. 52) lost its member on 2026-05-28 and nobody has replaced him — that is
+ * the vacant seat /api/stats reports as 140 of 141. A reader in that district
+ * would have found their district simply absent from the list, which reads as
+ * "we lost your data" rather than "your seat is empty". All 71 appear now, and
+ * the vacant one says so.
  */
 export function ConstituencyPicker({
   mps,
@@ -35,6 +38,12 @@ export function ConstituencyPicker({
         ),
     [mps],
   );
+
+  // A district whose elected member has left and not been replaced. Their
+  // profile is still the honest answer to "who did this district elect", so
+  // the option stays selectable — it is labelled, not disabled.
+  const isVacant = (mp: MpSummary) => Boolean(mp.mandate_end_date);
+  const vacantCount = districts.filter(isVacant).length;
 
   // Nothing to offer until the roster loads, or if the constituency backfill
   // has not run against this database. Rendering an empty <select> would look
@@ -66,12 +75,14 @@ export function ConstituencyPicker({
         {districts.map((mp) => (
           <option key={mp.constituency_number} value={String(mp.constituency_number)}>
             {mp.constituency_name} (Nr. {mp.constituency_number})
+            {isVacant(mp) ? ` — ${LT.constituency.seatVacantShort}` : ''}
           </option>
         ))}
       </select>
 
       <p className="mt-3 text-xs text-muted-foreground leading-relaxed">
         {LT.constituency.pickerNote(districts.length)}
+        {vacantCount > 0 ? ` ${LT.constituency.vacantNote(vacantCount)}` : ''}
       </p>
     </div>
   );

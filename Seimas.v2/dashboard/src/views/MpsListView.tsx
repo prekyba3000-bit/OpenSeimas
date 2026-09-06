@@ -19,6 +19,14 @@ const MpsListView = () => {
         queryKey: ['mps', 'roster'],
         queryFn: () => api.getMps(),
     });
+    // The district picker needs every member, not only the sitting ones: a
+    // district whose member left and was not replaced still exists, and its
+    // reader deserves to be told the seat is vacant rather than find their
+    // district absent. Nalšios šiaurinė (Nr. 52) is that case today.
+    const allMpsQuery = useQuery({
+        queryKey: ['mps', 'roster', 'all'],
+        queryFn: () => api.getMps('all'),
+    });
     const {
         data: mps = [],
         isLoading: loading,
@@ -148,7 +156,10 @@ const MpsListView = () => {
 
             {/* Before the browse-everyone controls: most readers want one
                 member — theirs — and this is the shortest path to them. */}
-            <ConstituencyPicker mps={mps} onSelect={(mp) => handleMpClick(mp.id)} />
+            <ConstituencyPicker
+                mps={allMpsQuery.data ?? []}
+                onSelect={(mp) => handleMpClick(mp.id)}
+            />
 
             {/* Smart Search & Filter Bar */}
             <Card className="p-4" style={{ backgroundColor: 'hsl(var(--muted))' }}>
