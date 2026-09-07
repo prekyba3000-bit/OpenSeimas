@@ -275,6 +275,17 @@ def get_sessions():
     `status` is derived from the dates and today, not from whether the chamber
     happens to be voting: `sitting` means LRS records the session as begun and
     not ended, which is a different claim from "the Seimas met today".
+
+    `vote_count` and `sitting_days` are counted here, over every vote, because
+    the sessions page used to count them in the browser from the first 2,600
+    votes `/api/votes` returned. There are 5,286. The two oldest sessions fell
+    almost entirely outside that window — 1,517 and 391 votes — and the page
+    published the short numbers as session totals. A number presented as a
+    total has to be one.
+
+    Null, not zero, when the votes table is absent: we-cannot-count and
+    counted-nothing are different facts, and a session that met and decided
+    nothing is a real thing this must not claim.
     """
     with get_db_conn() as conn:
         if not conn:
@@ -293,6 +304,37 @@ def get_sessions():
             )
             rows = cur.fetchall()
 
+            cur.execute("SELECT to_regclass('public.votes') AS t")
+            counts = None
+            if cur.fetchone()["t"] is not None:
+                # The same rule the client's `sessionIdForDate` applies, in SQL:
+                # sessions overlap at the edges (an extraordinary session opens
+                # while the next ordinary one is already announced), so the
+                # latest session that has begun by the sitting date wins — not
+                # whichever row comes first.
+                cur.execute(
+                    """
+                    SELECT s.seimas_session_id AS sid,
+                           COUNT(*) AS vote_count,
+                           COUNT(DISTINCT v.sitting_date) AS sitting_days
+                    FROM votes v
+                    JOIN LATERAL (
+                        SELECT s.seimas_session_id
+                        FROM sessions s
+                        WHERE v.sitting_date >= s.date_from
+                          AND (s.date_to IS NULL OR v.sitting_date <= s.date_to)
+                        ORDER BY s.date_from DESC
+                        LIMIT 1
+                    ) s ON TRUE
+                    WHERE v.sitting_date IS NOT NULL
+                    GROUP BY s.seimas_session_id
+                    """
+                )
+                counts = {
+                    r["sid"]: (r["vote_count"], r["sitting_days"])
+                    for r in cur.fetchall()
+                }
+
     today = datetime.date.today()
     sessions = []
     synced_at = None
@@ -304,6 +346,9 @@ def get_sessions():
             status = "sitting"
         else:
             status = "ended"
+        # A session LRS records but no vote falls in has 0 votes, which is a
+        # fact; `counts is None` means the votes table is absent, which is not.
+        votes_seen, days_seen = (counts or {}).get(row["seimas_session_id"], (0, 0))
         sessions.append(
             {
                 "id": row["seimas_session_id"],
@@ -312,6 +357,8 @@ def get_sessions():
                 "date_from": _iso(row["date_from"]),
                 "date_to": _iso(row["date_to"]),
                 "status": status,
+                "vote_count": None if counts is None else votes_seen,
+                "sitting_days": None if counts is None else days_seen,
             }
         )
 

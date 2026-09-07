@@ -44,6 +44,18 @@ export function periodLabel(s: SeimasSession): string {
   return `${s.date_from} → ${s.date_to}`;
 }
 
+/**
+ * How many recent votes the expandable per-day lists are drawn from.
+ *
+ * This is a sample and is labelled as one. It used to be 2,600 and it used to
+ * be the source of the headline session totals as well — with 5,286 votes in
+ * the database, the two oldest sessions fell almost entirely outside the
+ * window and the page published 0 and a fraction as their totals. The totals
+ * are counted in SQL now (`session.vote_count` / `session.sitting_days`); this
+ * only fills the lists a reader opens.
+ */
+const VOTE_SAMPLE = 500;
+
 const SessionsView = () => {
   const navigate = useNavigate();
   const {
@@ -51,8 +63,8 @@ const SessionsView = () => {
     isLoading: loadingVotes,
     error,
   } = useQuery({
-    queryKey: ['votes', 'sessions', 2600],
-    queryFn: () => api.getVotes(2600, 0),
+    queryKey: ['votes', 'sessions', 'sample', VOTE_SAMPLE],
+    queryFn: () => api.getVotes(VOTE_SAMPLE, 0),
   });
   const {
     data: sessionData,
@@ -124,8 +136,8 @@ const SessionsView = () => {
       <Card className="p-5">
         <div className="flex items-center gap-1 h-10">
           {SESSIONS.slice().reverse().map(s => {
-            const count = sessionVotes[s.id]?.votes.length ?? 0;
-            const maxCount = Math.max(...SESSIONS.map(ss => sessionVotes[ss.id]?.votes.length ?? 0), 1);
+            const count = s.vote_count ?? 0;
+            const maxCount = Math.max(...SESSIONS.map(ss => ss.vote_count ?? 0), 1);
             const isCurrent = s.status === 'sitting';
             return (
               <div
@@ -237,16 +249,23 @@ const SessionsView = () => {
                       date reads as the second. */}
                   {hasStarted ? (
                     <>
+                      {/* Counted in SQL over every vote. Null means the count
+                          is unavailable, which is not zero — an em dash rather
+                          than a number that would be a claim. */}
                       <div className="text-right">
-                        <div className="text-lg font-bold text-foreground">{data?.votes.length ?? 0}</div>
+                        <div className="text-lg font-bold text-foreground">
+                          {session.vote_count ?? '—'}
+                        </div>
                         <div className="text-xs text-muted-foreground">
-                          {ltPlural(data?.votes.length ?? 0, 'balsavimas', 'balsavimai', 'balsavimų')}
+                          {ltPlural(session.vote_count ?? 0, 'balsavimas', 'balsavimai', 'balsavimų')}
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="text-lg font-bold text-foreground">{dates.length}</div>
+                        <div className="text-lg font-bold text-foreground">
+                          {session.sitting_days ?? '—'}
+                        </div>
                         <div className="text-xs text-muted-foreground">
-                          {ltPlural(dates.length, 'posėdžio diena', 'posėdžių dienos', 'posėdžių dienų')}
+                          {ltPlural(session.sitting_days ?? 0, 'posėdžio diena', 'posėdžių dienos', 'posėdžių dienų')}
                         </div>
                       </div>
                     </>
@@ -311,17 +330,33 @@ const SessionsView = () => {
                       </div>
                     );
                   })}
-                  {dates.length > 30 && (
+                  {/* Counted against the session's real sitting-day total, not
+                      against how many days the sample happened to reach. The
+                      old version divided the sample by itself and always looked
+                      complete. LT-COPY: needs native review */}
+                  {(session.sitting_days ?? dates.length) > Math.min(dates.length, 30) && (
                     <div className="px-5 py-3 text-xs text-muted-foreground text-center bg-muted/10">
-                      Rodoma 30 iš {dates.length} posėdžių dienų
+                      Rodoma {Math.min(dates.length, 30)} iš{' '}
+                      {session.sitting_days ?? dates.length} posėdžių dienų
                     </div>
                   )}
                 </motion.div>
               )}
 
+              {/* „Balsavimų duomenų nerasta" used to cover this whole branch,
+                  and for an older session it was false: the votes exist, the
+                  sample the lists are drawn from simply does not reach back
+                  that far. Saying a session decided nothing when it decided
+                  1,517 things is the failure this page was already making with
+                  its totals. LT-COPY: needs native review */}
               {isExpanded && dates.length === 0 && (
                 <div className="border-t border-border p-8 text-center text-muted-foreground text-sm">
-                  {isCurrent ? 'Sesija ką tik prasidėjo — balsavimų dar nėra.' : 'Balsavimų duomenų nerasta.'}
+                  {(session.vote_count ?? 0) > 0
+                    ? 'Sąraše rodomi tik naujausi balsavimai, todėl šios sesijos jame nėra. ' +
+                      'Skaičius viršuje suskaičiuotas iš visų balsavimų.'
+                    : isCurrent
+                      ? 'Sesija ką tik prasidėjo — balsavimų dar nėra.'
+                      : 'Balsavimų duomenų nerasta.'}
                 </div>
               )}
             </Card>

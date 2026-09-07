@@ -117,13 +117,20 @@ lists all 20 runners. Commit `49391af`.
   so Render's health check cannot see it. Real. Needs a decision about Render's
   behaviour on a failing check for a free-tier service that already sleeps, so
   it is not a change to make unattended.
-* **Uncapped `limit` on `get_votes` / `get_mp_votes`** (its R5). Confirmed.
-  Coupled to SessionsView's 2,600-row query, which would break if a cap landed
-  first. Both need doing in one change.
-* **SessionsView aggregates the first 2,600 votes** (its R2/R5). Confirmed at
-  `SessionsView.tsx:53–55`. There are 5,286 votes, so the session totals are
-  already incomplete. This is a real trust-floor issue — a number presented as
-  a total that is not one — and it is the next thing I would do.
+* **~~SessionsView aggregates the first 2,600 votes~~** (its R2/R5) — **fixed,
+  and it was worse than "silently incomplete once the dataset exceeds the
+  cap". It had already exceeded it.** Measured against production: that window
+  held all 1,812 of session 144's votes, 781 of session 141's 1,554, and
+  **none at all** of sessions 140, 139 and 143 — which hold 1,517, 391 and 5.
+  So three sessions published „0 balsavimų" and, on expanding,
+  „Balsavimų duomenų nerasta" — a claim that the Seimas met and decided
+  nothing across 27 sitting days. `/api/meta/sessions` counts in SQL now, with
+  the same overlap rule the client applies, and returns null rather than 0
+  when it cannot count. Sums to 5,286 of 5,286. Commit `aee1426`.
+* **~~Uncapped `limit` on `get_votes` / `get_mp_votes`~~** — fixed in the same
+  commit, since one enabled the other. `MAX_PAGE = 500`, clamped rather than
+  rejected: a caller asking for too much wants as much as it can have, and a
+  422 would break someone doing nothing wrong.
 * **CORS `https://dashboard.*\.vercel\.app` with credentials** (its R5).
   Confirmed at `main.py:67`. The audit is careful to say this is not an
   authentication bypass, and it is not.
@@ -161,3 +168,16 @@ greps find what you name.
 
 The guard files now assert at the route table rather than only over payloads,
 and the agreement test §1.4 has always called permanent now exists.
+
+## LT-COPY added by this work
+
+Both in `SessionsView.tsx`, both marked in place. The file was already in the
+21-file inventory, so the pack's count is unchanged.
+
+* „Sąraše rodomi tik naujausi balsavimai, todėl šios sesijos jame nėra.
+  Skaičius viršuje suskaičiuotas iš visų balsavimų." — replaces
+  „Balsavimų duomenų nerasta" for a session whose votes exist but fall outside
+  the sample the lists are drawn from.
+* „Rodoma {n} iš {m} posėdžių dienų" — {m} is now the session's real
+  sitting-day count. It used to divide the sample by itself, so it always
+  looked complete.

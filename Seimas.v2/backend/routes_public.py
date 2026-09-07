@@ -437,6 +437,27 @@ def get_mp(mp_id: str):
 # The subjects a vote can be tagged with. Kept in one place so the route can
 # reject an unknown one rather than silently returning an empty list, which
 # reads as "your member never voted on this" instead of "that is not a topic".
+# The largest page any public list route will return.
+#
+# Both `/api/votes` and `/api/mps/{id}/votes` took whatever `limit` a caller
+# sent. An anonymous request for every one of the 744,495 `mp_votes` rows costs
+# the same one connection out of a small pool as a request for twenty, and the
+# service has one worker on a free tier.
+#
+# 500 rather than something rounder: the sessions page was the only real
+# consumer asking for more, and it no longer asks — its totals are counted in
+# SQL by `/api/meta/sessions` now, because a browser cannot total 5,286 votes
+# from a window of 2,600. Nothing else needs a page this large.
+#
+# Silently clamped, not rejected: a client asking for too much wants as much as
+# it can have, and a 422 here would break a caller that is doing nothing wrong.
+MAX_PAGE = 500
+
+
+def _page_size(limit: int) -> int:
+    return max(1, min(limit, MAX_PAGE))
+
+
 VOTE_TOPICS = (
     "bustas", "pajamos", "sveikata", "svietimas",
     "transportas", "saugumas", "aplinka", "valdymas",
@@ -446,6 +467,7 @@ VOTE_TOPICS = (
 @router.get("/api/mps/{mp_id}/votes")
 def get_mp_votes(mp_id: str, limit: int = 20, topic: Optional[str] = None):
     """Get recent votes for an MP, optionally only those on one subject."""
+    limit = _page_size(limit)
     if topic is not None and topic not in VOTE_TOPICS:
         raise HTTPException(
             status_code=422,
@@ -960,6 +982,8 @@ def get_attendance_trajectory(mp_id: str):
 @router.get("/api/votes")
 def get_votes(limit: int = 50, offset: int = 0):
     """List recent votes."""
+    limit = _page_size(limit)
+    offset = max(0, offset)
     with get_db_conn() as conn:
         if not conn:
             raise HTTPException(status_code=500, detail="Database connection failed")

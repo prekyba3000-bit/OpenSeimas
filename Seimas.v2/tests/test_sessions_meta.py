@@ -27,17 +27,33 @@ _SESSIONS = [
 ]
 
 
-def _fake_db(rows, table_exists=True):
+def _fake_db(rows, table_exists=True, counts=None):
+    """The route asks three questions now: does `sessions` exist, what is in
+    it, and how many votes fall in each session. `counts=None` models a tree
+    with no `votes` table, which must reach the payload as null rather than 0.
+    """
     @contextmanager
     def fake_get_db():
         cur = MagicMock()
 
         def execute(sql, params=None):
-            cur._one = {"t": "sessions" if table_exists else None}
+            if "to_regclass" in sql and "votes" in sql:
+                cur._one = {"t": "votes" if counts is not None else None}
+                cur._all = []
+            elif "to_regclass" in sql:
+                cur._one = {"t": "sessions" if table_exists else None}
+                cur._all = []
+            elif "GROUP BY s.seimas_session_id" in sql:
+                cur._all = [
+                    {"sid": sid, "vote_count": v, "sitting_days": d}
+                    for sid, (v, d) in (counts or {}).items()
+                ]
+            else:
+                cur._all = rows
 
         cur.execute.side_effect = execute
         cur.fetchone.side_effect = lambda: cur._one
-        cur.fetchall.side_effect = lambda: rows
+        cur.fetchall.side_effect = lambda: cur._all
         conn, cm = MagicMock(), MagicMock()
         cm.__enter__.return_value = cur
         cm.__exit__.return_value = None
@@ -47,11 +63,12 @@ def _fake_db(rows, table_exists=True):
     return fake_get_db
 
 
-async def _get(monkeypatch, rows, table_exists=True, today=datetime.date(2026, 8, 23)):
+async def _get(monkeypatch, rows, table_exists=True, today=datetime.date(2026, 8, 23),
+               counts=None):
     import backend.core as core_mod
     import backend.routes_meta as meta
 
-    monkeypatch.setattr(core_mod, "get_db_conn", _fake_db(rows, table_exists))
+    monkeypatch.setattr(core_mod, "get_db_conn", _fake_db(rows, table_exists, counts))
 
     class _Date(datetime.date):
         @classmethod
@@ -113,3 +130,24 @@ async def test_missing_table_reports_empty_not_error(monkeypatch):
     body = await _get(monkeypatch, [], table_exists=False)
     assert body["sessions"] == []
     assert body["source"] is None
+
+
+@pytest.mark.asyncio
+async def test_a_session_carries_the_total_it_is_shown_with(monkeypatch):
+    """The sessions page counted these in the browser from the first 2,600 of
+    5,286 votes and published the result as session totals. Sessions 140 and
+    139 — 1,517 and 391 votes — were almost entirely outside that window."""
+    body = await _get(monkeypatch, _SESSIONS, counts={144: (1812, 29)})
+    by_id = {s["id"]: s for s in body["sessions"]}
+    assert (by_id[144]["vote_count"], by_id[144]["sitting_days"]) == (1812, 29)
+    # A session no vote falls in has none. That is a fact, and it is 0.
+    assert by_id[146]["vote_count"] == 0
+
+
+@pytest.mark.asyncio
+async def test_counts_are_null_when_they_cannot_be_counted(monkeypatch):
+    """§1.1. Zero would say every session met and decided nothing."""
+    body = await _get(monkeypatch, _SESSIONS, counts=None)
+    for s in body["sessions"]:
+        assert s["vote_count"] is None
+        assert s["sitting_days"] is None

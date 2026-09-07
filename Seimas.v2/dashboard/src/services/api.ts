@@ -973,6 +973,11 @@ export interface SeimasSession {
   date_from: string;
   date_to: string | null;
   status: "ended" | "sitting" | "upcoming";
+  /** Counted in SQL over every vote, not in the browser over a page of them.
+   *  Null means the votes table is absent — we cannot count — which is not the
+   *  same as a session that met and decided nothing. */
+  vote_count?: number | null;
+  sitting_days?: number | null;
 }
 
 export interface SessionsResponse {
