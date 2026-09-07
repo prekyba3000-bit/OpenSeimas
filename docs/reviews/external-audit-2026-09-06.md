@@ -126,7 +126,17 @@ lists all 20 runners. Commit `49391af`.
   „Balsavimų duomenų nerasta" — a claim that the Seimas met and decided
   nothing across 27 sitting days. `/api/meta/sessions` counts in SQL now, with
   the same overlap rule the client applies, and returns null rather than 0
-  when it cannot count. Sums to 5,286 of 5,286. Commit `aee1426`.
+  when it cannot count. Sums to 5,286 of 5,286.
+
+  The day-by-day lists a reader opens are now fetched per session, by date
+  range, and only on expand — `/api/votes` takes `date_from`/`date_to`. My
+  first cut kept the single blanket download and simply labelled it a sample,
+  which was honest and made browsing worse for four of six sessions; opening a
+  session now returns that session's votes. Verified against production: 139,
+  143 and 146 come back complete, and the three large sessions return their
+  newest 500 covering 6–8 of their sitting days, which the panel states.
+  `votes_unassigned` is counted the same way, over every vote, so the
+  „Sesija nenustatyta" panel is no longer a fraction of itself.
 * **~~Uncapped `limit` on `get_votes` / `get_mp_votes`~~** — fixed in the same
   commit, since one enabled the other. `MAX_PAGE = 500`, clamped rather than
   rejected: a caller asking for too much wants as much as it can have, and a
