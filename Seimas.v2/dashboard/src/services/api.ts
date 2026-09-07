@@ -982,6 +982,9 @@ export interface SeimasSession {
 
 export interface SessionsResponse {
   sessions: SeimasSession[];
+  /** Votes whose sitting date falls in no published session, over every vote.
+   *  Null when the votes table is absent. */
+  votes_unassigned?: number | null;
   source: string | null;
   synced_at?: string | null;
 }
@@ -1037,8 +1040,14 @@ export const api = {
       parse: (data) => mpVoteTopicsSchema.parse(data),
     }),
 
-  getVotes: (limit = 50, offset = 0) =>
-    request<VoteSummary[]>(`/votes?limit=${limit}&offset=${offset}`),
+  /** `range` narrows to one session's dates so a caller can open that session
+   *  instead of downloading the newest N and hoping it is inside them. */
+  getVotes: (limit = 50, offset = 0, range?: { from?: string | null; to?: string | null }) => {
+    const q = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+    if (range?.from) q.set('date_from', range.from);
+    if (range?.to) q.set('date_to', range.to);
+    return request<VoteSummary[]>(`/votes?${q.toString()}`);
+  },
 
   getMpDiary: (id: string, limit = 50, offset = 0, options?: RequestOptions<MpDiary>) =>
     request<MpDiary>(`/mps/${id}/diary?limit=${limit}&offset=${offset}`, {

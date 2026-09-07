@@ -980,10 +980,29 @@ def get_attendance_trajectory(mp_id: str):
 
 
 @router.get("/api/votes")
-def get_votes(limit: int = 50, offset: int = 0):
-    """List recent votes."""
+def get_votes(
+    limit: int = 50,
+    offset: int = 0,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+):
+    """List recent votes, optionally within a date range.
+
+    The range exists so the sessions page can open one session's votes instead
+    of downloading the newest N and hoping the session it wants is inside
+    them. It downloaded 2,600 for exactly that reason and still missed three
+    sessions entirely.
+    """
     limit = _page_size(limit)
     offset = max(0, offset)
+    for label, value in (("date_from", date_from), ("date_to", date_to)):
+        if value is not None:
+            try:
+                datetime.date.fromisoformat(value)
+            except ValueError:
+                raise HTTPException(
+                    status_code=422, detail=f"{label} must be an ISO date (YYYY-MM-DD)"
+                )
     with get_db_conn() as conn:
         if not conn:
             raise HTTPException(status_code=500, detail="Database connection failed")
@@ -992,9 +1011,11 @@ def get_votes(limit: int = 50, offset: int = 0):
             cur.execute("""
                 SELECT id, sitting_date, title, result_type
                 FROM votes
+                WHERE (%s::date IS NULL OR sitting_date >= %s::date)
+                  AND (%s::date IS NULL OR sitting_date <= %s::date)
                 ORDER BY sitting_date DESC, created_at DESC
                 LIMIT %s OFFSET %s
-            """, (limit, offset))
+            """, (date_from, date_from, date_to, date_to, limit, offset))
             rows = cur.fetchall()
 
             return [

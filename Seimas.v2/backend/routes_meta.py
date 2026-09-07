@@ -306,6 +306,7 @@ def get_sessions():
 
             cur.execute("SELECT to_regclass('public.votes') AS t")
             counts = None
+            unassigned = None
             if cur.fetchone()["t"] is not None:
                 # The same rule the client's `sessionIdForDate` applies, in SQL:
                 # sessions overlap at the edges (an extraordinary session opens
@@ -334,6 +335,24 @@ def get_sessions():
                     r["sid"]: (r["vote_count"], r["sitting_days"])
                     for r in cur.fetchall()
                 }
+                # Votes whose sitting date falls in no published session. The
+                # page shows these separately rather than guessing a session
+                # for them, and it used to count them from a page of votes —
+                # so the number was a fraction of itself and read as a
+                # complete finding.
+                cur.execute(
+                    """
+                    SELECT COUNT(*) AS n
+                    FROM votes v
+                    WHERE v.sitting_date IS NOT NULL
+                      AND NOT EXISTS (
+                        SELECT 1 FROM sessions s
+                        WHERE v.sitting_date >= s.date_from
+                          AND (s.date_to IS NULL OR v.sitting_date <= s.date_to)
+                      )
+                    """
+                )
+                unassigned = cur.fetchone()["n"]
 
     today = datetime.date.today()
     sessions = []
@@ -364,6 +383,7 @@ def get_sessions():
 
     return {
         "sessions": sessions,
+        "votes_unassigned": unassigned,
         "source": "p2b.ad_seimo_sesijos",
         "synced_at": _iso(synced_at),
     }

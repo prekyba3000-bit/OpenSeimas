@@ -67,13 +67,25 @@ describe('session totals', () => {
     expect(screen.getByText('27')).toBeInTheDocument();
   });
 
-  it('asks for a bounded page of votes, not thousands', async () => {
+  it('downloads no votes at all until a session is opened', async () => {
     vi.mocked(api.getSessions).mockResolvedValue({ sessions: SESSIONS, source: 'p2b' });
     vi.mocked(api.getVotes).mockResolvedValue([] as never);
     renderView();
     await screen.findAllByText('1812');
-    const [limit] = vi.mocked(api.getVotes).mock.calls[0];
+    expect(api.getVotes).not.toHaveBeenCalled();
+  });
+
+  it('asks for the opened session\'s own dates, in a bounded page', async () => {
+    vi.mocked(api.getSessions).mockResolvedValue({ sessions: SESSIONS, source: 'p2b' });
+    vi.mocked(api.getVotes).mockResolvedValue([] as never);
+    renderView();
+
+    await userEvent.click(await screen.findByText('2 eilinė'));
+    const [limit, offset, range] = vi.mocked(api.getVotes).mock.calls[0];
     expect(limit).toBeLessThanOrEqual(500);
+    expect(offset).toBe(0);
+    // Not "the newest N and hope": the range is this session's own boundaries.
+    expect(range).toEqual({ from: '2025-03-10', to: '2025-06-30' });
   });
 
   it('renders an unavailable count as unknown, never as zero', async () => {
@@ -90,15 +102,38 @@ describe('session totals', () => {
     expect(screen.queryByText('0')).not.toBeInTheDocument();
   });
 
-  it('does not claim a session has no votes when the sample simply does not reach it', async () => {
+  it('lists the opened session\'s own votes', async () => {
+    vi.mocked(api.getSessions).mockResolvedValue({ sessions: SESSIONS, source: 'p2b' });
+    vi.mocked(api.getVotes).mockResolvedValue([
+      { id: '9', date: '2025-06-30', title: 'Dėl biudžeto pakeitimo', result: null },
+    ] as never);
+    renderView();
+
+    await userEvent.click(await screen.findByText('2 eilinė'));
+    expect(await screen.findByText('Dėl biudžeto pakeitimo')).toBeInTheDocument();
+    // 27 sitting days in the session, one reachable in this page of votes.
+    expect(screen.getByText(/Rodoma 1 iš\s*27 posėdžių dienų/)).toBeInTheDocument();
+  });
+
+  it('never says a session decided nothing when the count says otherwise', async () => {
+    // The failure this page was making: „Balsavimų duomenų nerasta" over a
+    // session that held 1,517 votes across 27 sitting days.
     vi.mocked(api.getSessions).mockResolvedValue({ sessions: SESSIONS, source: 'p2b' });
     vi.mocked(api.getVotes).mockResolvedValue([] as never);
     renderView();
 
-    const heading = await screen.findByText('2 eilinė');
-    await userEvent.click(heading);
+    await userEvent.click(await screen.findByText('2 eilinė'));
+    expect(await screen.findByText(/nors jų yra/i)).toBeInTheDocument();
     expect(screen.queryByText(/Balsavimų duomenų nerasta/)).not.toBeInTheDocument();
-    expect(screen.getByText(/rodomi tik naujausi balsavimai/i)).toBeInTheDocument();
+  });
+
+  it('counts votes belonging to no session over every vote, not a page of them', async () => {
+    vi.mocked(api.getSessions).mockResolvedValue({
+      sessions: SESSIONS, source: 'p2b', votes_unassigned: 128,
+    });
+    vi.mocked(api.getVotes).mockResolvedValue([] as never);
+    renderView();
+    expect(await screen.findByText(/128 balsavimų, kurių posėdžio data/)).toBeInTheDocument();
   });
 
   it('still says a session that has not begun has not begun', async () => {

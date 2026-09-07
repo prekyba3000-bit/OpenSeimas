@@ -43,6 +43,8 @@ class _SessionsCursor:
             self._rows = [{"t": "votes" if self._votes_table else None}]
         elif "GROUP BY s.seimas_session_id" in sql:
             self._rows = [{"sid": 144, "vote_count": 1812, "sitting_days": 29}]
+        elif "NOT EXISTS" in sql:
+            self._rows = [{"n": 0}]
         elif "FROM sessions" in sql:
             self._rows = [
                 {"seimas_session_id": 144, "number": 60, "name": "4 eilinė",
@@ -120,4 +122,41 @@ def test_an_oversized_request_is_clamped_rather_than_rejected():
     cur.execute = spy
     with mock.patch.object(rp, "get_db_conn", lambda: _db(cur)):
         assert rp.get_votes(limit=99_999, offset=-5) == []
-    assert captured["params"] == (rp.MAX_PAGE, 0)
+    assert captured["params"][-2:] == (rp.MAX_PAGE, 0)
+
+
+def test_a_date_range_narrows_the_vote_list():
+    """So a caller can open one session instead of downloading the newest N
+    and hoping the session it wants is inside them."""
+    captured: dict = {}
+    cur = empty_cursor()
+    real_execute = cur.execute
+
+    def spy(sql, params=None):
+        if "FROM votes" in sql:
+            captured["params"] = params
+        return real_execute(sql, params)
+
+    cur.execute = spy
+    with mock.patch.object(rp, "get_db_conn", lambda: _db(cur)):
+        rp.get_votes(limit=500, date_from="2025-03-10", date_to="2025-06-30")
+    assert "2025-03-10" in captured["params"]
+    assert "2025-06-30" in captured["params"]
+
+
+def test_a_malformed_date_is_rejected_rather_than_ignored():
+    """A silently dropped filter returns the newest votes instead of the ones
+    asked for — the caller cannot tell it got a different question's answer."""
+    import pytest
+    from fastapi import HTTPException
+
+    with mock.patch.object(rp, "get_db_conn", lambda: _db(empty_cursor())):
+        with pytest.raises(HTTPException) as exc:
+            rp.get_votes(date_from="last tuesday")
+    assert exc.value.status_code == 422
+    assert "date_from" in str(exc.value.detail)
+
+
+def test_no_range_still_lists_the_most_recent_votes():
+    with mock.patch.object(rp, "get_db_conn", lambda: _db(empty_cursor())):
+        assert rp.get_votes() == []

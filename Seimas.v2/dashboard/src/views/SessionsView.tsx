@@ -45,27 +45,22 @@ export function periodLabel(s: SeimasSession): string {
 }
 
 /**
- * How many recent votes the expandable per-day lists are drawn from.
+ * Votes fetched for the one session a reader has opened.
  *
- * This is a sample and is labelled as one. It used to be 2,600 and it used to
- * be the source of the headline session totals as well — with 5,286 votes in
- * the database, the two oldest sessions fell almost entirely outside the
- * window and the page published 0 and a fraction as their totals. The totals
- * are counted in SQL now (`session.vote_count` / `session.sitting_days`); this
- * only fills the lists a reader opens.
+ * This page used to fetch the 2,600 most recent votes once, count the headline
+ * totals from them in the browser, and fill every session's list from the same
+ * pile. There are 5,286 votes: sessions 140, 139 and 143 were entirely outside
+ * that window and read „0 balsavimų", and 141 published 781 of its 1,554.
+ *
+ * The totals are counted in SQL now. The lists are fetched per session, by
+ * date range, only when a session is opened — so nothing is downloaded until a
+ * reader asks, and what arrives is that session's votes rather than whichever
+ * ones happened to be recent.
  */
-const VOTE_SAMPLE = 500;
+const SESSION_PAGE = 500;
 
 const SessionsView = () => {
   const navigate = useNavigate();
-  const {
-    data: votes = [],
-    isLoading: loadingVotes,
-    error,
-  } = useQuery({
-    queryKey: ['votes', 'sessions', 'sample', VOTE_SAMPLE],
-    queryFn: () => api.getVotes(VOTE_SAMPLE, 0),
-  });
   const {
     data: sessionData,
     isLoading: loadingSessions,
@@ -74,29 +69,43 @@ const SessionsView = () => {
     queryKey: ['meta', 'sessions'],
     queryFn: () => api.getSessions(),
   });
-  const loading = loadingVotes || loadingSessions;
+  const loading = loadingSessions;
   const SESSIONS = useMemo(() => sessionData?.sessions ?? [], [sessionData]);
   const [expandedSession, setExpandedSession] = useState<number | null>(null);
 
-  const sessionVotes = useMemo(() => {
-    const grouped: Record<number, { votes: VoteSummary[]; byDate: Record<string, VoteSummary[]> }> = {};
-    SESSIONS.forEach(s => { grouped[s.id] = { votes: [], byDate: {} }; });
-    grouped[UNKNOWN_SESSION_ID] = { votes: [], byDate: {} };
+  const openSession = useMemo(
+    () => SESSIONS.find(s => s.id === expandedSession) ?? null,
+    [SESSIONS, expandedSession],
+  );
 
-    votes.forEach(v => {
-      const d = v.date;
-      const id = sessionIdForDate(SESSIONS, d);
-      const bucket = grouped[id] ?? grouped[UNKNOWN_SESSION_ID];
-      bucket.votes.push(v);
-      if (!bucket.byDate[d]) bucket.byDate[d] = [];
-      bucket.byDate[d].push(v);
+  const {
+    data: openVotes = [],
+    isLoading: loadingOpenVotes,
+    error,
+  } = useQuery({
+    queryKey: ['votes', 'session', openSession?.id, openSession?.date_from, openSession?.date_to],
+    enabled: !!openSession,
+    queryFn: () =>
+      api.getVotes(SESSION_PAGE, 0, {
+        from: openSession!.date_from,
+        to: openSession!.date_to,
+      }),
+  });
+
+  const byDate = useMemo(() => {
+    const grouped: Record<string, VoteSummary[]> = {};
+    openVotes.forEach(v => {
+      // Belt and braces: the range is the session's own dates, but a vote the
+      // server would file elsewhere must not be shown under this session.
+      if (sessionIdForDate(SESSIONS, v.date) !== openSession?.id) return;
+      (grouped[v.date] ??= []).push(v);
     });
-
     return grouped;
-  }, [votes, SESSIONS]);
+  }, [openVotes, SESSIONS, openSession]);
 
-  // Only shown when it has contents. An empty bucket is not a finding.
-  const unknownCount = sessionVotes[UNKNOWN_SESSION_ID]?.votes.length ?? 0;
+  // Counted over every vote by the server, not over a page of them. Only shown
+  // when it has contents: an empty bucket is not a finding.
+  const unknownCount = sessionData?.votes_unassigned ?? 0;
 
   // No session list is a different fact from "these votes belong to no
   // session". Without this, an unreachable endpoint would file every vote
@@ -113,11 +122,14 @@ const SessionsView = () => {
     );
   }
 
-  if (error) {
+  // `sessionsError`, not the vote query's. One session's votes failing to load
+  // is a note inside that session's panel; it must not blank the page, which
+  // is what happened while this read the single blanket vote fetch.
+  if (sessionsError) {
     return (
       <div className="p-6 border rounded-xl flex items-center gap-3 border-destructive bg-destructive/10 text-destructive">
         <AlertTriangle className="w-5 h-5 shrink-0" />
-        <ProblemDetailsNotice error={error} className="text-sm border-0 bg-transparent p-0 text-destructive" />
+        <ProblemDetailsNotice error={sessionsError} className="text-sm border-0 bg-transparent p-0 text-destructive" />
       </div>
     );
   }
@@ -202,10 +214,11 @@ const SessionsView = () => {
           </Card>
         )}
         {SESSIONS.map(session => {
-          const data = sessionVotes[session.id];
           const isExpanded = expandedSession === session.id;
           const isCurrent = session.status === 'sitting';
-          const dates = Object.keys(data?.byDate ?? {}).sort().reverse();
+          const dates = isExpanded
+            ? Object.keys(byDate).sort().reverse()
+            : [];
           // The LRS feed lists a session before it opens.
           const hasStarted = session.date_from <= new Date().toISOString().slice(0, 10);
 
@@ -289,7 +302,7 @@ const SessionsView = () => {
                   className="border-t border-border max-h-[500px] overflow-y-auto"
                 >
                   {dates.slice(0, 30).map(date => {
-                    const dayVotes = data!.byDate[date];
+                    const dayVotes = byDate[date];
                     return (
                       <div key={date} className="border-b border-border last:border-0">
                         <div className="px-5 py-2 bg-muted/20 flex items-center justify-between">
@@ -343,20 +356,23 @@ const SessionsView = () => {
                 </motion.div>
               )}
 
-              {/* „Balsavimų duomenų nerasta" used to cover this whole branch,
-                  and for an older session it was false: the votes exist, the
-                  sample the lists are drawn from simply does not reach back
-                  that far. Saying a session decided nothing when it decided
-                  1,517 things is the failure this page was already making with
-                  its totals. LT-COPY: needs native review */}
+              {/* „Balsavimų duomenų nerasta" used to cover this whole branch
+                  and for an older session it was false — the votes existed,
+                  the one download the page made simply did not reach them. It
+                  now says which of the four things is actually true.
+                  LT-COPY: needs native review */}
               {isExpanded && dates.length === 0 && (
                 <div className="border-t border-border p-8 text-center text-muted-foreground text-sm">
-                  {(session.vote_count ?? 0) > 0
-                    ? 'Sąraše rodomi tik naujausi balsavimai, todėl šios sesijos jame nėra. ' +
-                      'Skaičius viršuje suskaičiuotas iš visų balsavimų.'
-                    : isCurrent
-                      ? 'Sesija ką tik prasidėjo — balsavimų dar nėra.'
-                      : 'Balsavimų duomenų nerasta.'}
+                  {loadingOpenVotes
+                    ? 'Kraunama…'
+                    : error
+                      ? 'Nepavyko užkrauti šios sesijos balsavimų.'
+                      : (session.vote_count ?? 0) > 0
+                        ? 'Šios sesijos balsavimų nepavyko parodyti, nors jų yra. ' +
+                          'Skaičius viršuje suskaičiuotas iš visų balsavimų.'
+                        : isCurrent
+                          ? 'Sesija ką tik prasidėjo — balsavimų dar nėra.'
+                          : 'Balsavimų duomenų nerasta.'}
                 </div>
               )}
             </Card>

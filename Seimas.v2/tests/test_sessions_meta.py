@@ -43,6 +43,9 @@ def _fake_db(rows, table_exists=True, counts=None):
             elif "to_regclass" in sql:
                 cur._one = {"t": "sessions" if table_exists else None}
                 cur._all = []
+            elif "NOT EXISTS" in sql:
+                cur._one = {"n": 0}
+                cur._all = []
             elif "GROUP BY s.seimas_session_id" in sql:
                 cur._all = [
                     {"sid": sid, "vote_count": v, "sitting_days": d}
