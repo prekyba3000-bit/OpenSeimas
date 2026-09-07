@@ -1,7 +1,7 @@
-# RESUME — 2026-09-07
+# RESUME — 2026-09-08
 
-Branch `main`, **5 commits ahead of origin, not yet pushed**. Suites:
-**345 dashboard / 347 backend** (+19 skipped). tsc 11, all vendored `ui/`.
+Branch `main`, pushed and deployed. Suites: **350 dashboard / 354 backend**
+(+19 skipped). tsc 11, all vendored `ui/`.
 
 ## Read this first: an RPG card of named MPs was live, and two surfaces disagreed
 
@@ -34,16 +34,24 @@ charter calls permanent now exists — it did not before.
 rejected vote as passed once `result_type` is populated; `record_fetch` unable
 to write its own error on an aborted transaction; `pipeline.cli --list`.
 
-**Next concrete step:** `SessionsView.tsx:53-55` aggregates the first 2,600 of
-5,286 votes and presents the result as session totals. That is a number
-presented as a total that is not one — trust floor, and visible to readers. It
-is coupled to capping `get_votes`/`get_mp_votes` (uncapped today), so both go
-in one change.
+**Live #3 — three sessions said the Seimas decided nothing.** The sessions
+page counted its own totals from the 2,600 most recent votes; there are 5,286.
+Sessions 140, 139 and 143 fell entirely outside that window and published
+„0 balsavimų" and „Balsavimų duomenų nerasta" — they hold 1,517, 391 and 5.
+Session 141 published 781 of its 1,554. `/api/meta/sessions` counts in SQL
+now and sums to 5,286 of 5,286; `MAX_PAGE = 500` caps the vote routes, which
+the page no longer needs to exceed.
 
-**Blocked on the human:** pushing these 5 commits. It is a two-sided ship
-(§3) — Render drops the endpoint, Vercel drops the button, frontend first is
-the harmless order — and migration 044 publishes the correction on the next
-daily sync, after both.
+**Next concrete step, in priority order:**
+
+1. `/health` returns 200 with `"status": "degraded"` when the database is
+   down, so Render's health check cannot see a broken service. The fix is to
+   split liveness from readiness; the open question is whether to point
+   Render's `healthCheckPath` at readiness, which on a free tier that already
+   sleeps risks a restart loop during a Neon blip.
+2. A `tsc --noEmit` gate in CI. All 11 errors are vendored `ui/` files the app
+   never imports, so the gate needs those excluded or the files fixed first.
+3. Node 20 → 24 in CI (Node 20 is EOL).
 
 ## Read this first: an AI-generated risk label was live in the public repo
 
