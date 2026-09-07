@@ -1,7 +1,49 @@
-# RESUME — 2026-09-06
+# RESUME — 2026-09-07
 
-Branch `main`, everything pushed. Suites: **335 dashboard / 330 backend**
-(+19 skipped). tsc 11, all vendored `ui/`.
+Branch `main`, **5 commits ahead of origin, not yet pushed**. Suites:
+**345 dashboard / 347 backend** (+19 skipped). tsc 11, all vendored `ui/`.
+
+## Read this first: an RPG card of named MPs was live, and two surfaces disagreed
+
+An external technical audit arrived (`OpenSeimas-Technical-Audit-2026-09-06.md`,
+in the human's Downloads — not committed). Verifying it found two live
+production defects and four latent ones. Full triage, including where I think
+the audit's severities are wrong: `external-audit-2026-09-06.md`.
+
+**Live #1 — the share card.** `GET /api/v2/heroes/{id}/share-card` returned a
+PNG of a named member beside a circle reading „0" (`level`), a badge reading
+"True Neutral" (`alignment`), a STR/WIS/CHA/INT/STA radar, an XP bar, and
+„artifacts" — unauthenticated, cached an hour, behind a „Dalintis kortele"
+button on every profile. Removing those keys from the JSON earlier is what
+made the image worse: the renderer read a dict that no longer had them and
+published its defaults. `test_no_verdicts_on_the_wire.py` said "Nothing
+rendered them"; every assertion in it reads a payload, and a PNG is not a
+payload. Endpoint, renderer, template, button and Pillow removed; correction
+`rpg-share-card` in migration 044.
+
+**Live #2 — list and profile disagreed.** One member's published `experience`
+read 12.35 on the profile and 61.98 on the leaderboard, same day, same
+database. `COALESCE(0, 0) AS max_years_in_parliament` in the single-MP path,
+plus six copies of the pre-migration-015 participation predicate the engine
+kept after 015 fixed the views. Both paths now reduce the same rows through
+one function; one `_CHOICE_RECORDED` constant. The §1.4 agreement test the
+charter calls permanent now exists — it did not before.
+
+**Latent, fixed:** the floor-speech checkpoint committing before its inserts
+(production checked: nothing lost yet); three views that would have shown every
+rejected vote as passed once `result_type` is populated; `record_fetch` unable
+to write its own error on an aborted transaction; `pipeline.cli --list`.
+
+**Next concrete step:** `SessionsView.tsx:53-55` aggregates the first 2,600 of
+5,286 votes and presents the result as session totals. That is a number
+presented as a total that is not one — trust floor, and visible to readers. It
+is coupled to capping `get_votes`/`get_mp_votes` (uncapped today), so both go
+in one change.
+
+**Blocked on the human:** pushing these 5 commits. It is a two-sided ship
+(§3) — Render drops the endpoint, Vercel drops the button, frontend first is
+the harmless order — and migration 044 publishes the correction on the next
+daily sync, after both.
 
 ## Read this first: an AI-generated risk label was live in the public repo
 
