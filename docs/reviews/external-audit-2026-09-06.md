@@ -112,11 +112,36 @@ lists all 20 runners. Commit `49391af`.
 
 ## Verified, not fixed, and why
 
-* **`/health` returns 200 when the database is disconnected** (its R7).
-  Confirmed: the body says `"status": "degraded"` but the HTTP status is 200,
-  so Render's health check cannot see it. Real. Needs a decision about Render's
-  behaviour on a failing check for a free-tier service that already sleeps, so
-  it is not a change to make unattended.
+* **~~`/health` returns 200 when the database is disconnected~~** (its R7) —
+  **fixed by splitting the question, not by making `/health` fail.** A failing
+  `healthCheckPath` on Render restarts the service; a restart cannot reconnect
+  a Neon outage and would loop through one on a free plan that already sleeps.
+  So `/health` stays liveness — 200 while the process answers, with the
+  database named in the body — and `/health/ready` is readiness, 503 when the
+  database is unreachable. `uptime_check.sh` probes readiness now; it used to
+  grep `"status":"ok"` out of the liveness body, which worked and depended on
+  nobody rewording that string. Verified against the production database, both
+  states.
+* **~~Fourteen tsc errors / no type gate~~** (its R6) — **fixed.** 11 errors,
+  all in three vendored shadcn/ui adapters (`calendar`, `chart`, `resizable`)
+  that no application file imports, broken against the installed
+  react-day-picker, recharts and react-resizable-panels. Fixing vendored
+  adapters is separate work; blocking every future type gate on it is not. So
+  `tsconfig.typecheck.json` excludes exactly those three, CI and the pre-push
+  hook both run `tsc --noEmit` against it, and `noVendoredUiImports.test.ts`
+  fails if anything imports one of them or if a fourth entry appears in the
+  exclusion list. The gate cannot quietly widen its own blind spot.
+* **~~CI on Node 20 (EOL)~~** (its R6) — **fixed.** CI on 24, the current LTS;
+  `engines.node >= 22`, which is what the machine running the pre-push hook
+  actually has. CI deliberately runs the newer line so a version-specific
+  break appears there rather than in a Vercel build.
+* **~~The build never got `VITE_API_URL`~~** (its R6) — **fixed, and it was
+  live-capable.** `config.ts` throws at module load without it and Vite
+  inlines the value at build time, so `vite build` succeeds with the variable
+  missing (verified: exit 0) and produces a bundle that blanks the page for
+  every visitor. CI gave it to the tests and not to the build. It now gets it,
+  and `.github/scripts/smoke-built-app.mjs` fails the build if the URL was not
+  inlined — verified failing on a deliberately unset build.
 * **~~SessionsView aggregates the first 2,600 votes~~** (its R2/R5) — **fixed,
   and it was worse than "silently incomplete once the dataset exceeds the
   cap". It had already exceeded it.** Measured against production: that window
@@ -144,10 +169,6 @@ lists all 20 runners. Commit `49391af`.
 * **CORS `https://dashboard.*\.vercel\.app` with credentials** (its R5).
   Confirmed at `main.py:67`. The audit is careful to say this is not an
   authentication bypass, and it is not.
-* **11 tsc errors** (its R6 says fourteen). All 11 are in vendored shadcn
-  `ui/` files — `calendar.tsx`, `chart.tsx`, `resizable.tsx` — none of which
-  the app imports. Worth a `tsc --noEmit` gate; not worth calling broken
-  adapters releasable.
 
 ## Where I think the audit is wrong for this project
 
@@ -159,9 +180,6 @@ lists all 20 runners. Commit `49391af`.
 * **"Establish whether a secrets-bearing Storybook build was published"**
   (its R4). No Storybook build is published anywhere; there is no such
   artifact to inspect.
-* **Node 20 EOL / Node 24 migration** (its R6). True and not urgent. It
-  competes for the same hours as the incomplete session totals above, and
-  those are visible to readers.
 
 ## What this cost, and the lesson worth keeping
 

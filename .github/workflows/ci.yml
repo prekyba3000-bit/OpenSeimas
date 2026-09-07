@@ -45,18 +45,41 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # 24 is the current LTS; 20 reached end of life. package.json declares
+      # `engines.node >= 22`, which is what the local pre-push hook runs on —
+      # CI deliberately runs the newer line so a version-specific break shows
+      # up here rather than in a Vercel build.
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "24"
           cache: npm
       # Monorepo workspaces: root package.json includes Seimas.v2/dashboard and
       # packages/*; --legacy-peer-deps is the documented install path (README).
       - name: Install
         run: npm ci --legacy-peer-deps
+      # Vite transpiles regardless of type errors, so nothing else here would
+      # have failed on a broken adapter. Excludes three vendored shadcn/ui
+      # files nothing imports; see tsconfig.typecheck.json and the test that
+      # keeps that exclusion honest.
+      - name: Type check
+        run: npm run dashboard:typecheck
       - name: Unit tests (vitest, single run in CI)
         # config.ts throws without VITE_API_URL; tests execute it at import time.
         env:
           VITE_API_URL: http://localhost:8000
         run: npm run dashboard:test
+      # The same variable the tests get. Vite inlines it at build time, and
+      # config.ts throws at module load without it — so a build without it
+      # succeeds here and the deployed app dies on first paint. The build was
+      # the one step not given it.
       - name: Build
+        env:
+          VITE_API_URL: http://localhost:8000
         run: npm run dashboard:build
+      # Proves the bundle it just built actually starts. A build that produces
+      # a module-load crash is the failure the missing variable would cause,
+      # and nothing above would notice it.
+      - name: Built app starts
+        env:
+          VITE_API_URL: http://localhost:8000
+        run: node .github/scripts/smoke-built-app.mjs

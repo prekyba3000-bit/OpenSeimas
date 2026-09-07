@@ -1,5 +1,5 @@
 """Health, admin (auth-gated sync/refresh), and root endpoints."""
-from fastapi import APIRouter, HTTPException, BackgroundTasks, Header
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Header, Response
 from typing import Optional
 
 from backend.core import _refresh_state, _refresh_materialized_view
@@ -35,23 +35,52 @@ router = APIRouter()
 
 
 
-@router.get("/health")
-def health():
-    """Health check with DB connectivity verification."""
-    db_status = "disconnected"
+def _database_status() -> str:
     try:
         with get_db_conn() as conn:
             if conn:
                 with conn.cursor() as cur:
                     cur.execute("SELECT 1")
-                    db_status = "connected"
+                    return "connected"
     except Exception:
-        db_status = "error"
+        return "error"
+    return "disconnected"
 
+
+@router.get("/health")
+def health():
+    """Liveness: this process is running and answering.
+
+    Always 200 while the process is up, deliberately. Render's
+    `healthCheckPath` points here, and a failing check there does not route
+    around a broken database — it restarts the service, which cannot fix a
+    Neon outage and would loop through one on a free plan that already sleeps.
+
+    The body still reports the database, and it is the body the uptime probe
+    reads. Readiness — the thing that returns a non-2xx when the database is
+    gone — is `/health/ready`.
+    """
+    db_status = _database_status()
     return {
         "status": "ok" if db_status == "connected" else "degraded",
         "database": db_status,
     }
+
+
+@router.get("/health/ready")
+def health_ready(response: Response):
+    """Readiness: this process can serve requests.
+
+    503 when the database is unreachable. Every public route needs it, so a
+    process without it is up and useless, and the HTTP status has to say so —
+    `/health` returned 200 with `"status": "degraded"` in the body, which no
+    load balancer reads.
+    """
+    db_status = _database_status()
+    ready = db_status == "connected"
+    if not ready:
+        response.status_code = 503
+    return {"ready": ready, "database": db_status}
 
 
 @router.get("/api/admin/refresh-status")
