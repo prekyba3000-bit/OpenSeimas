@@ -959,28 +959,53 @@ def public_breakdown(breakdown: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+# One predicate for "the source recorded this member's choice on this vote",
+# deferred to by every query here (§1.2). It is migration 015's, verbatim in
+# meaning: `už` / `prieš` / `susilaikė`, case- and accent-tolerant, and nothing
+# else counts.
+#
+# What it replaced was `COALESCE(mv.vote_choice, '') !~* '^nedalyvavo$'` —
+# "anything that is not literally the word absent" — which is what migration
+# 015 exists to have fixed. LRS emits `kaip_balsavo=""` for a member who was
+# not there, so an empty string passed that test and every member counted as
+# having voted on everything. 015 fixed the two materialized views and left the
+# six copies in this file untouched, so the leaderboard read one definition and
+# the profile another. Measured 2026-09-07: one member's first recorded vote
+# was 2024-11-19 by the view and 2024-11-14 by the engine, and their published
+# `experience` differed on the two surfaces because of it.
+#
+# `~ '^susilaik'` rather than 015's `LIKE 'susilaik%'`: identical match, no `%`.
+# Some of these queries are executed with parameters, and psycopg2 interpolates
+# the whole string — a lone `%` in a predicate is a placeholder error waiting
+# for whichever caller happens to pass one.
+_CHOICE_RECORDED = (
+    "(LOWER(COALESCE(mv.vote_choice, '')) IN ('už', 'uz', 'prieš', 'pries')\n"
+    "                       OR LOWER(COALESCE(mv.vote_choice, '')) ~ '^susilaik')"
+)
+
+
 def _fetch_mp_metrics(mp_id: str, db_cursor) -> Dict[str, Any] | None:
     db_cursor.execute(
-        """
+        f"""
         WITH vote_rollup AS (
             SELECT
                 mv.politician_id AS mp_id,
                 COUNT(mv.vote_id) FILTER (
-                    WHERE COALESCE(mv.vote_choice, '') !~* '^nedalyvavo$'
+                    WHERE {_CHOICE_RECORDED}
                 ) AS votes_participated,
                 COUNT(mv.vote_id) FILTER (
                     WHERE LOWER(COALESCE(mv.vote_choice, '')) IN ('už', 'uz')
                       AND COALESCE(v.result_type, '') = 'Priimta'
                 ) AS votes_for_passed,
                 COUNT(DISTINCT v.sitting_date) FILTER (
-                    WHERE COALESCE(mv.vote_choice, '') !~* '^nedalyvavo$'
+                    WHERE {_CHOICE_RECORDED}
                 ) AS active_vote_days,
                 COUNT(mv.vote_id) FILTER (
-                    WHERE COALESCE(mv.vote_choice, '') !~* '^nedalyvavo$'
+                    WHERE {_CHOICE_RECORDED}
                       AND COALESCE(v.vote_type, '') ILIKE '%%pateik%%'
                 ) AS amendment_votes,
                 MIN(v.sitting_date) FILTER (
-                    WHERE COALESCE(mv.vote_choice, '') !~* '^nedalyvavo$'
+                    WHERE {_CHOICE_RECORDED}
                 ) AS first_vote_date
             FROM mp_votes mv
             LEFT JOIN votes v ON mv.vote_id = v.seimas_vote_id
@@ -1048,9 +1073,55 @@ def _fetch_mp_metrics(mp_id: str, db_cursor) -> Dict[str, Any] | None:
     return db_cursor.fetchone()
 
 
+# The cohort maxima every normalized dimension divides by. One reduction, used
+# by the single-MP path and the leaderboard path alike.
+#
+# They used to be two. `_fetch_metric_maxima` computed its own set in SQL over
+# every row of `politicians`, while the leaderboard reduced over
+# `mp_leaderboard_metrics WHERE is_active`; and its years-in-parliament maximum
+# was the literal `COALESCE(0, 0)`, so `_normalize(years, 0)` returned 0.0 and
+# the seniority half of `experience` silently vanished from the profile while
+# the list kept it. Measured in production 2026-09-07 on one member:
+# experience 12.35 on the profile, 61.98 on the list. Same member, same day,
+# same published dimension, two answers — the disagreement §1.4's permanent
+# agreement test exists to make impossible.
+#
+# Note the second, quieter half: the two cohorts differed too (all politicians
+# vs active ones). The other maxima happened to agree only because no former
+# member currently holds one.
+_MAXIMA_KEYS = (
+    ("max_bills_authored", "bills_authored_count"),
+    ("max_committee_leadership", "committee_leadership_roles"),
+    ("max_speeches_given", "speeches_given"),
+    ("max_amendments_proposed_proxy", "amendment_votes"),
+    ("max_amendments_proposed_count", "amendments_proposed_count"),
+    ("max_total_votes_cast", "total_votes_cast"),
+)
+
+
+def _maxima_from_rows(rows) -> Dict[str, float]:
+    out = {
+        name: max((float(r[col] or 0) for r in rows), default=0.0)
+        for name, col in _MAXIMA_KEYS
+    }
+    out["max_years_in_parliament"] = max(
+        (_years_since(r["first_vote_date"]) for r in rows), default=0.0
+    )
+    return out
+
+
 def _fetch_metric_maxima(db_cursor) -> Dict[str, float]:
+    # Same rows, same reduction as calculate_all_hero_profiles_fast. The CTE
+    # below is the fallback for a tree without migration 014's view, and it is
+    # the only path where the cohort can differ.
+    db_cursor.execute("SELECT to_regclass('public.mp_leaderboard_metrics') AS t")
+    if db_cursor.fetchone()["t"]:
+        db_cursor.execute("SELECT * FROM mp_leaderboard_metrics WHERE is_active = TRUE")
+        maxima = _maxima_from_rows(db_cursor.fetchall())
+        maxima.update(_amendment_profile_maximum(db_cursor))
+        return maxima
     db_cursor.execute(
-        """
+        f"""
         WITH vote_rollup AS (
             SELECT
                 p.id AS mp_id,
@@ -1059,11 +1130,11 @@ def _fetch_metric_maxima(db_cursor) -> Dict[str, float]:
                       AND COALESCE(v.result_type, '') = 'Priimta'
                 ) AS votes_for_passed,
                 COUNT(mv.vote_id) FILTER (
-                    WHERE COALESCE(mv.vote_choice, '') !~* '^nedalyvavo$'
+                    WHERE {_CHOICE_RECORDED}
                       AND COALESCE(v.vote_type, '') ILIKE '%%pateik%%'
                 ) AS amendment_votes,
                 MIN(v.sitting_date) FILTER (
-                    WHERE COALESCE(mv.vote_choice, '') !~* '^nedalyvavo$'
+                    WHERE {_CHOICE_RECORDED}
                 ) AS first_vote_date
             FROM politicians p
             LEFT JOIN mp_votes mv ON p.id = mv.politician_id
@@ -1115,15 +1186,29 @@ def _fetch_metric_maxima(db_cursor) -> Dict[str, float]:
             COALESCE(MAX(speeches_given), 0) AS max_speeches_given,
             COALESCE(MAX(amendment_votes), 0) AS max_amendments_proposed_proxy,
             COALESCE((SELECT MAX(amendments_proposed_count) FROM mp_stats_summary), 0) AS max_amendments_proposed_count,
-            COALESCE(
-                0,
-                0
-            ) AS max_years_in_parliament,
+            MIN(first_vote_date) AS earliest_first_vote,
             COALESCE((SELECT MAX(total_votes_cast) FROM mp_stats_summary), 0) AS max_total_votes_cast
         FROM mp_rollup
         """
     )
     row = db_cursor.fetchone()
+    return {
+        "max_bills_authored": float(row["max_bills_authored"] or 0),
+        "max_committee_leadership": float(row["max_committee_leadership"] or 0),
+        "max_speeches_given": float(row["max_speeches_given"] or 0),
+        "max_amendments_proposed_proxy": float(row["max_amendments_proposed_proxy"] or 0),
+        "max_amendments_proposed_count": float(row["max_amendments_proposed_count"] or 0),
+        "max_total_votes_cast": float(row["max_total_votes_cast"] or 0),
+        # The earliest first vote in the cohort is the longest service in it.
+        "max_years_in_parliament": _years_since(row["earliest_first_vote"]),
+        **_amendment_profile_maximum(db_cursor),
+    }
+
+
+def _amendment_profile_maximum(db_cursor) -> Dict[str, float]:
+    """Only the single-MP path has a direct amendment signal to normalize by;
+    `amendment_profiles` is empty in the current schema, so the leaderboard
+    reduces the proxy instead and this returns the unavailable state."""
     amendments_direct_max = 0.0
     amendments_direct_available = False
     if _table_exists(db_cursor, "amendment_profiles"):
@@ -1145,15 +1230,8 @@ def _fetch_metric_maxima(db_cursor) -> Dict[str, float]:
             amendments_direct_available = True
 
     return {
-        "max_bills_authored": float(row["max_bills_authored"] or 0),
-        "max_committee_leadership": float(row["max_committee_leadership"] or 0),
-        "max_speeches_given": float(row["max_speeches_given"] or 0),
-        "max_amendments_proposed_proxy": float(row["max_amendments_proposed_proxy"] or 0),
-        "max_amendments_proposed_count": float(row["max_amendments_proposed_count"] or 0),
         "max_amendments_proposed_direct": amendments_direct_max,
         "amendments_direct_available": amendments_direct_available,
-        "max_years_in_parliament": float(row["max_years_in_parliament"] or 0),
-        "max_total_votes_cast": float(row["max_total_votes_cast"] or 0),
     }
 
 
@@ -1574,18 +1652,14 @@ def calculate_all_hero_profiles_fast(
     if not rows:
         return []
 
-    def _safe_max(key: str) -> float:
-        return max((float(r[key] or 0) for r in rows), default=0.0)
-
-    max_bills_authored = _safe_max("bills_authored_count")
-    max_committee_leadership = _safe_max("committee_leadership_roles")
-    max_speeches_given = _safe_max("speeches_given")
-    max_amendments_proposed_proxy = _safe_max("amendment_votes")
-    max_amendments_proposed_count = _safe_max("amendments_proposed_count")
-    max_total_votes_cast = _safe_max("total_votes_cast")
-    max_years_in_parliament = max(
-        (_years_since(r["first_vote_date"]) for r in rows), default=0.0
-    )
+    maxima = _maxima_from_rows(rows)
+    max_bills_authored = maxima["max_bills_authored"]
+    max_committee_leadership = maxima["max_committee_leadership"]
+    max_speeches_given = maxima["max_speeches_given"]
+    max_amendments_proposed_proxy = maxima["max_amendments_proposed_proxy"]
+    max_amendments_proposed_count = maxima["max_amendments_proposed_count"]
+    max_total_votes_cast = maxima["max_total_votes_cast"]
+    max_years_in_parliament = maxima["max_years_in_parliament"]
 
     profiles: List[Dict[str, Any]] = []
     _attendance_by_mp = attendance_overrides(db_cursor)
