@@ -14,6 +14,7 @@ import { formatLtDateLong } from '../utils/ltDate';
 import { NoPerMemberData } from '../components/NoPerMemberData';
 import { isTruncatedTitle, TITLE_TRUNCATED_LT } from '../utils/voteTitle';
 import { factionLabel } from '../utils/faction';
+import { toOutcome } from '../utils/voteOutcome';
 import {
     perMemberChoiceState,
     hasAggregateTallies,
@@ -149,7 +150,9 @@ const VoteDetailView = ({ voteId }: { voteId: string }) => {
                     {vote.result_type && (
                         <span className={cn(
                             'px-3 py-1 rounded-full font-bold text-xs',
-                            vote.result_type.toLowerCase().includes('priimta')
+                            // "nepriimta" contains "priimta"; toOutcome tests
+                            // the negatives first and is the one rule.
+                            toOutcome(vote.result_type) === 'PASSED'
                                 ? 'bg-vote-for/10 text-vote-for'
                                 : 'bg-vote-against/10 text-vote-against',
                         )}>

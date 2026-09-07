@@ -13,6 +13,7 @@ import { ProblemDetailsNotice } from '../components/ProblemDetailsNotice';
 import { LT } from '../i18n/lt';
 import { cn } from '../components/ui/utils';
 import { formatLtDateShort } from '../utils/ltDate';
+import { toOutcome } from '../utils/voteOutcome';
 
 const PAGE_SIZE = 50;
 
@@ -43,8 +44,12 @@ export const VoteCard = ({
     const getResultIcon = (result: string | null) => {
         if (!result) return <AlertCircle className="w-5 h-5 text-primary" />;
         const r = result.toLowerCase();
-        if (r.includes('priimta') || r.includes('pritarta')) return <CheckCircle className="w-5 h-5 text-vote-for" />;
-        if (r.includes('nepriimta') || r.includes('atmesta')) return <XCircle className="w-5 h-5 text-destructive" />;
+        // Not `r.includes('priimta')` first: "nepriimta" contains "priimta",
+        // so that ordering shows a rejected vote a green tick. toOutcome owns
+        // the rule; see its comment.
+        const outcome = toOutcome(r);
+        if (outcome === 'PASSED') return <CheckCircle className="w-5 h-5 text-vote-for" />;
+        if (outcome === 'FAILED') return <XCircle className="w-5 h-5 text-destructive" />;
         return <AlertCircle className="w-5 h-5 text-primary" />;
     };
 

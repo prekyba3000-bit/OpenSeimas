@@ -8,6 +8,7 @@ import { api, VoteSummary, SeimasSession } from '../services/api';
 import { Card } from '../components/Card';
 import { cn } from '../components/ui/utils';
 import { ProblemDetailsNotice } from '../components/ProblemDetailsNotice';
+import { toOutcome } from '../utils/voteOutcome';
 
 // LT-COPY: needs native review
 export const UNKNOWN_SESSION_ID = -1;
@@ -293,7 +294,8 @@ const SessionsView = () => {
                               {v.result && (
                                 <span className={cn(
                                   'text-xs font-bold px-2 py-0.5 rounded shrink-0 ml-2',
-                                  v.result.toLowerCase().includes('priimta') ? 'bg-vote-for/10 text-vote-for' : 'bg-destructive/10 text-destructive',
+                                  // "nepriimta" contains "priimta" — toOutcome owns the ordering.
+                                  toOutcome(v.result) === 'PASSED' ? 'bg-vote-for/10 text-vote-for' : 'bg-destructive/10 text-destructive',
                                 )}>
                                   {v.result}
                                 </span>
