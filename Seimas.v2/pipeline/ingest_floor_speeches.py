@@ -294,6 +294,11 @@ def _ingest():
     skipped_unknown_mp = defaultdict(int)
     sittings_processed = 0
     sittings_skipped = 0
+    # Two ways a sitting can fail, kept apart because they mean different
+    # things. A fetch failure leaves no checkpoint and is retried on the next
+    # run; a write failure means the source was read and the rows did not land.
+    failed_fetch: list[str] = []
+    failed_write: list[str] = []
 
     force_full = "--full" in sys.argv
     sitting_state = load_sitting_state(cur)
@@ -311,11 +316,9 @@ def _ingest():
             try:
                 turns = list(fetch_turns(posedis_id, stenograma_url))
             except Exception as exc:
-                print(f"  FAILED sitting {posedis_id}: {exc}")
+                failed_fetch.append(str(posedis_id))
+                print(f"  FETCH FAILED for sitting {posedis_id}: {exc}")
                 continue
-            record_sitting_state(cur, posedis_id, sitting_dt, stenograma_url, len(turns))
-            conn.commit()
-
             payload = []
             for t in turns:
                 mp_uuid = asm_to_uuid.get(t["asm_id"])
@@ -339,9 +342,21 @@ def _ingest():
                     )
                 )
 
+            # The rows and the checkpoint that says "this sitting is done"
+            # commit together, or neither commits.
+            #
+            # They used to be two transactions, checkpoint first. A failed
+            # INSERT then rolled back only the rows — the checkpoint was
+            # already committed — and `should_skip` treats a sitting with
+            # `turns_seen > 0` as settled once it is older than
+            # SETTLED_AFTER_DAYS. So one transient database error during the
+            # 14-day window silently dropped a sitting's speeches for good,
+            # and the run still reported success. Verified against production
+            # 2026-09-06: no sitting has yet lost its speeches this way, which
+            # is luck rather than design.
             inserted = 0
-            if payload:
-                try:
+            try:
+                if payload:
                     execute_values(
                         cur,
                         """
@@ -355,14 +370,23 @@ def _ingest():
                         payload,
                     )
                     inserted = cur.rowcount
-                    conn.commit()
-                    total_attempted += len(payload)
-                    total_inserted += inserted
-                    total_deduped += len(payload) - inserted
-                except Exception as exc:
-                    conn.rollback()
-                    print(f"  INSERT FAILED for sitting {posedis_id}: {exc}")
-                    continue
+                # Recorded even when payload is empty: a sitting whose every
+                # speaker is a former member was genuinely read and has
+                # nothing for us to store. `turns_seen` stays the count of
+                # turns FETCHED, which is what "the stenogram had content"
+                # means to should_skip.
+                record_sitting_state(
+                    cur, posedis_id, sitting_dt, stenograma_url, len(turns)
+                )
+                conn.commit()
+                total_attempted += len(payload)
+                total_inserted += inserted
+                total_deduped += len(payload) - inserted
+            except Exception as exc:
+                conn.rollback()
+                failed_write.append(str(posedis_id))
+                print(f"  INSERT FAILED for sitting {posedis_id}: {exc}")
+                continue
 
             sittings_processed += 1
             stenograma_present = bool(stenograma_url)
@@ -390,7 +414,29 @@ def _ingest():
             f"  skipped {unknown_total} turn(s) for {len(skipped_unknown_mp)} "
             f"asm_id(s) not in active politicians — former members or replacements."
         )
-    return total_attempted, total_inserted
+    if failed_fetch:
+        print(
+            f"  FAILED to fetch {len(failed_fetch)} sitting(s): "
+            f"{', '.join(failed_fetch)} — no checkpoint written, retried next run"
+        )
+    if failed_write:
+        print(
+            f"  FAILED to write {len(failed_write)} sitting(s): "
+            f"{', '.join(failed_write)} — rows and checkpoint both rolled back"
+        )
+    return total_attempted, total_inserted, failed_fetch, failed_write
+
+
+class IncompleteRun(RuntimeError):
+    """Some sittings were not read, or were read and not stored.
+
+    Raised inside the `record_fetch` block on purpose. That contract already
+    says a half-failed run must not look identical to a successful one, and
+    raising is how a run reaches `source_fetches` as status='error'. Before
+    this, every failure printed a line and the process still exited 0, so the
+    daily sync's `|| echo "floor-speech ingest failed"` branch could never
+    fire and the provenance row said 'ok'.
+    """
 
 
 def run():
@@ -401,7 +447,7 @@ def run():
     conn = psycopg2.connect(DB_DSN)
     try:
         with record_fetch(conn, "seimas_floor_speeches", EIGA_FULL_URL) as fetch:
-            attempted, inserted = _ingest()
+            attempted, inserted, failed_fetch, failed_write = _ingest()
             fetch["rows"] = inserted
             # Two different numbers. What the source offered is what says
             # whether the feed is alive; what we inserted is 0 on every healthy
@@ -418,6 +464,18 @@ def run():
                     f"{attempted - inserted} turns already stored "
                     "(idempotent re-run; a closed sitting is append-only at source)"
                 )
+            if failed_fetch or failed_write:
+                raise IncompleteRun(
+                    f"{len(failed_fetch)} sitting(s) not fetched "
+                    f"({', '.join(failed_fetch) or 'none'}), "
+                    f"{len(failed_write)} not stored "
+                    f"({', '.join(failed_write) or 'none'})"
+                )
+    except IncompleteRun as exc:
+        # Already recorded as status='error' by record_fetch. A traceback here
+        # would say "crash" about a condition the run handled and reported.
+        print(f"ERROR: floor-speech ingest incomplete — {exc}", file=sys.stderr)
+        return 1
     finally:
         conn.close()
     return 0
@@ -428,4 +486,4 @@ def main(args=None):
 
 
 if __name__ == "__main__":
-    run()
+    sys.exit(run())
