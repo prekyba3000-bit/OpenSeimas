@@ -3,8 +3,13 @@
 Three things travelled that should not have:
 
   * an RPG morality layer — `alignment: "Lawful Good"`, `level`, `xp`,
-    `artifacts` — attached to named members of parliament. Nothing rendered
-    them, but the media kit invites external API use, so they were public.
+    `artifacts` — attached to named members of parliament. "Nothing rendered
+    them" was written here and was false: `share_card_renderer.py` drew all
+    four onto a PNG served at `/api/v2/heroes/{mp_id}/share-card`, live and
+    unauthenticated, behind a „Dalintis kortele" button on every profile.
+    Removing the keys from the JSON made it worse — the renderer read a dict
+    that no longer had them and published its defaults, Level 0 and
+    "True Neutral", as facts about a named person. Retired 2026-09-07.
   * the composite itself: `final_integrity_score`, `base_risk_score` and its
     penalty, demoted to the methodology page.
   * `/api/accountability/heroes-villains`, which sorted real people into
@@ -178,3 +183,40 @@ def test_the_leaderboard_is_not_ranked_by_an_aggregate():
     text = (BACKEND / "hero_engine.py").read_text()
     assert 'key=lambda p: (p["level"], p["xp"])' not in text
     assert 'profiles.sort(key=lambda p: (p["mp"]["name"] or "").lower())' in text
+
+
+def test_no_public_route_renders_a_card_about_a_person():
+    """The hole the JSON guards could not see.
+
+    Everything above reads payloads. A PNG is a public surface too, and the
+    one that existed carried a level number, a D&D alignment, five RPG stat
+    axes and an XP bar about a named member of parliament — for months, while
+    these tests passed. Asserted at the route table, because that is what a
+    reader can reach.
+    """
+    import ast
+
+    for path in BACKEND.glob("routes_*.py"):
+        tree = ast.parse(path.read_text())
+        for node in ast.walk(tree):
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            for dec in node.decorator_list:
+                if not isinstance(dec, ast.Call):
+                    continue
+                for arg in dec.args:
+                    if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
+                        assert "share-card" not in arg.value, (
+                            f"{path.name} routes {arg.value} again"
+                        )
+
+
+def test_the_rpg_renderer_is_gone_from_the_tree():
+    """Deleted rather than left unrouted: an importable renderer of levels and
+    alignments is one decorator away from being public again, and this one was
+    re-pointed at a live endpoint once already."""
+    backend_files = {p.name for p in BACKEND.glob("*")}
+    assert "share_card_renderer.py" not in backend_files
+    assert "share_card_template.html" not in backend_files
+    with pytest.raises(ImportError):
+        __import__("backend.share_card_renderer")

@@ -1,6 +1,5 @@
 """v2 heroes endpoints: leaderboard, search, profile, share card, OpenPlanter graph."""
 from fastapi import APIRouter, HTTPException, Request, Query
-from fastapi.responses import Response
 import time
 import datetime
 from typing import List, Dict, Optional, Any
@@ -53,10 +52,6 @@ def calculate_all_hero_profiles(*args, **kwargs):
 
 def calculate_all_hero_profiles_fast(*args, **kwargs):
     return core.calculate_all_hero_profiles_fast(*args, **kwargs)
-
-
-def render_share_card(*args, **kwargs):
-    return core.render_share_card(*args, **kwargs)
 
 
 @router.get("/api/v2/heroes/leaderboard", response_model=List[HeroProfileResponse])
@@ -209,29 +204,17 @@ def get_openplanter_graph(request: Request):
                 )
 
 
-@router.get("/api/v2/heroes/{mp_id}/share-card")
-def get_hero_share_card(mp_id: str, format: str = "primary"):
-    """Generate a deterministic, social-ready hero card PNG."""
-    with get_db_conn() as conn:
-        if not conn:
-            raise HTTPException(status_code=500, detail="Database connection failed")
-
-        with conn.cursor() as cur:
-            try:
-                hero_profile = calculate_hero_profile(mp_id=mp_id, db_cursor=cur)
-                png_bytes = render_share_card(hero_profile=hero_profile, card_format=format)
-            except ValueError:
-                raise HTTPException(status_code=404, detail="MP not found")
-            except Exception:
-                logger.exception("Failed to render share card")
-                raise HTTPException(status_code=500, detail="Failed to render share card")
-
-    safe_name = str(hero_profile.get("mp", {}).get("name", "hero")).strip().replace(" ", "-").lower()
-    safe_name = "".join(ch for ch in safe_name if ch.isalnum() or ch in ("-", "_"))
-    safe_name = safe_name.encode("ascii", "ignore").decode("ascii") or "hero"
-    headers = {
-        "Cache-Control": "public, max-age=3600",
-        "Content-Disposition": f'inline; filename="hero-{safe_name}-{format}.png"',
-    }
-    return Response(content=png_bytes, media_type="image/png", headers=headers)
+# Retired 2026-09-07: /api/v2/heroes/{mp_id}/share-card.
+#
+# It rendered a PNG of a named member of parliament carrying a level number, a
+# D&D alignment badge, STR/WIS/CHA/INT/STA axes, an XP bar and „artifacts" —
+# a verdict about a person, in the plainest sense §1.3 forbids. Worse after
+# those fields were removed from the profile payload: the renderer read them
+# from a dict that no longer had them and fell back to its defaults, so every
+# card published Level 0 and "True Neutral" as facts about someone. Live,
+# unauthenticated, cached an hour, and reachable from a „Dalintis kortele"
+# button on every profile.
+#
+# The JSON guard in tests/test_no_verdicts_on_the_wire.py said "nothing
+# rendered them". It read the payload. A PNG is a public surface too.
 

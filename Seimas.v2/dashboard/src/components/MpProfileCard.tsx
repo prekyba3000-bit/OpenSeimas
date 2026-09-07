@@ -1,8 +1,7 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Download, ExternalLink } from 'lucide-react';
+import React, { useEffect, useRef } from 'react';
+import { ExternalLink } from 'lucide-react';
 import { Card } from './Card';
 import { FlagList } from './FlagList';
-import { API_URL } from '../config';
 import type { ForensicFlag, MpProfile } from '../services/api';
 import { forensicBreakdownToFlags } from '../utils/forensicBreakdownToFlags';
 
@@ -12,7 +11,6 @@ export type MpProfileCardProps = {
 };
 
 export default function MpProfileCard({ profile, highlightEngine }: MpProfileCardProps) {
-  const [isDownloading, setIsDownloading] = useState(false);
   const flagListRef = useRef<HTMLElement>(null);
   const flags = forensicBreakdownToFlags(profile.forensicBreakdown);
 
@@ -23,33 +21,6 @@ export default function MpProfileCard({ profile, highlightEngine }: MpProfileCar
   }, [highlightEngine]);
 
 
-  const handleShareCard = async () => {
-    if (isDownloading) return;
-    setIsDownloading(true);
-    try {
-      const response = await fetch(
-        `${API_URL}/api/v2/heroes/${profile.mp.id}/share-card?format=primary`
-      );
-      if (!response.ok) {
-        throw new Error(`Share card request failed (${response.status})`);
-      }
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const slug = profile.mp.name.replace(/\s+/g, '-').toLowerCase();
-      const fileName = `mp-${slug}.png`;
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error('Failed to download share card:', error);
-    } finally {
-      setIsDownloading(false);
-    }
-  };
 
   return (
     <Card className="p-6 md:p-8 space-y-6 bg-card border-border text-foreground rounded-xl shadow-card">
@@ -67,15 +38,6 @@ export default function MpProfileCard({ profile, highlightEngine }: MpProfileCar
             </a>
           )}
         </div>
-        <button
-          type="button"
-          onClick={handleShareCard}
-          disabled={isDownloading}
-          className="inline-flex items-center justify-center gap-2 shrink-0 bg-primary hover:bg-primary/90 disabled:opacity-60 text-primary-foreground rounded-lg px-4 py-2 text-sm font-semibold transition-colors"
-        >
-          <Download className="w-4 h-4" />
-          {isDownloading ? 'Generuojama…' : 'Dalintis kortele'}
-        </button>
       </div>
 
       <Card className="p-6 bg-muted border-border rounded-xl space-y-4">

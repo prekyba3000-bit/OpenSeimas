@@ -33,11 +33,6 @@ except ImportError:
         calculate_all_hero_profiles_fast,
         fetch_graph_mp_summaries,
     )
-try:
-    from backend.share_card_renderer import render_share_card
-except ImportError:
-    from share_card_renderer import render_share_card
-
 # Add root directory to sys.path to allow importing ingestion scripts
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 

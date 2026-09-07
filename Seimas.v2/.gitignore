@@ -32,7 +32,6 @@ Thumbs.db
 .env
 archive/
 *.html
-!backend/share_card_template.html
 # *.xml
 !mps.xml
 response.xml
