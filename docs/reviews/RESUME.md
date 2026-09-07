@@ -42,16 +42,37 @@ Session 141 published 781 of its 1,554. `/api/meta/sessions` counts in SQL
 now and sums to 5,286 of 5,286; `MAX_PAGE = 500` caps the vote routes, which
 the page no longer needs to exceed.
 
+**Gates, all now in CI and the pre-push hook:** `tsc --noEmit` (against
+`tsconfig.typecheck.json`, which excludes three vendored shadcn/ui adapters
+nothing imports — `noVendoredUiImports.test.ts` fails if that stops being
+true); a built-app smoke check; Node 24 in CI, `engines.node >= 22` locally.
+`/health` is liveness (200 while the process answers), `/health/ready` is
+readiness (503 when the database is gone) and is what `uptime_check.sh`
+probes.
+
+The `VITE_API_URL` gap was the live-capable one: CI gave it to the tests and
+not to the build, `config.ts` throws at module load without it, and Vite
+inlines it at build time — so a green build could ship a bundle that blanked
+the page. Verified in both directions.
+
 **Next concrete step, in priority order:**
 
-1. `/health` returns 200 with `"status": "degraded"` when the database is
-   down, so Render's health check cannot see a broken service. The fix is to
-   split liveness from readiness; the open question is whether to point
-   Render's `healthCheckPath` at readiness, which on a free tier that already
-   sleeps risks a restart loop during a Neon blip.
-2. A `tsc --noEmit` gate in CI. All 11 errors are vendored `ui/` files the app
-   never imports, so the gate needs those excluded or the files fixed first.
-3. Node 20 → 24 in CI (Node 20 is EOL).
+1. The session cards on `SessionsView` are clickable `div`s with no role and
+   no keyboard handling. A reader on a keyboard cannot open a session at all.
+2. The three vendored shadcn/ui adapters (`calendar`, `chart`, `resizable`)
+   are broken against their installed libraries and excluded from the type
+   gate. Fix or delete — the charter's P6 note deliberately left the 42
+   vendored `ui/` files in place, so deleting is a call, not hygiene.
+3. Remaining audit items, none of them live: `ingest_votes_v2`'s
+   `ON CONFLICT DO NOTHING` never applies a corrected vote from the source
+   (R3); the CORS regex `https://dashboard.*\.vercel\.app` with credentials
+   (R5); dependency advisories for aiohttp, Vite, Vitest and Storybook (R4) —
+   Pillow's went with the share card.
+
+**Watch:** Render went push-to-serving in ~40s twice on 2026-09-07/08, faster
+than a Docker rebuild should be. Evidence said the new code was live each
+time (a real FastAPI 404 on a removed route, corrected numbers on the wire),
+but it is worth confirming on the next deploy.
 
 ## Read this first: an AI-generated risk label was live in the public repo
 
