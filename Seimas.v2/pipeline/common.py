@@ -110,6 +110,13 @@ def record_fetch(conn, source_name: str, source_url: Optional[str] = None):
     try:
         yield result
     except Exception as exc:
+        # Roll back first. A failed statement aborts the whole transaction in
+        # Postgres, so every statement after it raises "current transaction is
+        # aborted" — including this one. The failure the runner meant to record
+        # was replaced by a second exception about the recording, and the row
+        # stayed 'running' forever. The 'running' INSERT above is already
+        # committed, so the rollback discards only the failed work.
+        conn.rollback()
         cur.execute(
             "UPDATE source_fetches SET status='error', error=%s, rows_affected=%s, finished_at=NOW() WHERE id=%s",
             (str(exc)[:2000], result.get("rows", 0), fetch_id),

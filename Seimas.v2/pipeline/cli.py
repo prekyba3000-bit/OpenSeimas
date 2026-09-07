@@ -20,9 +20,12 @@ from . import common
 
 
 def list_modules() -> List[str]:
+    # `__path__` is a module global, not a name visible inside a function body,
+    # so `--list` raised NameError on every invocation. Read it off the package.
+    package_path = sys.modules[__package__].__path__
     return sorted(
         name
-        for _, name, _ in pkgutil.iter_modules(__path__)
+        for _, name, _ in pkgutil.iter_modules(package_path)
         if name.startswith(("ingest", "link", "compute", "tag"))
     )
 
