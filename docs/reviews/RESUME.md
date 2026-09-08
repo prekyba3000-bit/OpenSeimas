@@ -1,7 +1,8 @@
 # RESUME — 2026-09-08
 
-Branch `main`, pushed and deployed. Suites: **350 dashboard / 354 backend**
-(+19 skipped). tsc 11, all vendored `ui/`.
+Branch `main`, pushed and deployed. Suites: **449 dashboard / 363 backend**
+(+19 skipped). `tsc -p tsconfig.typecheck.json` clean; the 11 remaining errors
+are the three excluded vendored `ui/` adapters.
 
 ## Read this first: an RPG card of named MPs was live, and two surfaces disagreed
 
@@ -55,14 +56,24 @@ not to the build, `config.ts` throws at module load without it, and Vite
 inlines it at build time — so a green build could ship a bundle that blanked
 the page. Verified in both directions.
 
+**Live #4 — the site could not be used without a mouse.** Six files, three of
+them on the paths a reader needs: all 141 member cards, both comparison
+pickers, the whole Stebėsena table. Buttons and links now, with
+aria-expanded/aria-controls and real labels on the proportional bars.
+`a11y/noClickableDivs.test.ts` asserts the shape across every `.tsx`, with two
+principled exemptions (aria-hidden click-aways, and the full ARIA widget
+pattern SeimasMap uses). Three defects were found only by opening the page
+after the suites were green — see the commit.
+
 **Next concrete step, in priority order:**
 
-1. The session cards on `SessionsView` are clickable `div`s with no role and
-   no keyboard handling. A reader on a keyboard cannot open a session at all.
-2. The three vendored shadcn/ui adapters (`calendar`, `chart`, `resizable`)
+1. The three vendored shadcn/ui adapters (`calendar`, `chart`, `resizable`)
    are broken against their installed libraries and excluded from the type
    gate. Fix or delete — the charter's P6 note deliberately left the 42
    vendored `ui/` files in place, so deleting is a call, not hygiene.
+2. `MpCard` is a button; navigation wants a link, so a reader can open a
+   member in a new tab. That means changing its `onClick` contract and its
+   story — a separate change from making it usable at all.
 3. Remaining audit items, none of them live: `ingest_votes_v2`'s
    `ON CONFLICT DO NOTHING` never applies a corrected vote from the source
    (R3); the CORS regex `https://dashboard.*\.vercel\.app` with credentials
