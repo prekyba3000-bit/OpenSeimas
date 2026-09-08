@@ -3,7 +3,7 @@ import { ltPlural } from '../utils/ltPlural';
 import { useQuery } from '@tanstack/react-query';
 import { Users, Shield, AlertTriangle, TrendingUp, ChevronRight } from 'lucide-react';
 import { motion } from 'motion/react';
-import { useNavigate } from 'react-router';
+import { Link } from 'react-router';
 import { api, MpSummary } from '../services/api';
 import { Card } from '../components/Card';
 import { factionLabel } from '../utils/faction';
@@ -21,7 +21,6 @@ interface FactionData {
 }
 
 const FactionsView = () => {
-  const navigate = useNavigate();
   const {
     data: mps = [],
     isLoading: loading,
@@ -83,19 +82,29 @@ const FactionsView = () => {
       <Card className="p-4">
         <div className="flex h-8 rounded-full overflow-hidden bg-muted">
           {factions.map(f => (
-            <div
+            <button
               key={f.name}
-              className="h-full flex items-center justify-center text-xs font-bold text-white transition-all cursor-pointer hover:brightness-110"
+              type="button"
+              className="h-full flex items-center justify-center text-xs font-bold text-white transition-all hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               style={{
                 width: `${(f.members.length / mps.filter(m => m.is_active).length) * 100}%`,
                 backgroundColor: f.meta.hex,
                 minWidth: f.members.length > 2 ? '40px' : '20px',
               }}
+              // `title` was the only label, and a tooltip needs a pointer to
+              // appear. The short name is rendered inside only when the band
+              // is wide enough, so a small faction's band had no accessible
+              // name at all.
               title={`${f.meta.short}: ${f.members.length}`}
+              // ltPlural, not a hardcoded „nariai": 18 takes the genitive
+              // („18 narių"), and the label read „18 nariai" until the page
+              // was opened and the labels read back.
+              aria-label={`${f.meta.short} — ${f.members.length} ${ltPlural(f.members.length, 'narys', 'nariai', 'narių')}`}
+              aria-expanded={expandedFaction === f.name}
               onClick={() => setExpandedFaction(expandedFaction === f.name ? null : f.name)}
             >
               {f.members.length > 5 && f.meta.short}
-            </div>
+            </button>
           ))}
         </div>
         <div className="flex items-center justify-center gap-4 mt-3 flex-wrap">
@@ -181,10 +190,13 @@ const FactionsView = () => {
                   >
                     <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-[500px] overflow-y-auto">
                       {sortedMembers.map(mp => (
-                        <div
+                        <Link
                           key={mp.id}
-                          className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer group"
-                          onClick={e => { e.stopPropagation(); navigate(`/dashboard/mps/${mp.id}`); }}
+                          to={`/dashboard/mps/${mp.id}`}
+                          // stopPropagation stays: this sits inside the
+                          // faction card, which toggles on click.
+                          onClick={e => e.stopPropagation()}
+                          className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted/50 transition-colors group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         >
                           <img
                             src={mp.photo_url}
@@ -218,7 +230,7 @@ const FactionsView = () => {
                           >
                             {formatAttendance(mp.attendance)}
                           </div>
-                        </div>
+                        </Link>
                       ))}
                     </div>
                   </motion.div>

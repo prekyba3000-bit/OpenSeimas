@@ -3,7 +3,7 @@ import { ltPlural } from '../utils/ltPlural';
 import { useQuery } from '@tanstack/react-query';
 import { Calendar, ChevronRight, AlertTriangle, Vote, Clock, BarChart3 } from 'lucide-react';
 import { motion } from 'motion/react';
-import { useNavigate } from 'react-router';
+import { Link } from 'react-router';
 import { api, VoteSummary, SeimasSession } from '../services/api';
 import { Card } from '../components/Card';
 import { cn } from '../components/ui/utils';
@@ -60,7 +60,6 @@ export function periodLabel(s: SeimasSession): string {
 const SESSION_PAGE = 500;
 
 const SessionsView = () => {
-  const navigate = useNavigate();
   const {
     data: sessionData,
     isLoading: loadingSessions,
@@ -152,10 +151,12 @@ const SessionsView = () => {
             const maxCount = Math.max(...SESSIONS.map(ss => ss.vote_count ?? 0), 1);
             const isCurrent = s.status === 'sitting';
             return (
-              <div
+              <button
                 key={s.id}
+                type="button"
                 className={cn(
-                  'h-full rounded cursor-pointer transition-all hover:brightness-110 flex items-center justify-center text-xs font-bold text-white/80',
+                  'h-full rounded transition-all hover:brightness-110 flex items-center justify-center text-xs font-bold text-white/80',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
                   isCurrent ? 'border-2 border-dashed border-primary' : '',
                 )}
                 style={{
@@ -163,11 +164,19 @@ const SessionsView = () => {
                   backgroundColor: isCurrent ? 'hsl(var(--attention))' : count > 0 ? 'hsl(var(--primary))' : 'hsl(var(--muted))',
                   opacity: count > 0 ? 0.6 + (count / maxCount) * 0.4 : 0.3,
                 }}
+                // `title` was the only label these carried, and a tooltip is
+                // not one: it needs a pointer to appear at all. The count is
+                // rendered inside only when the bar is wide enough, so on a
+                // narrow bar there was no accessible name whatsoever.
                 title={`${s.name}: ${count} balsavimų`}
+                // Same trap: „7 balsavimų" is wrong, „7 balsavimai" is right.
+                aria-label={`${s.name} — ${count} ${ltPlural(count, 'balsavimas', 'balsavimai', 'balsavimų')}`}
+                aria-expanded={expandedSession === s.id}
+                aria-controls={`session-panel-${s.id}`}
                 onClick={() => setExpandedSession(expandedSession === s.id ? null : s.id)}
               >
                 {count > 20 && count}
-              </div>
+              </button>
             );
           })}
         </div>
@@ -230,8 +239,15 @@ const SessionsView = () => {
                 isCurrent && 'border-primary/40',
               )}
             >
-              <div
-                className="p-5 flex items-center justify-between cursor-pointer hover:bg-muted/20 transition-colors"
+              {/* A button, not a div with an onClick. It was the latter, so a
+                  reader using a keyboard could not open a session at all —
+                  no tab stop, no Enter, no focus ring, and nothing announcing
+                  that it expands. */}
+              <button
+                type="button"
+                className="w-full text-left p-5 flex items-center justify-between hover:bg-muted/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+                aria-expanded={isExpanded}
+                aria-controls={`session-panel-${session.id}`}
                 onClick={() => setExpandedSession(isExpanded ? null : session.id)}
               >
                 <div className="flex items-center gap-4">
@@ -293,10 +309,13 @@ const SessionsView = () => {
                     isExpanded && 'rotate-90',
                   )} />
                 </div>
-              </div>
+              </button>
 
               {isExpanded && dates.length > 0 && (
                 <motion.div
+                  id={`session-panel-${session.id}`}
+                  role="region"
+                  aria-label={session.name}
                   initial={{ height: 0, opacity: 0 }}
                   animate={{ height: 'auto', opacity: 1 }}
                   className="border-t border-border max-h-[500px] overflow-y-auto"
@@ -312,12 +331,15 @@ const SessionsView = () => {
                           </span>
                           <span className="text-xs text-muted-foreground">{dayVotes.length} balsavimų</span>
                         </div>
+                        {/* Links, not divs with an onClick: this is
+                            navigation, so each row belongs in the tab order
+                            and should open in a new tab if a reader asks. */}
                         <div className="divide-y divide-border/50">
                           {dayVotes.slice(0, 8).map(v => (
-                            <div
+                            <Link
                               key={v.id}
-                              className="px-5 py-2.5 flex items-center justify-between hover:bg-muted/10 transition-colors cursor-pointer group"
-                              onClick={() => navigate(`/dashboard/votes/${v.id}`)}
+                              to={`/dashboard/votes/${v.id}`}
+                              className="px-5 py-2.5 flex items-center justify-between hover:bg-muted/10 transition-colors group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
                             >
                               <div className="flex items-center gap-3 flex-1 min-w-0">
                                 <Vote className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
@@ -332,7 +354,7 @@ const SessionsView = () => {
                                   {v.result}
                                 </span>
                               )}
-                            </div>
+                            </Link>
                           ))}
                           {dayVotes.length > 8 && (
                             <div className="px-5 py-2 text-xs text-muted-foreground text-center">
@@ -362,7 +384,12 @@ const SessionsView = () => {
                   now says which of the four things is actually true.
                   LT-COPY: needs native review */}
               {isExpanded && dates.length === 0 && (
-                <div className="border-t border-border p-8 text-center text-muted-foreground text-sm">
+                <div
+                  id={`session-panel-${session.id}`}
+                  role="region"
+                  aria-label={session.name}
+                  className="border-t border-border p-8 text-center text-muted-foreground text-sm"
+                >
                   {loadingOpenVotes
                     ? 'Kraunama…'
                     : error

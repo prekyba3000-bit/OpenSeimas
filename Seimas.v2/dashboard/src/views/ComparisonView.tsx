@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { Users, GitCompare, TrendingUp, Check } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import { api, MpSummary } from '../services/api';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
@@ -16,6 +16,30 @@ const MpSelector = ({ mps, selected, onSelect, placeholder }: {
 }) => {
     const [open, setOpen] = useState(false);
     const [search, setSearch] = useState('');
+    const triggerRef = useRef<HTMLButtonElement>(null);
+
+    // Closing the list leaves focus wherever the removed node was — on
+    // `document.body`, which is nowhere. A reader who opens the list, changes
+    // their mind and presses Escape has to tab from the top of the page again.
+    const close = React.useCallback(() => {
+        setOpen(false);
+        setSearch('');
+        triggerRef.current?.focus();
+    }, []);
+
+    // On the document, not on the search input. The first version put the
+    // handler on the input, which works only while focus is still in the
+    // search box — tab to an option and Escape did nothing, leaving a reader
+    // inside a list they could not leave without a pointer.
+    useEffect(() => {
+        if (!open) return;
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key !== 'Escape') return;
+            close();
+        };
+        document.addEventListener('keydown', onKey);
+        return () => document.removeEventListener('keydown', onKey);
+    }, [open, close]);
 
     const filtered = mps.filter((mp) =>
         mp.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -26,10 +50,20 @@ const MpSelector = ({ mps, selected, onSelect, placeholder }: {
 
     return (
         <div className="relative">
-            <div
-                onClick={() => setOpen(!open)}
+            {/* The trigger and every option were divs with onClick, so the
+                whole member picker was unreachable by keyboard: a reader
+                could not choose anyone to compare at all. Buttons now, with
+                the listbox relationship declared. */}
+            <button
+                ref={triggerRef}
+                type="button"
+                onClick={() => (open ? close() : setOpen(true))}
+                aria-haspopup="listbox"
+                aria-expanded={open}
+                aria-label={selectedMp ? `${placeholder}: ${selectedMp.name}` : placeholder}
                 className={`
-                    p-4 rounded-xl cursor-pointer flex items-center gap-4 transition-all duration-200 border
+                    w-full text-left p-4 rounded-xl flex items-center gap-4 transition-all duration-200 border
+                    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
                     ${open ? 'bg-primary/10 border-primary' : 'bg-muted border-border hover:bg-muted hover:border-border'}
                 `}
             >
@@ -50,16 +84,35 @@ const MpSelector = ({ mps, selected, onSelect, placeholder }: {
                         <span className="text-muted-foreground text-sm flex-1">{placeholder}</span>
                     </>
                 )}
-            </div>
+            </button>
 
-            <AnimatePresence>
-                {open && (
-                    <>
-                        <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+            {/* Decorative click-away only — aria-hidden, because Escape
+                (handled on the document above) closes the list for anyone not
+                using a pointer. */}
+            {open && (
+                <div
+                    className="fixed inset-0 z-40"
+                    aria-hidden
+                    onClick={close}
+                />
+            )}
+
+            {/* No AnimatePresence. It wrapped this list to fade it out, and in
+                the browser the exit animation completed while the node was
+                never removed: a `role="listbox"` with 140 focusable options
+                sat in the document at opacity 0, reachable by Tab and by a
+                screen reader, with the trigger beside it saying
+                aria-expanded="false". The jsdom suite removed it correctly, so
+                only opening the page and looking found this.
+
+                The enter animation is kept; the fade-out is not worth a list
+                that outlives its own closing. */}
+            {open && (
                         <motion.div
                             initial={{ opacity: 0, y: -10 }}
                             animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -10 }}
+                            role="listbox"
+                            aria-label={placeholder}
                             className="absolute z-50 mt-2 w-full bg-popover border border-border rounded-xl shadow-raised max-h-80 overflow-auto custom-scrollbar"
                         >
                             <div className="sticky top-0 bg-popover p-2 border-b border-border">
@@ -74,25 +127,26 @@ const MpSelector = ({ mps, selected, onSelect, placeholder }: {
                             </div>
 
                             {filtered.map((mp) => (
-                                <div
+                                <button
                                     key={mp.id}
-                                    onClick={() => { onSelect(mp.id); setOpen(false); setSearch(''); }}
-                                    className="p-3 flex items-center gap-3 hover:bg-muted cursor-pointer transition-colors border-b border-border last:border-0"
+                                    type="button"
+                                    role="option"
+                                    aria-selected={mp.id === selected}
+                                    onClick={() => { onSelect(mp.id); close(); }}
+                                    className="w-full text-left p-3 flex items-center gap-3 hover:bg-muted transition-colors border-b border-border last:border-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
                                 >
                                     <img src={mp.photo_url} alt="" className="w-8 h-8 rounded-full object-cover bg-muted" />
                                     <div className="flex flex-col">
                                         <span className="text-sm font-medium text-foreground">{mp.name}</span>
                                         <span className="text-xs text-muted-foreground">{mp.party}</span>
                                     </div>
-                                </div>
+                                </button>
                             ))}
                             {filtered.length === 0 && (
                                 <div className="p-4 text-center text-xs text-muted-foreground">{LT.comparisonView.noResults}</div>
                             )}
                         </motion.div>
-                    </>
-                )}
-            </AnimatePresence>
+            )}
         </div>
     );
 };

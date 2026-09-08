@@ -5,7 +5,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Trophy, ArrowUpDown, HelpCircle } from 'lucide-react';
-import { useNavigate, NavLink } from 'react-router';
+import { useNavigate, NavLink, Link } from 'react-router';
 import { api, MONITORING_API_URL, type MpLeaderboardRow } from '../services/api';
 import { API_URL } from '../config';
 import {
@@ -343,7 +343,17 @@ export default function StebsenaView() {
                             (e.target as HTMLImageElement).src = DEFAULT_PHOTO;
                           }}
                         />
-                        <span className="font-semibold text-foreground">{row.mp.name}</span>
+                        {/* The row keeps its onClick for a pointer, but the
+                            name is a real link — otherwise the whole table is
+                            unreachable by keyboard, and there is no way to
+                            open a member's profile at all. */}
+                        <Link
+                          to={`/dashboard/mps/${row.mp.id}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="font-semibold text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+                        >
+                          {row.mp.name}
+                        </Link>
                       </div>
                     </td>
                     <td className="p-4 text-foreground/85">

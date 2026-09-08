@@ -109,6 +109,18 @@ export function MainLayout() {
   // there does not find their own location hidden behind a collapsed group.
   const [moreOpen, setMoreOpen] = React.useState(false);
   const closeSidebar = React.useCallback(() => setIsSidebarOpen(false), []);
+  // The backdrop is `aria-hidden` and correctly so — it is a click-away, not a
+  // control. But it was the only way to dismiss the drawer without picking a
+  // destination, which left a reader on a keyboard with the drawer open over
+  // the page and no way to close it.
+  React.useEffect(() => {
+    if (!isSidebarOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeSidebar();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [isSidebarOpen, closeSidebar]);
   const [cmdOpen, setCmdOpen] = React.useState(false);
   const location = useLocation();
   const pathname = location.pathname;

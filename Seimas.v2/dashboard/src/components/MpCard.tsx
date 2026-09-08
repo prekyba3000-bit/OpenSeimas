@@ -37,9 +37,25 @@ export function MpCard({ name, party, avatarUrl, onClick, mp }: MpCardProps) {
   const partyShort = getPartyShort(displayParty);
   const initials = displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
 
+  // A button when it does something, a plain card when it does not. It was a
+  // div with an onClick either way, which made the entire members grid — the
+  // primary way to browse the Seimas — unreachable without a pointer: no tab
+  // stop, no Enter, no focus ring, and no accessible name.
+  //
+  // A link would be better still, since this navigates and a reader may want a
+  // new tab; that means changing the component's `onClick` contract and its
+  // story, which is a separate change from making it usable at all.
+  const Root = onClick ? 'button' : 'div';
+
   return (
-    <div
-      className="flex items-center gap-4 p-4 rounded-xl cursor-pointer transition-all duration-200 backdrop-blur-sm border"
+    <Root
+      {...(onClick ? { type: 'button' as const } : {})}
+      className={
+        'w-full text-left flex items-center gap-4 p-4 rounded-xl transition-all duration-200 backdrop-blur-sm border' +
+        (onClick
+          ? ' cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background'
+          : '')
+      }
       style={{
         backgroundColor: 'hsl(var(--card))',
         borderColor: isHovered ? partyColor + '40' : 'hsl(var(--border))',
@@ -123,6 +139,6 @@ export function MpCard({ name, party, avatarUrl, onClick, mp }: MpCardProps) {
           style={{ color: isHovered ? partyColor : 'hsl(var(--muted-foreground))' }}
         />
       </div>
-    </div>
+    </Root>
   );
 }
