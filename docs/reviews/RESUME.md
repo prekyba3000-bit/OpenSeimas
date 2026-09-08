@@ -1,8 +1,8 @@
 # RESUME — 2026-09-08
 
-Branch `main`, pushed and deployed. Suites: **449 dashboard / 363 backend**
-(+19 skipped). `tsc -p tsconfig.typecheck.json` clean; the 11 remaining errors
-are the three excluded vendored `ui/` adapters.
+Branch `main`, pushed and deployed. Suites: **453 dashboard / 374 backend**
+(+26 skipped without a database; 389 with one). `tsc --noEmit` clean over all
+of `src`, no exclusions. `npm audit` reports 0 with and without dev deps.
 
 ## Read this first: an RPG card of named MPs was live, and two surfaces disagreed
 
@@ -65,20 +65,29 @@ principled exemptions (aria-hidden click-aways, and the full ARIA widget
 pattern SeimasMap uses). Three defects were found only by opening the page
 after the suites were green — see the commit.
 
-**Next concrete step, in priority order:**
+**The external audit is closed.** Every finding is verified and either fixed,
+deliberately declined with the measurement behind it, or judged wrong for this
+project — all recorded in `external-audit-2026-09-06.md`. Two were live in
+production (the RPG share card, the list/profile disagreement); four were
+latent; the a11y one was found while fixing another and was the widest.
 
-1. The three vendored shadcn/ui adapters (`calendar`, `chart`, `resizable`)
-   are broken against their installed libraries and excluded from the type
-   gate. Fix or delete — the charter's P6 note deliberately left the 42
-   vendored `ui/` files in place, so deleting is a call, not hygiene.
-2. `MpCard` is a button; navigation wants a link, so a reader can open a
-   member in a new tab. That means changing its `onClick` contract and its
-   story — a separate change from making it usable at all.
-3. Remaining audit items, none of them live: `ingest_votes_v2`'s
-   `ON CONFLICT DO NOTHING` never applies a corrected vote from the source
-   (R3); the CORS regex `https://dashboard.*\.vercel\.app` with credentials
-   (R5); dependency advisories for aiohttp, Vite, Vitest and Storybook (R4) —
-   Pillow's went with the share card.
+Three decisions worth remembering, because they went against the audit's
+recommendation:
+
+1. **Vote corrections are recorded, not applied.** Upserting
+   `mp_votes.vote_choice` is a §4.5 STOP condition. Measured first: 5,632
+   member-choice comparisons across the term, zero differences. Drift now
+   lands in `mp_vote_choice_drift` and a human decides.
+2. **`/health` stays 200 with a dead database.** Render restarts on a failing
+   check and a restart cannot fix a Neon outage. `/health/ready` carries the
+   status code instead.
+3. **`/api/internal/data-health` stays public.** It publishes our own
+   data-quality checks in Lithuanian; on a transparency platform that is the
+   point.
+
+**Next concrete step:** nothing from the audit. Back to the charter's Work
+Program — P5 (summary pipeline, template-first) is the next unstarted item,
+and P4's authored-bills recon note is still the open question there.
 
 **Watch:** Render went push-to-serving in ~40s twice on 2026-09-07/08, faster
 than a Docker rebuild should be. Evidence said the new code was live each

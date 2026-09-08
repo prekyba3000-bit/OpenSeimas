@@ -166,9 +166,24 @@ lists all 20 runners. Commit `49391af`.
   commit, since one enabled the other. `MAX_PAGE = 500`, clamped rather than
   rejected: a caller asking for too much wants as much as it can have, and a
   422 would break someone doing nothing wrong.
-* **CORS `https://dashboard.*\.vercel\.app` with credentials** (its R5).
-  Confirmed at `main.py:67`. The audit is careful to say this is not an
-  authentication bypass, and it is not.
+* **~~CORS `https://dashboard.*\.vercel\.app` with credentials~~** (its R5) —
+  **fixed.** That regex matched any Vercel project whose name starts with
+  "dashboard", a namespace open to anyone's registration. Not an
+  authentication bypass — the audit says so and it is right — but far wider
+  than the three deployments that exist, all already listed. Regex dropped,
+  `allow_credentials` dropped (nothing sends a credentialed request),
+  `CORS_EXTRA_ORIGINS` added so a preview is allowed deliberately.
+* **~~Dependency advisories~~** (its R4) — **fixed, and `npm audit` reports 0
+  with and without dev dependencies.** Mostly by checking what is actually
+  there rather than upgrading: `aiohttp` is imported nowhere and was removed,
+  as Pillow was; `drizzle-kit`/`drizzle-orm` (a React dashboard with no
+  Drizzle usage) were the sole source of the vulnerable esbuild;
+  `@storybook/test-runner` is declared and never invoked and was the only
+  thing pulling the vulnerable uuid. react-router 7.13.0 → 7.18.3 within its
+  major, and Storybook `~8.5.0` → `~8.6.0` resolving 8.6.18, where its
+  advisory is fixed — `npm audit fix --force` would have gone to Storybook 10
+  and broken the stories that document the nine retained components. vite was
+  already at the recommended 6.4.3.
 
 ### Vote corrections: measured, then deliberately not applied (its R3)
 
