@@ -35,7 +35,14 @@ cd "$REPO/Seimas.v2"
 echo "[$(date -Is)] daily sync start"
 .venv/bin/python apply_migrations.py
 .venv/bin/python -m pipeline.ingest_seimas
-.venv/bin/python -m pipeline.ingest_votes_v2
+# Non-fatal, like every other runner here. It now exits nonzero when some vote
+# results could not be fetched — and under `set -e` that would abort the whole
+# sync over one 404'd vote, taking registrations with it. Registrations
+# arriving late is what understated 25 members' attendance on 2026-08-25; that
+# must not be collateral damage from an incomplete vote fetch. The missed ids
+# are named in the output and the run is recorded as an error in
+# source_fetches, so it is visible without being fatal.
+.venv/bin/python -m pipeline.ingest_votes_v2 || echo "[$(date -Is)] vote ingest incomplete (non-fatal, missed results retry next run)"
 
 # Registrations, immediately after the votes that create the sitting day.
 # Attendance v2 counts "registered OR voted", and a sitting day enters the

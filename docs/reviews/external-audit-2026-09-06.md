@@ -170,6 +170,37 @@ lists all 20 runners. Commit `49391af`.
   Confirmed at `main.py:67`. The audit is careful to say this is not an
   authentication bypass, and it is not.
 
+### Vote corrections: measured, then deliberately not applied (its R3)
+
+The audit says `ingest_votes_v2.py:300`'s `ON CONFLICT DO NOTHING` preserves
+old or incorrect choices when the source changes them, and proposes upserting
+the mutable fields. The reasoning is right and the fix is a §4.5 STOP
+condition: overwriting `mp_votes.vote_choice` changes a historical ingested
+record, and what a named member is recorded as having voted is precisely the
+row this project does not quietly rewrite.
+
+So I measured it first, read-only against production on 2026-09-08. Forty
+votes sampled at random across the whole term, re-fetched from
+`p2b.ad_sp_balsavimo_rezultatai`, **5,632 member-choice comparisons, zero
+differences.** Not one stored choice disagrees with what the source serves
+today. The correction has never once been needed.
+
+The real gap was that we would not have known if it were. The ingest already
+holds both values, so it now records a disagreement in
+`mp_vote_choice_drift` (migration 045) and changes nothing — with a `warn` /
+`record` DQ check so it surfaces, and a `times_seen` counter so a daily
+re-run of the same drift does not read as an escalation. A drift row is
+evidence for a person to act on, not an instruction to a script.
+
+Also fixed here: `record_fetch` was imported at the top of that file and never
+called, so the runner for the project's core dataset was the only one leaving
+no trace in `source_fetches`, and a run that missed vote results printed a
+warning and exited 0. It now records provenance and returns nonzero — with an
+`|| echo` guard in `daily_sync.sh`, because under `set -e` one 404'd vote
+result would otherwise abort the whole sync and take the registrations ingest
+with it, which is exactly what understated 25 members' attendance on
+2026-08-25.
+
 ## Where I think the audit is wrong for this project
 
 * **Unauthenticated `/api/internal/data-health`** (its R5). Confirmed

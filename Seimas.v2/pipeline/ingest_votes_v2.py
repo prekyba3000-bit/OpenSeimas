@@ -294,16 +294,69 @@ def process_sitting(sess_id, sit_id):
 
             # Upsert MP Votes
             if mp_votes_batch:
+                # DO NOTHING, deliberately, and this is the one place it is
+                # worth spelling out. Upserting the choice would mean
+                # overwriting what a named member is recorded as having voted —
+                # a §4.5 STOP condition, because that is a historical ingested
+                # record and not ours to quietly rewrite.
+                #
+                # Measured 2026-09-08 before deciding: 40 votes sampled across
+                # the term, re-fetched from the source, 5,632 member-choice
+                # comparisons, zero differences. The correction this would
+                # apply has never once been needed.
+                #
+                # What was missing is that we would not have known if it were.
+                # The disagreement is recorded below and nothing is changed.
                 extras.execute_values(cur, """
                     INSERT INTO mp_votes (vote_id, politician_id, vote_choice)
                     VALUES %s
                     ON CONFLICT DO NOTHING
                 """, mp_votes_batch)
+                _record_choice_drift(cur, mp_votes_batch)
 
             conn.commit()
             
     print(f"  > Sitting {sit_id}: Synced {local_votes_count} votes.")
     return local_votes_count
+
+def _record_choice_drift(cur, batch):
+    """Record where the source now disagrees with what we already stored.
+
+    Costs no extra HTTP: the ingest is already holding both values. Writes to
+    `mp_vote_choice_drift` only; `mp_votes` is never touched. A drift row is
+    evidence for a person to act on — re-ingest deliberately, publish a
+    correction under §1.6 — not an instruction to a script.
+
+    `mp_vote_choice_drift` may be absent on a tree without migration 045; that
+    degrades to doing nothing rather than failing an ingest over its own
+    bookkeeping.
+    """
+    cur.execute("SELECT to_regclass('public.mp_vote_choice_drift') AS t")
+    if cur.fetchone()[0] is None:
+        return
+    extras.execute_values(
+        cur,
+        """
+        INSERT INTO mp_vote_choice_drift
+               (vote_id, politician_id, stored_choice, source_choice)
+        SELECT s.vote_id::integer, s.politician_id::uuid, mv.vote_choice, s.source_choice
+        FROM (VALUES %s) AS s(vote_id, politician_id, source_choice)
+        JOIN mp_votes mv
+          -- Explicit casts: the batch carries the vote id as the string the
+          -- XML gave, and mp_votes.vote_id is an integer.
+          ON mv.vote_id = s.vote_id::integer
+         AND mv.politician_id = s.politician_id::uuid
+        -- NULL-safe: blank-to-value and value-to-blank are both drift, and
+        -- `<>` would call neither of them one.
+        WHERE COALESCE(mv.vote_choice, '') IS DISTINCT FROM COALESCE(s.source_choice, '')
+        ON CONFLICT (vote_id, politician_id,
+                     COALESCE(stored_choice, ''), COALESCE(source_choice, ''))
+        DO UPDATE SET last_seen_at = NOW(),
+                      times_seen = mp_vote_choice_drift.times_seen + 1
+        """,
+        batch,
+    )
+
 
 def ingest_term_votes():
     init_db_pool()
@@ -358,5 +411,47 @@ def sync_votes():
     ingest_term_votes()
 
 
+class IncompleteRun(RuntimeError):
+    """Some vote results could not be fetched, so the run did not read
+    everything it set out to read."""
+
+
+def run(args=None):
+    """Ingest with a provenance row recorded around it.
+
+    `record_fetch` was imported at the top of this file and never called, so
+    this — the runner for the project's core dataset — was the only one leaving
+    no trace in `source_fetches`. A run that missed vote results printed a
+    warning, returned a dict nobody read, and exited 0.
+    """
+    if not DB_DSN:
+        print("ERROR: DB_DSN not set", file=sys.stderr)
+        return 2
+    conn = psycopg2.connect(DB_DSN)
+    try:
+        with record_fetch(conn, "seimas_votes_v2", f"{BASE_URL}.ad_seimo_sesijos") as fetch:
+            result = ingest_term_votes() or {}
+            failed = result.get("failed_vote_ids") or []
+            fetch["rows"] = result.get("votes", 0)
+            fetch["parsed"] = result.get("votes", 0)
+            fetch["inserted"] = result.get("votes", 0)
+            if failed:
+                raise IncompleteRun(
+                    f"{len(failed)} vote result(s) not fetched: {', '.join(failed)}"
+                )
+    except IncompleteRun as exc:
+        # Already recorded as status='error' by record_fetch. A traceback would
+        # say "crash" about a condition the run handled and reported.
+        print(f"ERROR: vote ingest incomplete — {exc}", file=sys.stderr)
+        return 1
+    finally:
+        conn.close()
+    return 0
+
+
+def main(args=None):
+    return run(args)
+
+
 if __name__ == "__main__":
-    ingest_term_votes()
+    sys.exit(run())
