@@ -85,9 +85,30 @@ recommendation:
    data-quality checks in Lithuanian; on a transparency platform that is the
    point.
 
-**Next concrete step:** nothing from the audit. Back to the charter's Work
-Program — P5 (summary pipeline, template-first) is the next unstarted item,
-and P4's authored-bills recon note is still the open question there.
+**P5 is code-complete, both halves.** The vote templates shipped 2026-09-02;
+the bill half shipped 2026-09-08 now that `legislation` holds 1,683 rows that
+all join to votes. Nothing is published — no route, no `summary_revisions`
+row, no surface — and no LLM is involved, by design and by §4.1.
+
+The figure gate was strengthened while extending it: verbatim spans are
+consumed where they occur, so a title's digits can no longer be borrowed for a
+claim the row does not support.
+
+Worth remembering: the gate reported **0 violations** on the first bill pilot,
+and reading the rendered Lithuanian found four defects — a hardcoded plural
+participle, „nuo X iki X" for same-day passages, a doubled full stop, and
+stages listed with acceptance before consideration. None of them is a number,
+so none was visible to a figure check.
+
+**Next concrete step, and it is not code: a human reads the two pilots**
+(`p5-vote-summary-pilot.md`, `p5-bill-summary-pilot.md`). Specifically the
+stage names against the Seimas Statute — they are claims about procedure, not
+about our data — and the Lithuanian throughout, which is working copy.
+Publication is gated on that.
+
+After that, the Work Program's open item is P4's authored-bills recon: the API
+serves `bills_authored` while `legislation` is fed from a different source, and
+which of the two is canonical has never been written down.
 
 **Watch:** Render went push-to-serving in ~40s twice on 2026-09-07/08, faster
 than a Docker rebuild should be. Evidence said the new code was live each
