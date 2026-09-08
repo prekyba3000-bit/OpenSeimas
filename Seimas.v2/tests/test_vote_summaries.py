@@ -184,3 +184,43 @@ def test_teens_do_not_take_the_singular():
     assert "11 narių" in text
     assert "1 narys" in text
     assert "21 narys" in text
+
+
+# --- the hole the verbatim rule closes -----------------------------------
+
+def test_a_digit_cannot_be_borrowed_from_the_title_for_a_claim():
+    """The rule that only exists because of the step after this one.
+
+    A title carrying „Nr. IX-675 5, 17, 41 straipsniu" used to put 675, 5, 17
+    and 41 into the allowed multiset as loose digits. A rephrasing could spend
+    one of them on a claim of its own — „susilaike 41" — while quietly dropping
+    it from the title, and the multiset balanced. Accounting for each verbatim
+    span where it actually occurs means those digits are spent on the title.
+    """
+    r = row(title="Pelno mokesčio įstatymo Nr. IX-675 5, 17, 41 straipsnių pakeitimas",
+            votes_abstained=1)
+    s = render_vote_summary(r)
+    assert verify_rendered(s.text, s) == []
+
+    # The title arrives with one of its numbers moved into a tally claim.
+    tampered = s.text.replace("Nr. IX-675 5, 17, 41 straipsnių", "Nr. IX-675 5, 17 straipsnių")
+    tampered = tampered.replace("susilaikė – 1 narys", "susilaikė – 41 narių")
+    kinds = {v.kind for v in verify_rendered(tampered, s)}
+    assert "verbatim_altered" in kinds
+
+
+def test_editing_the_quoted_title_is_a_violation_on_its_own():
+    """The title is the one part a reader must get as the source wrote it. A
+    rephrasing that tidies it is describing a different law."""
+    r = row(title="Mokėjimų įstatymo Nr. VIII-1370 3 straipsnio pakeitimo įstatymo projektas")
+    s = render_vote_summary(r)
+    tidied = s.text.replace("Mokėjimų įstatymo Nr. VIII-1370 3 straipsnio pakeitimo įstatymo projektas",
+                            "Mokėjimų įstatymo pakeitimas")
+    assert [v.kind for v in verify_rendered(tidied, s)].count("verbatim_altered") == 1
+
+
+def test_an_untouched_title_still_passes():
+    """The strengthening must not reject the template's own output."""
+    r = row(title="Seimo nutarimo „Dėl 2025 m. biudžeto“ projektas (Nr. XVP-42)")
+    s = render_vote_summary(r)
+    assert verify(s, r) == []

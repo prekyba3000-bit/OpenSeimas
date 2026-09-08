@@ -14,15 +14,23 @@ runs on the finished string without trusting how it was produced.
 So `verify_rendered` takes text, not segments: it works on template output and
 on rephrased output identically.
 
-Two rules:
+Three rules:
 
-1. Every number in the text must be one the source row supports. The allowed
-   multiset is the figures the template emitted, plus the digits inside spans
-   copied verbatim from the source.
+1. Every number in the text must be one the source row supports - the figures
+   the template emitted, once the verbatim spans have been accounted for.
 
 2. Numbers may not be added, and figures may not be dropped. A rephrasing that
    silently loses "susilaike - 1" tells a different story than the record does,
    so a missing approved figure is a violation too.
+
+3. Spans copied verbatim from the source must survive intact. This closes a
+   hole the first two rules leave open: a title like "Nr. IX-675 5, 17, 41
+   straipsniu" puts 675, 5, 17 and 41 into the allowed multiset, and a
+   rephrasing could spend one of them on a claim of its own - "susilaike 41" -
+   while quietly dropping it from the title. Requiring the verbatim span to
+   appear, and accounting for its digits where it appears, means those digits
+   are spent on the title and cannot be borrowed. What is left to check
+   against is exactly the figures the template stands behind.
 """
 from __future__ import annotations
 
@@ -99,14 +107,35 @@ def verify_segments(summary: VoteSummary, row: Mapping[str, Any]) -> list[Violat
 
 
 def approved_figures(summary: VoteSummary) -> list[str]:
-    """Every digit run the finished text is allowed to contain."""
-    allowed: list[str] = []
+    """Every digit run the finished text is allowed to contain, once the
+    verbatim spans have been accounted for separately."""
+    return [s.text for s in summary.segments if s.kind == "figure"]
+
+
+def _consume_verbatim(text: str, summary: VoteSummary) -> tuple[str, list[Violation]]:
+    """Remove each verbatim span from the text, once, where it occurs.
+
+    A span that is not there is a violation in itself: the title is the one
+    part of a summary that must reach the reader as the source wrote it, and a
+    rephrasing that edits it is describing a different law.
+    """
+    violations: list[Violation] = []
+    remaining = text
     for seg in summary.segments:
-        if seg.kind == "figure":
-            allowed.append(seg.text)
-        elif seg.kind == "verbatim":
-            allowed.extend(_digit_runs(seg.text))
-    return allowed
+        if seg.kind != "verbatim" or not seg.text:
+            continue
+        index = remaining.find(seg.text)
+        if index < 0:
+            violations.append(
+                Violation(
+                    "verbatim_altered",
+                    f"text no longer contains the source span {seg.source_field or seg.text!r} "
+                    "unchanged; it must travel as the source wrote it",
+                )
+            )
+            continue
+        remaining = remaining[:index] + remaining[index + len(seg.text):]
+    return remaining, violations
 
 
 def verify_rendered(text: str, summary: VoteSummary) -> list[Violation]:
@@ -115,10 +144,10 @@ def verify_rendered(text: str, summary: VoteSummary) -> list[Violation]:
     Compares multisets, so a figure repeated twice in text that the row
     supports once is caught.
     """
-    violations: list[Violation] = []
+    remaining, violations = _consume_verbatim(text, summary)
     allowed = list(approved_figures(summary))
 
-    for run in _digit_runs(text):
+    for run in _digit_runs(remaining):
         if run in allowed:
             allowed.remove(run)
         else:
