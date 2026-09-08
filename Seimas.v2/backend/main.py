@@ -8,6 +8,7 @@ from fastapi.responses import Response, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 from contextlib import asynccontextmanager
+import os
 import threading
 from typing import Dict, Optional, Any
 
@@ -58,13 +59,30 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Skaidrus Seimas API", lifespan=lifespan)
 
+# Exact origins, and no credentials.
+#
+# `allow_origin_regex=r"https://dashboard.*\.vercel\.app"` matched any Vercel
+# project whose name begins with "dashboard" — anyone's, not just ours, since
+# that namespace is open to registration. It is not an authentication bypass
+# (admin routes take a Bearer token, which CORS never hands out) but it is a
+# browser trust policy far wider than the three deployments that exist, all of
+# which are already named in ALLOWED_ORIGINS.
+#
+# `allow_credentials=True` is dropped for the same reason: nothing in the
+# dashboard, the Tauri build or the Android WebView sends cookies or
+# credentialed requests, so it granted an ability no client uses.
+#
+# A preview deployment can be allowed deliberately with CORS_EXTRA_ORIGINS
+# (comma-separated) rather than by opening a wildcard.
+_extra_origins = [
+    o.strip() for o in os.getenv("CORS_EXTRA_ORIGINS", "").split(",") if o.strip()
+]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=core.ALLOWED_ORIGINS,
-    allow_origin_regex=r"https://dashboard.*\.vercel\.app",
+    allow_origins=core.ALLOWED_ORIGINS + _extra_origins,
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
 )
 
 

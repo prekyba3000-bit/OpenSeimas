@@ -1,5 +1,4 @@
 # Pinned 2026-06-11 — kept in sync with root requirements.txt (the file Docker installs).
-aiohttp==3.14.1
 psycopg2-binary==2.9.12
 python-dotenv==1.2.2
 fastapi==0.136.3
