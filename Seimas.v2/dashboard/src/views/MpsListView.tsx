@@ -254,7 +254,7 @@ const MpsListView = () => {
                                     <MpCard
                                         key={mp.id}
                                         mp={mp}
-                                        onClick={() => handleMpClick(mp.id)}
+                                        to={`/dashboard/mps/${mp.id}`}
                                     />
                                 ))}
                             </div>

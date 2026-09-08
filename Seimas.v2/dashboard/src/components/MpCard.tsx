@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router';
 import { Building2, ChevronRight, TrendingUp, Vote } from 'lucide-react';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { getPartyColor, getPartyShort } from '../utils/partyColors';
@@ -9,6 +10,9 @@ interface MpCardProps {
   name?: string;
   party?: string;
   avatarUrl?: string;
+  /** Where the card goes. Prefer this over `onClick` for navigation: a link
+   *  can be opened in a new tab, copied, and read as a destination. */
+  to?: string;
   onClick?: () => void;
   mp?: {
     id: string;
@@ -23,7 +27,7 @@ interface MpCardProps {
   };
 }
 
-export function MpCard({ name, party, avatarUrl, onClick, mp }: MpCardProps) {
+export function MpCard({ name, party, avatarUrl, to, onClick, mp }: MpCardProps) {
   const displayName = name || mp?.display_name || mp?.name || 'Unknown';
   const displayParty = factionLabel(party || mp?.current_party || mp?.party);
   const photoUrl = avatarUrl || mp?.photo_url;
@@ -37,22 +41,23 @@ export function MpCard({ name, party, avatarUrl, onClick, mp }: MpCardProps) {
   const partyShort = getPartyShort(displayParty);
   const initials = displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
 
-  // A button when it does something, a plain card when it does not. It was a
-  // div with an onClick either way, which made the entire members grid — the
-  // primary way to browse the Seimas — unreachable without a pointer: no tab
-  // stop, no Enter, no focus ring, and no accessible name.
-  //
-  // A link would be better still, since this navigates and a reader may want a
-  // new tab; that means changing the component's `onClick` contract and its
-  // story, which is a separate change from making it usable at all.
-  const Root = onClick ? 'button' : 'div';
+  // A link when it navigates, a button when it merely does something, a plain
+  // card when it does neither. It was a div with an onClick in every case,
+  // which made the entire members grid — the primary way to browse the
+  // Seimas — unreachable without a pointer: no tab stop, no Enter, no focus
+  // ring, no accessible name. A button fixed that and still could not be
+  // opened in a new tab, which is a normal thing to want from a list of 141
+  // people.
+  const interactive = !!(to || onClick);
+  const Root: React.ElementType = to ? Link : onClick ? 'button' : 'div';
 
   return (
     <Root
-      {...(onClick ? { type: 'button' as const } : {})}
+      {...(to ? { to } : {})}
+      {...(!to && onClick ? { type: 'button' as const } : {})}
       className={
         'w-full text-left flex items-center gap-4 p-4 rounded-xl transition-all duration-200 backdrop-blur-sm border' +
-        (onClick
+        (interactive
           ? ' cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background'
           : '')
       }

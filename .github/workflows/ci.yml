@@ -58,9 +58,8 @@ jobs:
       - name: Install
         run: npm ci --legacy-peer-deps
       # Vite transpiles regardless of type errors, so nothing else here would
-      # have failed on a broken adapter. Excludes three vendored shadcn/ui
-      # files nothing imports; see tsconfig.typecheck.json and the test that
-      # keeps that exclusion honest.
+      # have failed on one. No exclusions: the three vendored shadcn/ui
+      # adapters that used to need them are deleted.
       - name: Type check
         run: npm run dashboard:typecheck
       - name: Unit tests (vitest, single run in CI)

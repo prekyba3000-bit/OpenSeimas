@@ -22,9 +22,8 @@ psql -U julio -h localhost -d postgres -q -c "DROP DATABASE $SCRATCH_DB;"
 echo "pre-push: dashboard types..."
 cd dashboard
 # Vite transpiles regardless of type errors, so the build below never caught
-# one. Excludes three vendored shadcn/ui files nothing imports; the test
-# ui/noVendoredUiImports.test.ts fails if that stops being true.
-npx tsc -p tsconfig.typecheck.json --noEmit
+# one. Whole project, no exclusions.
+npx tsc --noEmit
 
 echo "pre-push: dashboard tests..."
 # The dashboard suite was never gated: the hook ran pytest and a production

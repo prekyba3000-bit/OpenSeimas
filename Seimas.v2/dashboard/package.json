@@ -13,7 +13,7 @@
     "build-storybook": "storybook build",
     "sync:tokens": "tsx scripts/sync-tokens.ts",
     "sync:mps": "tsx scripts/sync-mps.ts",
-    "typecheck": "tsc -p tsconfig.typecheck.json --noEmit"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@capacitor/core": "8.5.0",
@@ -63,11 +63,9 @@
     "motion": "^12.34.0",
     "next-themes": "^0.4.6",
     "react": "^19.2.0",
-    "react-day-picker": "^9.13.0",
     "react-dom": "^19.2.0",
     "react-hook-form": "^7.71.1",
     "react-markdown": "^9.0.3",
-    "react-resizable-panels": "^4.5.9",
     "react-responsive-masonry": "^2.7.1",
     "react-router": "^7.13.0",
     "recharts": "^3.7.0",
