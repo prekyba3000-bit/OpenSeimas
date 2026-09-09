@@ -13,6 +13,7 @@ import { ProblemDetailsNotice } from '../components/ProblemDetailsNotice';
 import { formatLtDateLong } from '../utils/ltDate';
 import { NoPerMemberData } from '../components/NoPerMemberData';
 import { isTruncatedTitle, TITLE_TRUNCATED_LT } from '../utils/voteTitle';
+import { PlainSummary } from '../components/PlainSummary';
 import { factionLabel } from '../utils/faction';
 import { toOutcome } from '../utils/voteOutcome';
 import {
@@ -169,6 +170,11 @@ const VoteDetailView = ({ voteId }: { voteId: string }) => {
                     <p className="text-muted-foreground text-sm leading-relaxed border-t border-border pt-4 mt-4">{vote.description}</p>
                 )}
             </Card>
+
+            {/* Approved, re-verified plain-language summary, or nothing.
+                Rendered above the raw tallies because it is the reader-facing
+                account; it never shows an unreviewed or stale one. */}
+            <PlainSummary entityType="vote" entityId={voteId} />
 
             {/* The aggregate tallies and the per-member list are separate
                 fields from separate parts of the source, so each is gated on

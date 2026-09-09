@@ -17,6 +17,7 @@ Conventions: routes resolve runtime helpers through backend.core proxies so test
 monkeypatch backend.core.* (same pattern as routes_public/routes_meta).
 """
 from fastapi import APIRouter, HTTPException, Request, Header
+from fastapi.responses import JSONResponse
 import datetime
 from typing import Optional
 
@@ -378,6 +379,168 @@ def add_summary_revision(payload: SummaryRevisionIn, authorization: Optional[str
             row = cur.fetchone()
         conn.commit()
     return {"status": "ok", "id": str(row["id"]), "revision": next_rev}
+
+
+class SummaryApproveIn(BaseModel):
+    entity_type: str = Field(..., min_length=1)
+    entity_id: str = Field(..., min_length=1, max_length=200)
+    revision: int = Field(..., ge=1)
+    approved_by: str = Field(..., min_length=1, max_length=200)
+
+
+def _figure_gate(entity_type: str, entity_id: str, body_lt: str, cur):
+    """Run the figure gate on a stored body against a freshly-rendered template.
+
+    Returns the list of gate violation dicts. Empty means the body's figures
+    all match the live row — the charter's condition for publishing it. A type
+    with no template (mp/topic) returns a single "unsupported" violation, so it
+    cannot be approved into a figure-verified state it was never checked for.
+    """
+    from pipeline.summaries import render_summary
+    from pipeline.summaries.verify import verify_rendered
+
+    summary, row = render_summary(entity_type, entity_id, cur)
+    if summary is None:
+        return [{
+            "kind": "no_template",
+            "detail": f"{entity_type!r} has no figure-bearing template, or "
+                      f"{entity_id!r} matched no data — cannot verify or publish it",
+        }]
+    return [{"kind": v.kind, "detail": v.detail} for v in verify_rendered(body_lt, summary)]
+
+
+@router.post("/api/admin/summaries/approve")
+def approve_summary_revision(payload: SummaryApproveIn, authorization: Optional[str] = Header(None)):
+    """Publish one drafted revision — after its figures are checked.
+
+    This is the boundary the charter's "every figure must match or the summary
+    is rejected" lives on. A revision is a draft until it is approved; approval
+    re-renders the template for the entity and runs the gate on the stored
+    body, refusing (422) if any figure the body states is not one the current
+    row supports. So an unreviewed pilot, or a future rephrasing that renumbers,
+    cannot be approved even by a maintainer with the token.
+    """
+    _require_admin_auth(authorization)
+    if payload.entity_type not in _SUMMARY_TYPES:
+        raise HTTPException(status_code=422, detail=f"entity_type must be one of {_SUMMARY_TYPES}")
+
+    # Outcome is decided inside the DB block; the HTTP error is raised after it.
+    # get_db_conn's context manager has a broad `except Exception` that logs and
+    # re-raises as a connection error, so an HTTPException raised inside it comes
+    # out mangled — the detail dict arrives at the client as a string.
+    outcome: dict = {}
+    with get_db_conn() as conn:
+        if not conn:
+            raise HTTPException(status_code=500, detail="Database connection failed")
+        with conn.cursor() as cur:
+            _require_table(cur, "summary_revisions")
+            cur.execute(
+                """
+                SELECT id, body_lt FROM summary_revisions
+                WHERE entity_type = %s AND entity_id = %s AND revision = %s
+                """,
+                (payload.entity_type, payload.entity_id, payload.revision),
+            )
+            rev = cur.fetchone()
+            if not rev:
+                outcome = {"code": 404, "detail": "revision not found"}
+            else:
+                violations = _figure_gate(payload.entity_type, payload.entity_id, rev["body_lt"], cur)
+                if violations:
+                    outcome = {"code": 422, "violations": violations}
+                else:
+                    cur.execute(
+                        "UPDATE summary_revisions SET approved_at = NOW(), approved_by = %s WHERE id = %s",
+                        (payload.approved_by, rev["id"]),
+                    )
+                    conn.commit()
+
+    if outcome.get("code") == 404:
+        raise HTTPException(status_code=404, detail="revision not found")
+    if outcome.get("code") == 422:
+        # Same shape as the app's other problem-details errors, with the gate's
+        # findings in an `extra` field the global handler would otherwise drop —
+        # a maintainer approving a summary needs to see why it was refused.
+        return JSONResponse(
+            status_code=422,
+            content={
+                "type": "https://openseimas.local/problems/figure-gate",
+                "title": "Figure gate rejected the summary",
+                "status": 422,
+                "detail": "A figure in the summary is not one the record supports.",
+                "instance": "/api/admin/summaries/approve",
+                "violations": outcome["violations"],
+            },
+        )
+    return {"status": "ok", "revision": payload.revision, "approved": True}
+
+
+@router.get("/api/summaries/{entity_type}/{entity_id}")
+def get_published_summary(entity_type: str, entity_id: str):
+    """The published summary for an entity — the latest APPROVED revision, or
+    nothing.
+
+    Two things stand between a stored row and a served string, and both are the
+    trust floor:
+
+      * a draft is never served. Only a revision with approved_at set is a
+        candidate, and the latest such by revision number wins. An unapproved
+        revision — a pilot, a rephrasing awaiting review — is invisible here
+        however recent.
+      * an approved summary whose figures no longer match the data is withheld,
+        not shown. A bill's passage grows as new votes are ingested, so a count
+        approved last week can go stale; rather than display a number the
+        current record no longer supports, the body is held back and the state
+        says so. Votes are stable, but the check is uniform.
+
+    Never 500s on a missing table or an unrenderable type: it returns the
+    honest "nothing published" shape, because the vote page always asks.
+    """
+    if entity_type not in _SUMMARY_TYPES:
+        raise HTTPException(status_code=422, detail=f"entity_type must be one of {_SUMMARY_TYPES}")
+
+    none = {"entity_type": entity_type, "entity_id": entity_id,
+            "status": "none", "summary": None}
+
+    result = none
+    with get_db_conn() as conn:
+        if not conn:
+            raise HTTPException(status_code=500, detail="Database connection failed")
+        with conn.cursor() as cur:
+            if not _table_exists(cur, "summary_revisions"):
+                return none
+            cur.execute(
+                """
+                SELECT revision, body_lt, editor, note, approved_at, approved_by, created_at
+                FROM summary_revisions
+                WHERE entity_type = %s AND entity_id = %s AND approved_at IS NOT NULL
+                ORDER BY revision DESC
+                LIMIT 1
+                """,
+                (entity_type, entity_id),
+            )
+            rev = cur.fetchone()
+            if rev:
+                # Re-verify against the live row before serving. A published
+                # figure the data no longer supports is withheld, not displayed.
+                if _figure_gate(entity_type, entity_id, rev["body_lt"], cur):
+                    result = {"entity_type": entity_type, "entity_id": entity_id,
+                              "status": "withheld_stale", "summary": None}
+                else:
+                    result = {
+                        "entity_type": entity_type, "entity_id": entity_id,
+                        "status": "published",
+                        "summary": {
+                            "body_lt": rev["body_lt"],
+                            "revision": rev["revision"],
+                            "editor": rev["editor"],
+                            "note": rev["note"],
+                            "approved_by": rev["approved_by"],
+                            "approved_at": rev["approved_at"].isoformat(),
+                            "created_at": rev["created_at"].isoformat(),
+                        },
+                    }
+    return result
 
 
 class MpReplyIn(BaseModel):

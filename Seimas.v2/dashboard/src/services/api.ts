@@ -492,6 +492,33 @@ export const mpSummarySchema = z.object({
 export const mpSummaryListSchema = z.array(mpSummarySchema);
 
 // Wire contract for /api/votes/{id}.
+// Wire contract for /api/summaries/{entity_type}/{entity_id}.
+//
+// `status` decides what a surface does: only "published" carries a body to
+// render. "none" is the ordinary state — no revision has been approved — and
+// "withheld_stale" means one was, but its figures no longer match the record,
+// so the server holds it back rather than serve a stale number. A surface
+// renders text for "published" and nothing for the rest; it never invents a
+// difference between them.
+export const publishedSummarySchema = z.object({
+  entity_type: z.string(),
+  entity_id: z.string(),
+  status: z.enum(["published", "none", "withheld_stale"]),
+  summary: z
+    .object({
+      body_lt: z.string(),
+      revision: z.number(),
+      editor: z.string(),
+      note: z.string().nullable(),
+      approved_by: z.string().nullable(),
+      approved_at: z.string(),
+      created_at: z.string(),
+    })
+    .nullable(),
+});
+
+export type PublishedSummary = z.infer<typeof publishedSummarySchema>;
+
 export const voteDetailSchema = z.object({
   id: z.string(),
   // votes.sitting_date and votes.title are nullable columns. Neither is null
@@ -1084,6 +1111,11 @@ export const api = {
 
   getVote: (id: string) =>
     request<VoteDetail>(`/votes/${id}`, { parse: (data) => voteDetailSchema.parse(data) }),
+
+  getSummary: (entityType: "vote" | "bill", id: string) =>
+    request<PublishedSummary>(`/summaries/${entityType}/${id}`, {
+      parse: (data) => publishedSummarySchema.parse(data),
+    }),
 
   compareMps: (ids: string[]) =>
     request<ComparisonResult>(`/mps/compare?ids=${ids.join(",")}`),

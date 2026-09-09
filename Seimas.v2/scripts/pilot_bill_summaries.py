@@ -23,34 +23,29 @@ from pathlib import Path
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
-from pipeline.summaries import render_bill_summary, verify
+from pipeline.summaries import render_bill_summary, verify, fetch_bill
 
 OUT = Path(__file__).resolve().parent.parent.parent / "docs" / "reviews" / "p5-bill-summary-pilot.md"
 
-# One aggregate per bill. Every figure the template prints comes from a column
-# in this result, so the gate has something to check each one against.
-BILL_SQL = """
+# Selecting a bill that exhibits a given shape. The row the template actually
+# reads is built by the canonical fetch_bill (pipeline/summaries/render.py) —
+# the passage aggregate has one home, and this only decides WHICH bill to hand
+# it. The predicate columns below (unnamed_stage_count, title length) exist for
+# selection, not for the summary.
+SELECT_SQL = """
 WITH passage AS (
     SELECT l.project_id,
            l.title,
-           count(*)                                        AS vote_count,
+           count(*)                                         AS vote_count,
            count(*) FILTER (WHERE v.votes_participated > 0) AS tallied_count,
-           min(v.sitting_date)                             AS first_date,
-           max(v.sitting_date)                             AS last_date,
-           count(*) FILTER (WHERE v.vote_type IS NULL)     AS unnamed_stage_count
+           min(v.sitting_date)                              AS first_date,
+           max(v.sitting_date)                              AS last_date,
+           count(*) FILTER (WHERE v.vote_type IS NULL)      AS unnamed_stage_count
     FROM legislation l
     JOIN votes v ON v.project_registration_nr = l.project_id
     GROUP BY l.project_id, l.title
 )
-SELECT * FROM passage WHERE {predicate} LIMIT 1
-"""
-
-STAGE_SQL = """
-SELECT v.vote_type, count(*) AS n, min(v.sitting_date) AS first_seen
-FROM votes v
-WHERE v.project_registration_nr = %s
-GROUP BY v.vote_type
-ORDER BY min(v.sitting_date), count(*) DESC
+SELECT project_id FROM passage WHERE {predicate} LIMIT 1
 """
 
 SHAPES: tuple[tuple[str, str, str], ...] = (
@@ -100,22 +95,12 @@ SHAPES: tuple[tuple[str, str, str], ...] = (
 
 
 def fetch(cur, predicate: str):
-    cur.execute(BILL_SQL.format(predicate=predicate))
-    row = cur.fetchone()
-    if row is None:
+    """Pick a bill matching the shape, then build its row the canonical way."""
+    cur.execute(SELECT_SQL.format(predicate=predicate))
+    picked = cur.fetchone()
+    if picked is None:
         return None
-    row = dict(row)
-    cur.execute(STAGE_SQL, (row["project_id"],))
-    stages = cur.fetchall()
-    row["stage_counts"] = [(r["vote_type"], r["n"]) for r in stages]
-    row["last_stage"] = stages[-1]["vote_type"] if stages else None
-    # Flattened so every figure's source_field resolves against this mapping
-    # and the gate can check it. A figure the row cannot answer for is a
-    # violation, not a pass.
-    for stage, n in row["stage_counts"]:
-        if stage:
-            row[f"stage_count.{stage}"] = n
-    return row
+    return fetch_bill(cur, picked["project_id"])
 
 
 def main() -> int:
