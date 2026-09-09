@@ -45,10 +45,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      # 24 is the current LTS; 20 reached end of life. package.json declares
-      # `engines.node >= 22`, which is what the local pre-push hook runs on —
-      # CI deliberately runs the newer line so a version-specific break shows
-      # up here rather than in a Vercel build.
+      # 24 is the current LTS; 20 reached end of life. The local pre-push
+      # hook runs on Node 22; CI deliberately runs the newer line so a
+      # version-specific break shows up here rather than in a Vercel build.
+      #
+      # No `engines` field in package.json: Vercel reads it and rejects a
+      # range like ">=22" with "Invalid Node.js Version", which failed two
+      # deploys on 2026-09-09. Node version is pinned per-runner instead —
+      # here, and in the Vercel project settings — not declared in the manifest
+      # every consumer reads.
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
