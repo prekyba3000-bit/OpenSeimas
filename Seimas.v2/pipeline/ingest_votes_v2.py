@@ -193,17 +193,28 @@ def process_sitting(sess_id, sit_id):
                 _FAILED_VOTE_IDS.append(vid)
                 continue
             
-            # Metadata
+            # Metadata. The title is the agenda's, always.
+            #
+            # There used to be a preference here for `klausimo_pavadinimas` off
+            # a `BalsavimoRezultataiAntraštė` element, with a `balsavimo_tipas`
+            # fallback for the stage. That element does not exist in this feed
+            # — 12 of 12 sampled votes return no header at all, checked live
+            # 2026-09-08, and the P5 recon found the same on 2026-09-02. So the
+            # branch had never once fired, and every title and stage has always
+            # come from the agenda. Removed rather than left as a fallback that
+            # cannot fall back.
             title = title_base
-            header = res_xml.find('.//BalsavimoRezultataiAntraštė')
-            if header is not None:
-                res_title = header.get('klausimo_pavadinimas')
-                if res_title: title = res_title
-                if not stadija: stadija = header.get('balsavimo_tipas')
-            
-            # The protocol totals element carries the whole vote summary. The
-            # source flags votes whose electronic per-MP results disagree with
-            # those totals; keep that on the record (migration 018).
+
+            # The protocol totals element carries the whole vote summary.
+            #
+            # `komentaras` is stored, not surfaced, and that is deliberate:
+            # migration 018's note called it a flag for votes whose electronic
+            # per-MP results disagree with the totals. It is not. It is one
+            # identical string on all 5,286 rows, including all 3,630 that
+            # publish complete per-member results — boilerplate, so it explains
+            # nothing about any particular vote. A surface that renders it as a
+            # per-vote warning is asserting a cause the source does not give,
+            # which is the defect fixed in `utils/perMemberChoices.ts`.
             totals = res_xml.find('.//BendriBalsavimoRezultatai')
             source_comment = totals.get('komentaras') if totals is not None else None
             tallies = _parse_tallies(totals)
