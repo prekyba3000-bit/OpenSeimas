@@ -117,3 +117,31 @@ Not done, deliberately:
 Next concrete step, and it is the same as the vote half's: **a human reads the
 pilots.** Specifically the stage names against the Statute, and the Lithuanian
 throughout. Publication is gated on that, not on more code.
+
+---
+
+## Serving, behind approval (2026-09-08)
+
+The templates and gate produced publishable prose but nothing was served:
+`summary_revisions` appended rows with no notion of *approved*, so the latest
+row could be an unreviewed pilot. This closed that gap.
+
+- **Migration 047** adds `approved_at` / `approved_by`. A revision is a draft
+  until approved; existing and future rows default to draft.
+- **`POST /api/admin/summaries/approve`** re-renders the entity's template and
+  runs the figure gate on the stored body before stamping it approved —
+  refusing (422 + violations) if a figure the text states is not one the
+  current row supports.
+- **`GET /api/summaries/{type}/{id}`** serves only the latest approved
+  revision, and re-verifies it against the live row on each read. A bill's
+  passage grows as votes are ingested, so an approved count can go stale; the
+  body is then withheld (`status: "withheld_stale"`), not served wrong.
+- **`PlainSummary`** renders a published, re-verified body on the vote page, or
+  nothing — no path renders a draft or a stale one.
+
+Fetch-and-render lives once in `pipeline/summaries/render.py`; the bill pilot
+imports `fetch_bill` from it so the passage aggregate has one home.
+
+Verified end-to-end against production and reverted to zero rows: draft not
+served → approve (gate clean) → served → simulated drift → withheld. Nothing
+is published, because publication still waits on the human LT review above.

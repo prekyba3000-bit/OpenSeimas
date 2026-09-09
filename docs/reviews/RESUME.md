@@ -100,15 +100,24 @@ participle, „nuo X iki X" for same-day passages, a doubled full stop, and
 stages listed with acceptance before consideration. None of them is a number,
 so none was visible to a figure check.
 
+**The serving path is built (2026-09-08).** A summary is a draft until a
+maintainer approves it; approval runs the figure gate, and the public read
+path re-verifies against the live row so a stale figure is withheld rather than
+served. `PlainSummary` renders an approved body on the vote page or nothing.
+Verified end-to-end against production and left at zero approved rows — so
+publishing reviewed copy is now a data change (`POST /api/admin/summaries` then
+`/approve`), not a deploy.
+
 **Next concrete step, and it is not code: a human reads the two pilots**
 (`p5-vote-summary-pilot.md`, `p5-bill-summary-pilot.md`). Specifically the
 stage names against the Seimas Statute — they are claims about procedure, not
-about our data — and the Lithuanian throughout, which is working copy.
-Publication is gated on that.
+about our data — and the Lithuanian throughout, which is working copy. That is
+the one thing between the built pipeline and a published summary.
 
-After that, the Work Program's open item is P4's authored-bills recon: the API
-serves `bills_authored` while `legislation` is fed from a different source, and
-which of the two is canonical has never been written down.
+The larger unbuilt product remains the compare page (the `contextBand` helper
+is shelved awaiting it) and Android deep-links — both want a design note first
+per the charter. P4's recon items all turned out already done; P6 dead-code
+removal is a decision for the human, not hygiene.
 
 **Watch:** Render went push-to-serving in ~40s twice on 2026-09-07/08, faster
 than a Docker rebuild should be. Evidence said the new code was live each
