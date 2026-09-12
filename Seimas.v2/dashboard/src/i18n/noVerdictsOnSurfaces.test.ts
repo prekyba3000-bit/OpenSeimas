@@ -13,7 +13,7 @@ import { join } from "node:path";
 const SRC = join(__dirname, "..");
 
 const DEAD =
-  /AlignmentScore|MpSelector|Header\.tsx/;
+  /MpSelector|Header\.tsx/;
 
 function sourceFiles(dirs: string[]): string[] {
   const out: string[] = [];

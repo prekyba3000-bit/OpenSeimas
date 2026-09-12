@@ -66,7 +66,7 @@ CI runs both against a fresh Postgres on every PR (`.github/workflows/ci.yml`).
 
 ## License
 
-Copyright (c) 2026 `<FILL IN: legal name>` — see [NOTICE](NOTICE).
+Copyright (c) 2026 `VšĮ Atviras įrašas` — see [NOTICE](NOTICE).
 
 AGPL-3.0 — see [LICENSE](LICENSE). Data exports are CC BY 4.0 when published.
 

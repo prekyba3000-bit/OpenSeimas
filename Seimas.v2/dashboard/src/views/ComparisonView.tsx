@@ -151,21 +151,7 @@ const MpSelector = ({ mps, selected, onSelect, placeholder }: {
     );
 };
 
-const AlignmentScore = ({ score, label }: { score: number; label: string }) => {
-    const percentage = Math.round(score * 100);
-    const color = percentage >= 80 ? 'text-vote-for' : percentage >= 50 ? 'text-secondary' : 'text-destructive';
-    const ringColor = percentage >= 80 ? 'border-vote-for' : percentage >= 50 ? 'border-border' : 'border-destructive';
 
-    return (
-        <div className="flex flex-col items-center gap-4 py-8">
-            <div className={`relative w-40 h-40 rounded-full border-8 ${ringColor} border-opacity-20 flex items-center justify-center`}>
-                <div className={`absolute inset-0 rounded-full border-8 ${ringColor} border-t-transparent animate-spin-slow opacity-50`} />
-                <span className={`text-5xl font-bold ${color}`}>{percentage}%</span>
-            </div>
-            <span className="text-sm text-muted-foreground font-medium">{label}</span>
-        </div>
-    );
-};
 
 interface ComparisonViewProps {
     initialSelected?: (string | null)[];
@@ -294,13 +280,21 @@ const ComparisonView = ({ initialSelected = [null, null] }: ComparisonViewProps)
                         </div>
                     )}
                     <Card className="text-center overflow-hidden relative">
-                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-vote-against via-secondary to-vote-for" />
-                        <AlignmentScore
-                            score={comparison.alignment_matrix[0][1]}
-                                label={LT.comparisonView.scoreLabel}
-                        />
-                        <p className="text-sm text-muted-foreground pb-8 max-w-md mx-auto">
-                            {LT.comparisonView.scoreBody}
+                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-muted to-muted-foreground" />
+                        <div className="flex flex-col items-center gap-4 py-8">
+                            {comparison.overlap_matrix[0][1] === 0 ? (
+                                <span className="text-2xl font-bold text-muted-foreground">{LT.comparisonView.notEnoughData}</span>
+                            ) : (
+                                <div className="flex flex-col items-center">
+                                    <span className="text-5xl font-bold text-foreground">
+                                        {comparison.same_choice_matrix[0][1]} / {comparison.overlap_matrix[0][1]}
+                                    </span>
+                                </div>
+                            )}
+                            <span className="text-sm text-muted-foreground font-medium">{LT.comparisonView.overlapLabel}</span>
+                        </div>
+                        <p className="text-sm text-muted-foreground pb-8 max-w-md mx-auto px-4">
+                            {LT.comparisonView.overlapBody}
                         </p>
                     </Card>
 

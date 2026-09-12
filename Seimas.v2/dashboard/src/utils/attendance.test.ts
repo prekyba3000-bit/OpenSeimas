@@ -56,7 +56,7 @@ describe("no reachable surface coerces attendance to zero", () => {
     const { readFileSync, readdirSync, statSync } = await import("node:fs");
     const { join } = await import("node:path");
     const SRC = join(__dirname, "..");
-    const DEAD = /AlignmentScore|MpSelector|Header\.tsx/;
+    const DEAD = /MpSelector|Header\.tsx/;
 
     const files: string[] = [];
     const walk = (dir: string) => {

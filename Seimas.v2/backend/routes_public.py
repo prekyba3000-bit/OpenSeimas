@@ -8,7 +8,7 @@ from collections import defaultdict
 from psycopg2.extras import RealDictCursor
 
 from backend import core
-from backend.hero_engine import attendance_overrides
+from backend.hero_engine import attendance_overrides, _CHOICE_RECORDED
 from backend.core import (
     _leaderboard_cache,
     _leaderboard_cache_lock,
@@ -316,34 +316,32 @@ def compare_mps(ids: str):
                 for row in mp_rows
             ]
 
-            # Pairwise alignment
-            alignment_matrix = []
+            # Pairwise overlap and same_choice counts
+            overlap_matrix = []
+            same_choice_matrix = []
             for i, mp1_id in enumerate(mp_ids):
-                row = []
+                overlap_row = []
+                same_row = []
                 for j, mp2_id in enumerate(mp_ids):
-                    if i == j:
-                        row.append(1.0)
-                    else:
-                        cur.execute("""
-                            SELECT
-                                COUNT(*) as total,
-                                SUM(CASE WHEN mv1.vote_choice = mv2.vote_choice THEN 1 ELSE 0 END) as agreed
-                            FROM mp_votes mv1
-                            JOIN mp_votes mv2 ON mv1.vote_id = mv2.vote_id
-                            WHERE mv1.politician_id = %s::uuid
-                              AND mv2.politician_id = %s::uuid
-                              AND mv1.vote_choice IS NOT NULL
-                              AND mv2.vote_choice IS NOT NULL
-                        """, (mp1_id, mp2_id))
-                        result = cur.fetchone()
-                        total = result["total"] or 0
-                        agreed = result["agreed"] or 0
-                        alignment = round(agreed / total, 3) if total > 0 else 0
-                        row.append(alignment)
-                alignment_matrix.append(row)
+                    cur.execute(f"""
+                        SELECT
+                            COUNT(*) as overlap_n,
+                            SUM(CASE WHEN mv1.vote_choice = mv2.vote_choice THEN 1 ELSE 0 END) as same_choice_n
+                        FROM mp_votes mv1
+                        JOIN mp_votes mv2 ON mv1.vote_id = mv2.vote_id
+                        WHERE mv1.politician_id = %s::uuid
+                          AND mv2.politician_id = %s::uuid
+                          AND {_CHOICE_RECORDED.replace('mv.', 'mv1.')}
+                          AND {_CHOICE_RECORDED.replace('mv.', 'mv2.')}
+                    """, (mp1_id, mp2_id))
+                    result = cur.fetchone()
+                    overlap_row.append(result["overlap_n"] or 0)
+                    same_row.append(result["same_choice_n"] or 0)
+                overlap_matrix.append(overlap_row)
+                same_choice_matrix.append(same_row)
 
             # Recent divergent votes
-            cur.execute("""
+            cur.execute(f"""
                 SELECT DISTINCT v.seimas_vote_id, v.title, v.sitting_date
                 FROM votes v
                 JOIN mp_votes mv1 ON v.seimas_vote_id = mv1.vote_id
@@ -352,8 +350,8 @@ def compare_mps(ids: str):
                   AND mv2.politician_id = ANY(%s::uuid[])
                   AND mv1.politician_id != mv2.politician_id
                   AND mv1.vote_choice != mv2.vote_choice
-                  AND mv1.vote_choice IS NOT NULL
-                  AND mv2.vote_choice IS NOT NULL
+                  AND {_CHOICE_RECORDED.replace('mv.', 'mv1.')}
+                  AND {_CHOICE_RECORDED.replace('mv.', 'mv2.')}
                 ORDER BY v.sitting_date DESC
                 LIMIT 10
             """, (mp_ids, mp_ids))
@@ -371,14 +369,15 @@ def compare_mps(ids: str):
 
                 divergent_votes.append({
                     "vote_id": vote_id,
-                    "title": (vote_row["title"][:80] + "...") if len(vote_row["title"]) > 80 else vote_row["title"],
+                    "title": vote_row["title"],
                     "date": _date_or_none(vote_row["sitting_date"]),
                     "votes": mp_votes_map,
                 })
 
             return {
                 "mps": mps,
-                "alignment_matrix": alignment_matrix,
+                "overlap_matrix": overlap_matrix,
+                "same_choice_matrix": same_choice_matrix,
                 "divergent_votes": divergent_votes,
             }
 

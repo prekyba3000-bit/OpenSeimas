@@ -1,4 +1,8 @@
-// TODO(v4): move remaining Skaidrumas Hub inline strings here when the hub is fully internationalised.
+// Application copy in Lithuanian
+// Every string that appears in the UI belongs here or in `utils/ltPlural.ts`.
+
+import { ltPlural } from '../utils/ltPlural';
+
 export const LT = {
   voteChoices: {
     for: "Už",
@@ -42,7 +46,7 @@ export const LT = {
     // includes members who took a vacated seat mid-term and were not elected
     // in 2024 at all.
     pickerNote: (n: number) =>
-      `Sąraše — ${n} vienmandatės apygardos. Kiti Seimo nariai apygardai ` +
+      `Sąraše — ${n} ${ltPlural(n, 'vienmandatė apygarda', 'vienmandatės apygardos', 'vienmandačių apygardų')}. Kiti Seimo nariai apygardai ` +
       `neatstovauja: dauguma jų išrinkti pagal partijų sąrašus.`,
     // One district's member left and has not been replaced — the empty seat
     // in „140 iš 141 vietų". Naming it is the point: a reader there should
@@ -99,9 +103,10 @@ export const LT = {
     selectSecond: "Pasirinkite antrą narį...",
     running: "Vykdoma lyginamoji analizė...",
     failed: "Nepavyko palyginti pasirinktų narių.",
-    scoreLabel: "Suderinamumo balas",
-    scoreBody:
-      "Skaičiuojama pagal bendrus balsavimo posėdžius. Didesnis balas reiškia stipresnį politinį suderinamumą.",
+    overlapLabel: "Sutampantys balsavimai",
+    overlapBody:
+      "Tai yra sutampančių balsų skaičius iš bendrai dalyvautų balsavimų. Tai nėra dalyvavimo rodiklis ar politinė pozicija.",
+    notEnoughData: "Nepakanka duomenų",
     divergences: "Naujausi skirtumai",
     viewVoteDetails: "Peržiūrėti balsavimo detales",
     readyTitle: "Pasiruošę palyginti",

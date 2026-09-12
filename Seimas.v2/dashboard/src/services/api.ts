@@ -35,7 +35,8 @@ export const MONITORING_API_URL = "/v2/heroes/leaderboard";
 
 export interface ComparisonResult {
   mps: { id: string; name: string; party: string; photo: string }[];
-  alignment_matrix: number[][];
+  overlap_matrix: number[][];
+  same_choice_matrix: number[][];
   divergent_votes: {
     vote_id: string;
     title: string;

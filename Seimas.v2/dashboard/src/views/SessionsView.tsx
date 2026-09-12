@@ -168,8 +168,7 @@ const SessionsView = () => {
                 // not one: it needs a pointer to appear at all. The count is
                 // rendered inside only when the bar is wide enough, so on a
                 // narrow bar there was no accessible name whatsoever.
-                title={`${s.name}: ${count} balsavimų`}
-                // Same trap: „7 balsavimų" is wrong, „7 balsavimai" is right.
+                title={`${s.name}: ${count} ${ltPlural(count, 'balsavimas', 'balsavimai', 'balsavimų')}`}
                 aria-label={`${s.name} — ${count} ${ltPlural(count, 'balsavimas', 'balsavimai', 'balsavimų')}`}
                 aria-expanded={expandedSession === s.id}
                 aria-controls={`session-panel-${s.id}`}

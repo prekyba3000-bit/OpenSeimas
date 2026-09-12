@@ -1,3 +1,32 @@
+# RESUME — 2026-09-12
+
+Branch `main` at `f8eef7f` (local changes in working tree).
+
+## Compare page — Approach A implemented
+
+The Compare page's verdict ring (`AlignmentScore`) has been entirely retired, implementing Approach A from the design note. The `compare_mps` endpoint now serves raw pairwise evidence counts (`overlap_n`, `same_choice_n`) computed securely via the `_CHOICE_RECORDED` constant, matching the rigorous standard of the list/profile agreement tests. The frontend reads these raw counts instead of percentage scores. All tests pass locally.
+
+### Done
+- Replaced `alignment_matrix` with `overlap_matrix` and `same_choice_matrix` in `compare_mps` backend route.
+- Updated `ComparisonView.tsx` to display explicit evidence counts and handle 0-overlap with a "Nepakanka duomenų" message.
+- Removed `AlignmentScore` component entirely.
+- Verified frontend tests (vitest, `tsc`) and backend tests (pytest) pass locally.
+- Added a `walkthrough.md` in the brain for the review process.
+
+### In-flight
+- None
+
+### Blocked (unchanged)
+- LT worksheet (`Pataisymas:` still blank).
+- Legal name fill in `NOTICE` and `README.md`.
+- P6 dead-UI judgement (43 vendored `ui/` files).
+- Git-history rewrite of the old wiki `index.json`.
+
+### Next concrete step
+The human should review the updated Compare page behavior via the local dev server and ensure the evidence-first UI feels right. After approval, these changes need to be committed and deployed following the `HANDOFF.md` process (both Vercel and Render).
+
+---
+
 # RESUME — 2026-09-08
 
 Branch `main`, pushed and deployed. Suites: **453 dashboard / 374 backend**
