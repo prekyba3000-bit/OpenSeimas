@@ -1,5 +1,13 @@
 # Agent Instructions
 
+**Read `docs/reviews/agent-reporting-discipline.md` before reporting any
+status.** It governs how you verify and phrase every claim of "done,"
+"passing," or "complete" in this project. It is not optional context — real
+reports in this repo have claimed "100% PASS, all green" while `tsc` had 30
+errors and `vite build` failed outright, because the cited test suite never
+touched the broken file. Verify with the actual build/typecheck, not only
+with whatever tests happen to exist.
+
 This project uses **bd** (beads) for task and memory management. It is mandatory for tracking progress, managing dependencies, and ensuring context recovery between sessions.
 
 ## 🛠 Features
