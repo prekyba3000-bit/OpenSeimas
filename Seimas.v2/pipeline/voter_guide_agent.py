@@ -70,9 +70,15 @@ class VoterGuideAgent:
                 if not mp:
                     return {
                         "error": f"Seimas MP ID {mp_id} not found",
+                        "mp_id": mp_id,
+                        "mp_name": f"MP #{mp_id}",
+                        "party": "Nefrakcinis",
                         "category": "insufficient_data",
+                        "alignment_pct": 0.0,
+                        "scope_note_lt": "Vertinami tik individualūs užfiksuoti Seimo nario balsavimai, o ne visos frakcijos ar partijos programa.",
+                        "methodology_note_lt": "Temos ir balsavimai susieti pagal oficialią Seimo teisėkūros klasifikaciją (vote_topics), o vartotojo pasirinkimai lyginami su faktiniais „Už“ / „Prieš“ balsavimais.",
                         "headline_lt": "Duomenų nerasta",
-                        "vote_breakdown": {"aligned": 0, "opposed": 0, "abstained": 0, "absent": 0, "total_eligible": 0},
+                        "vote_breakdown": {"aligned": 0, "opposed": 0, "abstained": 0, "absent": 0, "unverified": 0, "total_eligible": 0},
                         "evidence_coverage": {
                             "eligible_votes": 0,
                             "directional_classifiable_votes": 0,
@@ -114,8 +120,11 @@ class VoterGuideAgent:
                         "mp_name": mp_name,
                         "party": party_name,
                         "category": "insufficient_data",
+                        "alignment_pct": 0.0,
+                        "scope_note_lt": "Vertinami tik individualūs užfiksuoti Seimo nario balsavimai, o ne visos frakcijos ar partijos programa.",
+                        "methodology_note_lt": "Temos ir balsavimai susieti pagal oficialią Seimo teisėkūros klasifikaciją (vote_topics), o vartotojo pasirinkimai lyginami su faktiniais „Už“ / „Prieš“ balsavimais.",
                         "headline_lt": f"{mp_name}: Nepakanka duomenų išvadoms (0 galimų balsavimų)",
-                        "vote_breakdown": {"aligned": 0, "opposed": 0, "abstained": 0, "absent": 0, "total_eligible": 0},
+                        "vote_breakdown": {"aligned": 0, "opposed": 0, "abstained": 0, "absent": 0, "unverified": 0, "total_eligible": 0},
                         "evidence_coverage": {
                             "eligible_votes": 0,
                             "directional_classifiable_votes": 0,
