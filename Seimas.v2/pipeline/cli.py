@@ -16,28 +16,39 @@ import pkgutil
 import sys
 from typing import List
 
-from . import common
+try:
+    from . import common
+except ImportError:
+    import common
+
 
 
 def list_modules() -> List[str]:
-    # `__path__` is a module global, not a name visible inside a function body,
-    # so `--list` raised NameError on every invocation. Read it off the package.
-    package_path = sys.modules[__package__].__path__
+    pkg_name = __package__ or "pipeline"
+    if pkg_name in sys.modules:
+        package_path = sys.modules[pkg_name].__path__
+    else:
+        package_path = [os.path.dirname(os.path.abspath(__file__))]
     return sorted(
         name
         for _, name, _ in pkgutil.iter_modules(package_path)
-        if name.startswith(("ingest", "link", "compute", "tag"))
+        if name.startswith(("ingest", "link", "compute", "tag", "voter_guide"))
     )
 
 
 def run_module(name: str, args: List[str]) -> int:
-    mod = importlib.import_module(f".{name}", package=__package__)
+    pkg_name = __package__ or "pipeline"
+    try:
+        mod = importlib.import_module(f".{name}", package=pkg_name)
+    except (ImportError, ValueError):
+        mod = importlib.import_module(f"pipeline.{name}")
     if hasattr(mod, "main"):
         return mod.main(args) or 0
     if hasattr(mod, "run"):
         return mod.run(args) or 0
     print(f"Module '{name}' has no callable 'main' or 'run'.")
     return 2
+
 
 
 def main() -> None:

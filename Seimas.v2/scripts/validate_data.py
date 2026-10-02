@@ -1,44 +1,57 @@
-import psycopg2
+"""Data validation script for verifying OpenSeimas database integrity."""
+
+import logging
 import os
 import sys
+from typing import NoReturn, Optional
 
-def validate_data():
-    db_dsn = os.getenv("DB_DSN")
+import psycopg2
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+logger = logging.getLogger(__name__)
+
+
+def validate_data() -> None:
+    """Connect to the PostgreSQL database and check table counts and foreign key integrity."""
+    db_dsn: Optional[str] = os.getenv("DB_DSN")
     if not db_dsn:
-        print("[ERROR] DB_DSN not set.")
+        logger.error("DB_DSN environment variable is not set.")
         sys.exit(1)
 
     try:
-        conn = psycopg2.connect(db_dsn)
-        cur = conn.cursor()
+        with psycopg2.connect(db_dsn) as conn:
+            with conn.cursor() as cur:
+                logger.info("=== DATA VALIDATION REPORT ===")
 
-        print("\n=== DATA VALIDATION REPORT ===")
-        
-        # Check Politicians
-        cur.execute("SELECT count(*) FROM politicians")
-        mp_count = cur.fetchone()[0]
-        print(f"[DATA] Total MPs: {mp_count}")
-        
-        # Check Votes
-        cur.execute("SELECT count(*) FROM votes")
-        vote_count = cur.fetchone()[0]
-        print(f"[DATA] Total Votes: {vote_count}")
+                # Check Politicians
+                cur.execute("SELECT count(*) FROM politicians")
+                row = cur.fetchone()
+                mp_count: int = row[0] if row else 0
+                logger.info("[DATA] Total MPs: %d", mp_count)
 
-        # Check Relationships
-        cur.execute("SELECT count(*) FROM mp_votes WHERE politician_id NOT IN (SELECT id FROM politicians)")
-        orphaned_votes = cur.fetchone()[0]
-        if orphaned_votes > 0:
-            print(f"[WARN] Found {orphaned_votes} orphaned votes (no matching politician).")
-        else:
-            print("[OK] All votes linked to known politicians.")
+                # Check Votes
+                cur.execute("SELECT count(*) FROM votes")
+                row = cur.fetchone()
+                vote_count: int = row[0] if row else 0
+                logger.info("[DATA] Total Votes: %d", vote_count)
 
-        cur.close()
-        conn.close()
-        print("\n=== VALIDATION COMPLETE ===")
+                # Check Relationships
+                cur.execute(
+                    "SELECT count(*) FROM mp_votes WHERE politician_id NOT IN (SELECT id FROM politicians)"
+                )
+                row = cur.fetchone()
+                orphaned_votes: int = row[0] if row else 0
+                if orphaned_votes > 0:
+                    logger.warning("Found %d orphaned votes (no matching politician).", orphaned_votes)
+                else:
+                    logger.info("[OK] All votes linked to known politicians.")
 
-    except Exception as e:
-        print(f"[ERROR] Validation failed: {e}")
+                logger.info("=== VALIDATION COMPLETE ===")
+
+    except psycopg2.Error as err:
+        logger.error("Database validation failed: %s", err)
         sys.exit(1)
+
 
 if __name__ == "__main__":
     validate_data()

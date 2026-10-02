@@ -67,6 +67,8 @@ jobs:
       # adapters that used to need them are deleted.
       - name: Type check
         run: npm run dashboard:typecheck
+      - name: Lint
+        run: npm run dashboard:lint
       - name: Unit tests (vitest, single run in CI)
         # config.ts throws without VITE_API_URL; tests execute it at import time.
         env:

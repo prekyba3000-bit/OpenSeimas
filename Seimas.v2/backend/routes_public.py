@@ -4,6 +4,7 @@ import time
 import datetime
 from typing import List, Dict, Optional, Any
 from collections import defaultdict
+from pydantic import BaseModel
 
 from psycopg2.extras import RealDictCursor
 
@@ -16,6 +17,7 @@ from backend.core import (
     OPENPLANTER_GRAPH_CACHE_SEC,
     logger,
 )
+
 
 
 # Call-time proxies — keep bare names in route bodies patchable via backend.core.
@@ -1085,4 +1087,391 @@ def get_vote(vote_id: str):
                 "party_stats": party_stats,
                 "votes": mp_votes,
             }
+
+
+# ── Extraordinary Deep Data Endpoints ────────────────────────────────────────
+
+@router.get("/api/mps/{mp_id}/assets")
+def get_mp_assets(mp_id: str):
+    """Annual declared assets for an MP from VMI/VRK data."""
+    with get_db_conn() as conn:
+        if not conn:
+            raise HTTPException(status_code=500, detail="Database connection failed")
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            if not _table_exists(cur, "assets"):
+                return {"items": []}
+            cur.execute("""
+                SELECT year, total_value, source_url, raw_json
+                FROM assets
+                WHERE politician_id = %s::uuid
+                ORDER BY year ASC
+            """, (mp_id,))
+            rows = cur.fetchall()
+            return {
+                "items": [
+                    {
+                        "year": r["year"],
+                        "total_value": float(r["total_value"]) if r["total_value"] is not None else None,
+                        "source_url": r["source_url"],
+                        "raw_json": r["raw_json"] or {},
+                    }
+                    for r in rows
+                ]
+            }
+
+
+@router.get("/api/mps/{mp_id}/procurement")
+def get_mp_procurement(mp_id: str):
+    """Public procurement contract hits and corporate links for an MP."""
+    with get_db_conn() as conn:
+        if not conn:
+            raise HTTPException(status_code=500, detail="Database connection failed")
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            if not _table_exists(cur, "indirect_links"):
+                return {"items": []}
+            cur.execute("""
+                SELECT target_entity_code, target_entity_name, hop_count, path,
+                       has_procurement_hit, has_debtor_hit, detected_at
+                FROM indirect_links
+                WHERE mp_id = %s::uuid
+                ORDER BY hop_count ASC, has_procurement_hit DESC
+            """, (mp_id,))
+            rows = cur.fetchall()
+            return {
+                "items": [
+                    {
+                        "target_code": r["target_entity_code"],
+                        "target_name": r["target_entity_name"],
+                        "hops": r["hop_count"],
+                        "path": r["path"],
+                        "procurement_hit": bool(r["has_procurement_hit"]),
+                        "debtor_hit": bool(r["has_debtor_hit"]),
+                        "detected_at": r["detected_at"].isoformat() if r["detected_at"] else None,
+                    }
+                    for r in rows
+                ]
+            }
+
+
+@router.get("/api/mps/{mp_id}/amendment-speed")
+def get_mp_amendment_speed(mp_id: str, limit: int = 20):
+    """Speed anomalies and fast-tracked amendment profiles for an MP's authored bills."""
+    with get_db_conn() as conn:
+        if not conn:
+            raise HTTPException(status_code=500, detail="Database connection failed")
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            if not _table_exists(cur, "amendment_profiles") or not _table_exists(cur, "mp_legislation"):
+                return {"items": []}
+            cur.execute("""
+                SELECT ap.amendment_id, ap.word_count, ap.legal_citation_count,
+                       ap.complexity_score, ap.drafting_window_minutes,
+                       ap.speed_anomaly_zscore
+                FROM amendment_profiles ap
+                JOIN mp_legislation ml ON ap.amendment_id = ml.project_id
+                WHERE ml.politician_id = %s::uuid AND ap.speed_anomaly_zscore IS NOT NULL
+                ORDER BY ap.speed_anomaly_zscore ASC
+                LIMIT %s
+            """, (mp_id, limit))
+            rows = cur.fetchall()
+            return {
+                "items": [
+                    {
+                        "amendment_id": r["amendment_id"],
+                        "word_count": r["word_count"],
+                        "citation_count": r["legal_citation_count"],
+                        "complexity": r["complexity_score"],
+                        "drafting_window_min": r["drafting_window_minutes"],
+                        "zscore": round(float(r["speed_anomaly_zscore"]), 2) if r["speed_anomaly_zscore"] else None,
+                    }
+                    for r in rows
+                ]
+            }
+
+
+@router.get("/api/mps/{mp_id}/speeches")
+def get_mp_speeches(mp_id: str, limit: int = 30):
+    """Plenary floor speeches for an MP."""
+    with get_db_conn() as conn:
+        if not conn:
+            raise HTTPException(status_code=500, detail="Database connection failed")
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            if not _table_exists(cur, "speeches"):
+                return {"items": []}
+            cur.execute("""
+                SELECT session_date, speech_duration_seconds, words_spoken,
+                       speech_title, speech_url, speech_type
+                FROM speeches
+                WHERE mp_id = %s::uuid AND (speech_type IS NULL OR speech_type != 'press_release')
+                ORDER BY session_date DESC, created_at DESC
+                LIMIT %s
+            """, (mp_id, limit))
+            rows = cur.fetchall()
+            return {
+                "items": [
+                    {
+                        "date": _date_or_none(r["session_date"]),
+                        "duration_seconds": r["speech_duration_seconds"],
+                        "words_spoken": r["words_spoken"],
+                        "title": r["speech_title"],
+                        "url": r["speech_url"],
+                        "type": r["speech_type"],
+                    }
+                    for r in rows
+                ]
+            }
+
+
+@router.get("/api/mps/{mp_id}/supplier-links")
+def get_mp_supplier_links(mp_id: str):
+    """Direct commercial supplier links connecting MP declared roles (VTEK) to awarded public procurement tenders (CVP IS)."""
+    with get_db_conn() as conn:
+        if not conn:
+            raise HTTPException(status_code=500, detail="Database connection failed")
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            if not _table_exists(cur, "mp_supplier_links"):
+                return {"items": []}
+            cur.execute("""
+                SELECT mp_name, mp_party, org_code, org_name, mp_role,
+                       ocid, release_date, award_date, buyer_name, buyer_code,
+                       tender_title, value_amount, value_currency, declarant_relation
+                FROM mp_supplier_links
+                WHERE politician_id = %s::uuid
+                ORDER BY award_date DESC NULLS LAST, value_amount DESC
+            """, (mp_id,))
+            rows = cur.fetchall()
+            return {
+                "items": [
+                    {
+                        "mp_name": r["mp_name"],
+                        "mp_party": r["mp_party"],
+                        "org_code": r["org_code"],
+                        "org_name": r["org_name"],
+                        "mp_role": r["mp_role"],
+                        "ocid": r["ocid"],
+                        "release_date": _date_or_none(r["release_date"]),
+                        "award_date": _date_or_none(r["award_date"]),
+                        "buyer_name": r["buyer_name"],
+                        "buyer_code": r["buyer_code"],
+                        "tender_title": r["tender_title"],
+                        "value_amount": float(r["value_amount"]) if r["value_amount"] is not None else None,
+                        "value_currency": r["value_currency"] or "EUR",
+                        "declarant_relation": r["declarant_relation"],
+                    }
+                    for r in rows
+                ]
+            }
+
+
+@router.get("/api/mps/{mp_id}/faction-friction")
+def get_mp_faction_friction(mp_id: str, limit: int = 10):
+    """Parliamentary faction voting friction: tracks how often an MP votes contrary to their party majority line."""
+    with get_db_conn() as conn:
+        if not conn:
+            raise HTTPException(status_code=500, detail="Database connection failed")
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            if not _table_exists(cur, "mp_votes") or not _table_exists(cur, "votes"):
+                return {"total_votes": 0, "friction_count": 0, "friction_rate_pct": None, "notable_dissent_votes": []}
+            
+            cur.execute("""
+                WITH party_vote_modes AS (
+                    SELECT mv.vote_id, p.current_party, mv.vote_choice, COUNT(*) as choice_count,
+                           ROW_NUMBER() OVER (PARTITION BY mv.vote_id, p.current_party ORDER BY COUNT(*) DESC) as rn
+                    FROM mp_votes mv
+                    JOIN politicians p ON mv.politician_id = p.id
+                    WHERE mv.vote_choice IN ('Už', 'Prieš', 'Susilaikė') AND p.current_party IS NOT NULL AND p.current_party != ''
+                    GROUP BY mv.vote_id, p.current_party, mv.vote_choice
+                ),
+                mp_party_votes AS (
+                    SELECT mv.politician_id, mv.vote_id, mv.vote_choice as mp_choice, p.current_party,
+                           v.title as vote_title, v.sitting_date, v.id as db_vote_id,
+                           pvm.vote_choice as party_majority_choice
+                    FROM mp_votes mv
+                    JOIN politicians p ON mv.politician_id = p.id
+                    JOIN votes v ON mv.vote_id = v.seimas_vote_id
+                    JOIN party_vote_modes pvm ON mv.vote_id = pvm.vote_id AND p.current_party = pvm.current_party AND pvm.rn = 1
+                    WHERE mv.politician_id = %s::uuid AND mv.vote_choice IN ('Už', 'Prieš', 'Susilaikė')
+                )
+                SELECT db_vote_id, vote_title, sitting_date, mp_choice, party_majority_choice
+                FROM mp_party_votes
+                WHERE mp_choice != party_majority_choice
+                ORDER BY sitting_date DESC
+                LIMIT %s
+            """, (mp_id, limit))
+            dissent_rows = cur.fetchall()
+
+            cur.execute("""
+                WITH party_vote_modes AS (
+                    SELECT mv.vote_id, p.current_party, mv.vote_choice, COUNT(*) as choice_count,
+                           ROW_NUMBER() OVER (PARTITION BY mv.vote_id, p.current_party ORDER BY COUNT(*) DESC) as rn
+                    FROM mp_votes mv
+                    JOIN politicians p ON mv.politician_id = p.id
+                    WHERE mv.vote_choice IN ('Už', 'Prieš', 'Susilaikė') AND p.current_party IS NOT NULL AND p.current_party != ''
+                    GROUP BY mv.vote_id, p.current_party, mv.vote_choice
+                ),
+                mp_party_votes AS (
+                    SELECT mv.vote_choice as mp_choice, pvm.vote_choice as party_majority_choice
+                    FROM mp_votes mv
+                    JOIN politicians p ON mv.politician_id = p.id
+                    JOIN party_vote_modes pvm ON mv.vote_id = pvm.vote_id AND p.current_party = pvm.current_party AND pvm.rn = 1
+                    WHERE mv.politician_id = %s::uuid AND mv.vote_choice IN ('Už', 'Prieš', 'Susilaikė')
+                )
+                SELECT count(*) as total,
+                       count(*) FILTER (WHERE mp_choice != party_majority_choice) as friction
+                FROM mp_party_votes
+            """, (mp_id,))
+            totals = cur.fetchone()
+
+            total = totals["total"] if totals and totals["total"] else 0
+            friction = totals["friction"] if totals and totals["friction"] else 0
+            rate = round((friction / total * 100.0), 1) if total > 0 else None
+
+            return {
+                "total_votes": total,
+                "friction_count": friction,
+                "friction_rate_pct": rate,
+                "notable_dissent_votes": [
+                    {
+                        "vote_id": str(r["db_vote_id"]),
+                        "title": r["vote_title"],
+                        "date": _date_or_none(r["sitting_date"]),
+                        "mp_choice": r["mp_choice"],
+                        "party_majority_choice": r["party_majority_choice"],
+                    }
+                    for r in dissent_rows
+                ]
+            }
+
+
+@router.get("/api/mp/{mp_id}/declarations")
+def get_mp_declarations(mp_id: int):
+    """Fetch VTEK private interests declarations for an MP by seimas_mp_id."""
+    with get_db_conn() as conn:
+        if not conn:
+            raise HTTPException(status_code=500, detail="Database connection failed")
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT declaration_id, declaration_type, declarant_name, position_title,
+                       declared_assets_summary, corporate_interests, gifts_declared, declared_date, source_url
+                FROM vtek_declarations
+                WHERE seimas_mp_id = %s
+                ORDER BY declared_date DESC NULLS LAST
+                """,
+                (mp_id,)
+            )
+            rows = cur.fetchall()
+            return {
+                "seimas_mp_id": mp_id,
+                "count": len(rows),
+                "declarations": [dict(r) for r in rows]
+            }
+
+
+@router.get("/api/mp/{mp_id}/procurement")
+def get_mp_procurement(mp_id: int):
+    """Fetch CVP IS public procurement tenders linked to an MP."""
+    with get_db_conn() as conn:
+        if not conn:
+            raise HTTPException(status_code=500, detail="Database connection failed")
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT tender_id, title AS tender_title, buyer_name AS contracting_authority,
+                       supplier_name AS winning_supplier_name, contract_value_eur AS contract_amount_eur,
+                       contract_date, supplier_code, source_url
+                FROM procurement_tenders
+                WHERE linked_mp_id = %s
+                ORDER BY contract_date DESC NULLS LAST
+                """,
+                (mp_id,)
+            )
+            rows = cur.fetchall()
+            return {
+                "seimas_mp_id": mp_id,
+                "count": len(rows),
+                "tenders": [dict(r) for r in rows]
+            }
+
+
+@router.get("/api/mp/{mp_id}/lobbyist-meetings")
+def get_mp_lobbyist_meetings(mp_id: int):
+    """Fetch VTEK declared lobbyist meetings for an MP."""
+    with get_db_conn() as conn:
+        if not conn:
+            raise HTTPException(status_code=500, detail="Database connection failed")
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT meeting_id, lobbyist_name, lobbyist_organization AS lobbyist_firm,
+                       official_name, topic_summary AS meeting_topic,
+                       bill_registration_number AS bill_numbers, meeting_date, source_url
+                FROM lobbyist_meetings
+                WHERE official_mp_id = %s
+                ORDER BY meeting_date DESC NULLS LAST
+                """,
+                (mp_id,)
+            )
+            rows = cur.fetchall()
+            return {
+                "seimas_mp_id": mp_id,
+                "count": len(rows),
+                "meetings": [dict(r) for r in rows]
+            }
+
+
+@router.get("/api/mp/{mp_id}/committee-speeches")
+def get_mp_committee_speeches(mp_id: int):
+    """Fetch committee stenograms and speeches for an MP."""
+    with get_db_conn() as conn:
+        if not conn:
+            raise HTTPException(status_code=500, detail="Database connection failed")
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT id::text AS stenogram_id, committee_name, sitting_date,
+                       bill_registration_number, agenda_topics, transcript_text AS speech_text, source_url
+                FROM committee_stenograms
+                WHERE %s = ANY(attendees_mp_ids)
+                ORDER BY sitting_date DESC NULLS LAST
+                """,
+                (mp_id,)
+            )
+            rows = cur.fetchall()
+            return {
+                "seimas_mp_id": mp_id,
+                "count": len(rows),
+                "speeches": [dict(r) for r in rows]
+            }
+
+
+@router.get("/api/mp/{mp_id}/campaign-donors")
+def get_mp_campaign_donors(mp_id: int):
+    """Fetch VRK campaign donors and party funding metrics for an MP."""
+    with get_db_conn() as conn:
+        if not conn:
+            raise HTTPException(status_code=500, detail="Database connection failed")
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT donation_id, donor_name, donor_type, recipient_party_name AS recipient_name,
+                       amount_eur, donation_date, campaign_name, source_url
+                FROM campaign_donors
+                WHERE recipient_mp_id = %s
+                ORDER BY donation_date DESC NULLS LAST
+                """,
+                (mp_id,)
+            )
+            rows = cur.fetchall()
+            return {
+                "seimas_mp_id": mp_id,
+                "count": len(rows),
+                "donations": [dict(r) for r in rows]
+            }
+
+
+
+
+
+
+
 

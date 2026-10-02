@@ -12,18 +12,20 @@ The Compare page's verdict ring (`AlignmentScore`) has been entirely retired, im
 - Removed `AlignmentScore` component entirely.
 - Verified frontend tests (vitest, `tsc`) and backend tests (pytest) pass locally.
 - Added a `walkthrough.md` in the brain for the review process.
+- P6 dead-UI judgement (deleted 43 vendored `ui/` files and unused stories to minimize dead-code surface area).
+- Legal name fill in `NOTICE` and `README.md` (filled with VšĮ Atviras įrašas).
+- Git-history rewrite of the old wiki `index.json` (removed via `git filter-branch` and force pushed to `main`).
+- Deployed Compare page to Vercel/Render by pushing to `main`.
 
 ### In-flight
 - None
 
-### Blocked (unchanged)
-- LT worksheet (`Pataisymas:` still blank).
-- Legal name fill in `NOTICE` and `README.md`.
-- P6 dead-UI judgement (43 vendored `ui/` files).
-- Git-history rewrite of the old wiki `index.json`.
+### Blocked
+- LT worksheet (`Pataisymas:` still blank). Waiting for a human native speaker to review and provide corrections per the charter.
 
 ### Next concrete step
-The human should review the updated Compare page behavior via the local dev server and ensure the evidence-first UI feels right. After approval, these changes need to be committed and deployed following the `HANDOFF.md` process (both Vercel and Render).
+The human should perform the native LT review in `docs/reviews/lt-copy-review-worksheet.md`. After they provide corrections, we can apply them to the codebase and publish the summaries.
+
 
 ---
 

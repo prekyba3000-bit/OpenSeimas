@@ -5,12 +5,14 @@ import path from 'path';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 
+const projectDir = typeof __dirname !== 'undefined' ? __dirname : import.meta.dirname;
+
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
+      '@': path.resolve(projectDir, './src'),
     },
     // Workspace deps (e.g. @tanstack/react-query) hoist to the monorepo root and
     // would otherwise resolve React from outside the repo — two React instances,
@@ -20,14 +22,14 @@ export default defineConfig({
   server: {
     fs: {
       allow: [
-        __dirname,
-        path.resolve(__dirname, '../../packages'),
+        projectDir,
+        path.resolve(projectDir, '../../packages'),
         // @fontsource hoists to the repo-root node_modules, outside this
         // project root, so the dev server answered 403 for all 20 font files
         // and rendered in fallback typefaces. The production build inlines
         // them correctly, which is why this stayed invisible — but it makes
         // every local rendered-surface audit happen in the wrong font.
-        path.resolve(__dirname, '../../node_modules'),
+        path.resolve(projectDir, '../../node_modules'),
       ],
     },
     proxy: {

@@ -382,6 +382,62 @@ export const mpDiarySchema = z.object({
 
 export type MpDiary = z.infer<typeof mpDiarySchema>;
 
+export const mpAssetsSchema = z.object({
+  items: z.array(
+    z.object({
+      year: z.number(),
+      total_value: z.number().nullable(),
+      source_url: z.string().nullable(),
+      raw_json: z.record(z.string(), z.unknown()).optional().default({}),
+    }),
+  ),
+});
+export type MpAssets = z.infer<typeof mpAssetsSchema>;
+
+export const mpProcurementSchema = z.object({
+  items: z.array(
+    z.object({
+      target_code: z.string(),
+      target_name: z.string(),
+      hops: z.number(),
+      path: z.array(z.string()),
+      procurement_hit: z.boolean(),
+      debtor_hit: z.boolean(),
+      detected_at: z.string().nullable(),
+    }),
+  ),
+});
+export type MpProcurement = z.infer<typeof mpProcurementSchema>;
+
+export const mpAmendmentSpeedSchema = z.object({
+  items: z.array(
+    z.object({
+      amendment_id: z.string(),
+      word_count: z.number(),
+      citation_count: z.number(),
+      complexity: z.number(),
+      drafting_window_min: z.number().nullable(),
+      zscore: z.number().nullable(),
+    }),
+  ),
+});
+export type MpAmendmentSpeed = z.infer<typeof mpAmendmentSpeedSchema>;
+
+export const mpSpeechesSchema = z.object({
+  items: z.array(
+    z.object({
+      date: z.string().nullable(),
+      duration_seconds: z.number().nullable(),
+      words_spoken: z.number().nullable(),
+      title: z.string().nullable(),
+      url: z.string().nullable(),
+      type: z.string().nullable(),
+    }),
+  ),
+});
+export type MpSpeeches = z.infer<typeof mpSpeechesSchema>;
+
+
 
 // Wire contract for the votes behind the faction-alignment figure.
 export const factionAlignmentSchema = z.object({
@@ -1038,6 +1094,44 @@ export interface Freshness {
 
 // ── Public API ───────────────────────────────────────────────────────────────
 
+export const mpSupplierLinksSchema = z.object({
+  items: z.array(
+    z.object({
+      mp_name: z.string(),
+      mp_party: z.string().nullable().optional(),
+      org_code: z.string().nullable().optional(),
+      org_name: z.string(),
+      mp_role: z.string(),
+      ocid: z.string().nullable().optional(),
+      release_date: z.string().nullable(),
+      award_date: z.string().nullable(),
+      buyer_name: z.string(),
+      buyer_code: z.string().nullable().optional(),
+      tender_title: z.string(),
+      value_amount: z.number().nullable(),
+      value_currency: z.string(),
+      declarant_relation: z.string().nullable(),
+    }),
+  ),
+});
+export type MpSupplierLinks = z.infer<typeof mpSupplierLinksSchema>;
+
+export const mpFactionFrictionSchema = z.object({
+  total_votes: z.number(),
+  friction_count: z.number(),
+  friction_rate_pct: z.number().nullable(),
+  notable_dissent_votes: z.array(
+    z.object({
+      vote_id: z.string(),
+      title: z.string().nullable(),
+      date: z.string().nullable(),
+      mp_choice: z.string(),
+      party_majority_choice: z.string(),
+    }),
+  ),
+});
+export type MpFactionFriction = z.infer<typeof mpFactionFrictionSchema>;
+
 export const api = {
   getStats: () =>
     request<DashboardStats>("/stats", { parse: (data) => dashboardStatsSchema.parse(data) }),
@@ -1161,4 +1255,60 @@ export const api = {
 
   getVoteGeometry: (limit = 30) =>
     request<VoteGeoResponse>(`/forensics/vote-geometry?limit=${limit}`),
+
+  getMpAssets: (id: string, options?: RequestOptions<MpAssets>) =>
+    request<MpAssets>(`/mps/${id}/assets`, {
+      ...options,
+      parse: (data) => mpAssetsSchema.parse(data),
+    }),
+
+  getMpProcurement: (id: string, options?: RequestOptions<MpProcurement>) =>
+    request<MpProcurement>(`/mps/${id}/procurement`, {
+      ...options,
+      parse: (data) => mpProcurementSchema.parse(data),
+    }),
+
+  getMpAmendmentSpeed: (id: string, limit = 20, options?: RequestOptions<MpAmendmentSpeed>) =>
+    request<MpAmendmentSpeed>(`/mps/${id}/amendment-speed?limit=${limit}`, {
+      ...options,
+      parse: (data) => mpAmendmentSpeedSchema.parse(data),
+    }),
+
+  getMpSpeeches: (id: string, limit = 30, options?: RequestOptions<MpSpeeches>) =>
+    request<MpSpeeches>(`/mps/${id}/speeches?limit=${limit}`, {
+      ...options,
+      parse: (data) => mpSpeechesSchema.parse(data),
+    }),
+
+  getMpSupplierLinks: (id: string, options?: RequestOptions<MpSupplierLinks>) =>
+    request<MpSupplierLinks>(`/mps/${id}/supplier-links`, {
+      ...options,
+      parse: (data) => mpSupplierLinksSchema.parse(data),
+    }),
+
+  getMpFactionFriction: (id: string, limit = 10, options?: RequestOptions<MpFactionFriction>) =>
+    request<MpFactionFriction>(`/mps/${id}/faction-friction?limit=${limit}`, {
+      ...options,
+      parse: (data) => mpFactionFrictionSchema.parse(data),
+    }),
+
+  fetchMpDeclarations: (mpId: number) =>
+    request<{ seimas_mp_id: number; count: number; declarations: any[] }>(`/mp/${mpId}/declarations`),
+
+  fetchMpProcurementTenders: (mpId: number) =>
+    request<{ seimas_mp_id: number; count: number; tenders: any[] }>(`/mp/${mpId}/procurement`),
+
+  fetchMpLobbyistMeetings: (mpId: number) =>
+    request<{ seimas_mp_id: number; count: number; meetings: any[] }>(`/mp/${mpId}/lobbyist-meetings`),
+
+  fetchMpCommitteeSpeeches: (mpId: number) =>
+    request<{ seimas_mp_id: number; count: number; speeches: any[] }>(`/mp/${mpId}/committee-speeches`),
+
+  fetchMpCampaignDonors: (mpId: number) =>
+    request<{ seimas_mp_id: number; count: number; donations: any[] }>(`/mp/${mpId}/campaign-donors`),
+
 };
+
+
+
+

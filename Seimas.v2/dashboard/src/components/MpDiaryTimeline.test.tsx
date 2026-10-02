@@ -57,8 +57,8 @@ describe('MpDiaryTimeline', () => {
     vi.spyOn(api, 'getMpDiary').mockResolvedValue({ events: [event], has_more: false });
     wrap(<MpDiaryTimeline mpId="x" />);
     await waitFor(() => expect(screen.getByText('Seimo rytinis posėdis')).toBeInTheDocument());
-    // 89% of events have no location at source; nothing may be invented for them.
-    expect(screen.queryByText(/·\s*$/)).not.toBeInTheDocument();
+    // 89% of events have no location at source; explicitly noted when absent.
+    expect(screen.getByText(/Vieta: Seimo nenurodyta/)).toBeInTheDocument();
   });
 
   it('shows a location when the source gave one', async () => {

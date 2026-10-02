@@ -1,0 +1,272 @@
+[
+  {
+    "id": "insufficient_data_case",
+    "description": "Fewer than 3 directional classifiable votes results in insufficient_data category",
+    "mp_id": 100,
+    "mp_name": "Petras Petraitis",
+    "party": "Išsiregistravęs frakcijoje",
+    "preferred_stances": { "pajamos": "for" },
+    "mandate_start": null,
+    "votes": [
+      {
+        "vote_id": "v1",
+        "seimas_vote_id": 1001,
+        "sitting_date": "2026-05-10",
+        "title": "Dėl Mokesčių administravimo",
+        "vote_choice": "Už",
+        "topic": "pajamos"
+      },
+      {
+        "vote_id": "v2",
+        "seimas_vote_id": 1002,
+        "sitting_date": "2026-05-11",
+        "title": "Dėl Biudžeto sandaros",
+        "vote_choice": "Susilaikė",
+        "topic": "pajamos"
+      }
+    ],
+    "expected": {
+      "category": "insufficient_data",
+      "alignment_pct": 100.0,
+      "vote_breakdown": {
+        "aligned": 1,
+        "opposed": 0,
+        "abstained": 1,
+        "absent": 0,
+        "unverified": 0,
+        "total_eligible": 2
+      },
+      "evidence_coverage": {
+        "eligible_votes": 2,
+        "directional_classifiable_votes": 1,
+        "recorded_status_votes": 2,
+        "directional_coverage_pct": 50.0,
+        "recorded_status_coverage_pct": 100.0
+      },
+      "headline_contains": "Nepakanka duomenų išvadoms"
+    }
+  },
+  {
+    "id": "more_aligned_case",
+    "description": "More aligned votes than opposed (>= 3 directional) produces more_aligned category with headline putting both counts together",
+    "mp_id": 200,
+    "mp_name": "Saulius Skvernelis",
+    "party": "Demokratų frakcija „Vardan Lietuvos“",
+    "preferred_stances": { "pajamos": "for", "saugumas": "for" },
+    "mandate_start": null,
+    "votes": [
+      { "vote_id": "v1", "seimas_vote_id": 2001, "sitting_date": "2026-06-01", "title": "Dėl mokesčių lengvatos", "vote_choice": "Už", "topic": "pajamos" },
+      { "vote_id": "v2", "seimas_vote_id": 2002, "sitting_date": "2026-06-02", "title": "Dėl gynybos finansavimo", "vote_choice": "Už", "topic": "saugumas" },
+      { "vote_id": "v3", "seimas_vote_id": 2003, "sitting_date": "2026-06-03", "title": "Dėl kariuomenės struktūros", "vote_choice": "Už", "topic": "saugumas" },
+      { "vote_id": "v4", "seimas_vote_id": 2004, "sitting_date": "2026-06-04", "title": "Dėl akcizų tarifų", "vote_choice": "Prieš", "topic": "pajamos" }
+    ],
+    "expected": {
+      "category": "more_aligned",
+      "alignment_pct": 75.0,
+      "vote_breakdown": {
+        "aligned": 3,
+        "opposed": 1,
+        "abstained": 0,
+        "absent": 0,
+        "unverified": 0,
+        "total_eligible": 4
+      },
+      "evidence_coverage": {
+        "eligible_votes": 4,
+        "directional_classifiable_votes": 4,
+        "recorded_status_votes": 4,
+        "directional_coverage_pct": 100.0,
+        "recorded_status_coverage_pct": 100.0
+      },
+      "headline_contains": "3 iš 4 palyginamų balsavimų sutapo"
+    }
+  },
+  {
+    "id": "mixed_record_tie_case",
+    "description": "50% or lower alignment (tie 2 aligned, 2 opposed) produces mixed_record category",
+    "mp_id": 300,
+    "mp_name": "Jonas Jonaitis",
+    "party": "Frakcija „Laisvė“",
+    "preferred_stances": { "pajamos": "for" },
+    "mandate_start": null,
+    "votes": [
+      { "vote_id": "v1", "seimas_vote_id": 3001, "sitting_date": "2026-07-01", "title": "Įstatymas A", "vote_choice": "Už", "topic": "pajamos" },
+      { "vote_id": "v2", "seimas_vote_id": 3002, "sitting_date": "2026-07-02", "title": "Įstatymas B", "vote_choice": "Už", "topic": "pajamos" },
+      { "vote_id": "v3", "seimas_vote_id": 3003, "sitting_date": "2026-07-03", "title": "Įstatymas C", "vote_choice": "Prieš", "topic": "pajamos" },
+      { "vote_id": "v4", "seimas_vote_id": 3004, "sitting_date": "2026-07-04", "title": "Įstatymas D", "vote_choice": "Prieš", "topic": "pajamos" }
+    ],
+    "expected": {
+      "category": "mixed_record",
+      "alignment_pct": 50.0,
+      "vote_breakdown": {
+        "aligned": 2,
+        "opposed": 2,
+        "abstained": 0,
+        "absent": 0,
+        "unverified": 0,
+        "total_eligible": 4
+      },
+      "evidence_coverage": {
+        "eligible_votes": 4,
+        "directional_classifiable_votes": 4,
+        "recorded_status_votes": 4,
+        "directional_coverage_pct": 100.0,
+        "recorded_status_coverage_pct": 100.0
+      },
+      "headline_contains": "Nevienareikšmiai balsavimo duomenys"
+    }
+  },
+  {
+    "id": "mandate_transition_boundary",
+    "description": "MP sworn in mid-term: pre-mandate roll calls excluded from total_eligible (not classified as absent). mandate_start = 2026-07-01, only votes on/after that date count.",
+    "mp_id": 400,
+    "mp_name": "Aistė Mandatienė",
+    "party": "Tėvynės sąjungos-Lietuvos krikščionių demokratų frakcija",
+    "preferred_stances": { "pajamos": "for", "saugumas": "for" },
+    "mandate_start": "2026-07-01",
+    "votes": [
+      { "vote_id": "pre1", "seimas_vote_id": 4001, "sitting_date": "2026-06-10", "title": "Prieš mandatą: mokesčiai", "vote_choice": "Už", "topic": "pajamos" },
+      { "vote_id": "pre2", "seimas_vote_id": 4002, "sitting_date": "2026-06-15", "title": "Prieš mandatą: saugumas", "vote_choice": "Prieš", "topic": "saugumas" },
+      { "vote_id": "v1", "seimas_vote_id": 4003, "sitting_date": "2026-07-01", "title": "Pirmas mandato balsavimas", "vote_choice": "Už", "topic": "pajamos" },
+      { "vote_id": "v2", "seimas_vote_id": 4004, "sitting_date": "2026-07-05", "title": "Gynybos biudžetas", "vote_choice": "Už", "topic": "saugumas" },
+      { "vote_id": "v3", "seimas_vote_id": 4005, "sitting_date": "2026-07-10", "title": "Papildomos pajamos", "vote_choice": "Prieš", "topic": "pajamos" },
+      { "vote_id": "v4", "seimas_vote_id": 4006, "sitting_date": "2026-07-15", "title": "Saugumo strategija", "vote_choice": "Susilaikė", "topic": "saugumas" }
+    ],
+    "expected": {
+      "category": "more_aligned",
+      "alignment_pct": 66.7,
+      "vote_breakdown": {
+        "aligned": 2,
+        "opposed": 1,
+        "abstained": 1,
+        "absent": 0,
+        "unverified": 0,
+        "total_eligible": 4
+      },
+      "evidence_coverage": {
+        "eligible_votes": 4,
+        "directional_classifiable_votes": 3,
+        "recorded_status_votes": 4,
+        "directional_coverage_pct": 75.0,
+        "recorded_status_coverage_pct": 100.0
+      },
+      "headline_contains": "2 iš 3 palyginamų balsavimų sutapo"
+    }
+  },
+  {
+    "id": "fifty_fifty_split_tie",
+    "description": "Exactly 3 aligned, 3 opposed roll calls (50.0% alignment). Must produce mixed_record with balanced evidence bullets.",
+    "mp_id": 500,
+    "mp_name": "Rimas Lygionis",
+    "party": "Liberalų sąjūdžio frakcija",
+    "preferred_stances": { "pajamos": "for" },
+    "mandate_start": null,
+    "votes": [
+      { "vote_id": "a1", "seimas_vote_id": 5001, "sitting_date": "2026-08-01", "title": "Mokesčių A", "vote_choice": "Už", "topic": "pajamos" },
+      { "vote_id": "a2", "seimas_vote_id": 5002, "sitting_date": "2026-08-02", "title": "Mokesčių B", "vote_choice": "Už", "topic": "pajamos" },
+      { "vote_id": "a3", "seimas_vote_id": 5003, "sitting_date": "2026-08-03", "title": "Mokesčių C", "vote_choice": "Už", "topic": "pajamos" },
+      { "vote_id": "o1", "seimas_vote_id": 5004, "sitting_date": "2026-08-04", "title": "Mokesčių D", "vote_choice": "Prieš", "topic": "pajamos" },
+      { "vote_id": "o2", "seimas_vote_id": 5005, "sitting_date": "2026-08-05", "title": "Mokesčių E", "vote_choice": "Prieš", "topic": "pajamos" },
+      { "vote_id": "o3", "seimas_vote_id": 5006, "sitting_date": "2026-08-06", "title": "Mokesčių F", "vote_choice": "Prieš", "topic": "pajamos" },
+      { "vote_id": "n1", "seimas_vote_id": 5007, "sitting_date": "2026-08-07", "title": "Mokesčių G susilaikymas", "vote_choice": "Susilaikė", "topic": "pajamos" }
+    ],
+    "expected": {
+      "category": "mixed_record",
+      "alignment_pct": 50.0,
+      "vote_breakdown": {
+        "aligned": 3,
+        "opposed": 3,
+        "abstained": 1,
+        "absent": 0,
+        "unverified": 0,
+        "total_eligible": 7
+      },
+      "evidence_coverage": {
+        "eligible_votes": 7,
+        "directional_classifiable_votes": 6,
+        "recorded_status_votes": 7,
+        "directional_coverage_pct": 85.7,
+        "recorded_status_coverage_pct": 100.0
+      },
+      "headline_contains": "Nevienareikšmiai balsavimo duomenys",
+      "bullet_balance": {
+        "min_aligned": 1,
+        "min_opposed": 1,
+        "min_neutral": 1
+      }
+    }
+  },
+  {
+    "id": "high_unverified_pipeline_incomplete",
+    "description": "High unverified counts (>= 10) with fewer than 3 directional votes. Unverified must never leak into absent or distort coverage denominators.",
+    "mp_id": 600,
+    "mp_name": "Darius Nepatikrintas",
+    "party": "Mišri Seimo narių grupė",
+    "preferred_stances": { "valdymas": "for" },
+    "mandate_start": null,
+    "votes": [
+      { "vote_id": "d1", "seimas_vote_id": 6001, "sitting_date": "2026-09-01", "title": "Valdymo A", "vote_choice": "Už", "topic": "valdymas" },
+      { "vote_id": "d2", "seimas_vote_id": 6002, "sitting_date": "2026-09-02", "title": "Valdymo B", "vote_choice": "Prieš", "topic": "valdymas" },
+      { "vote_id": "u1", "seimas_vote_id": 6003, "sitting_date": "2026-09-03", "title": "Valdymo C", "vote_choice": "UNKNOWN", "topic": "valdymas" },
+      { "vote_id": "u2", "seimas_vote_id": 6004, "sitting_date": "2026-09-04", "title": "Valdymo D", "vote_choice": "UNKNOWN", "topic": "valdymas" },
+      { "vote_id": "u3", "seimas_vote_id": 6005, "sitting_date": "2026-09-05", "title": "Valdymo E", "vote_choice": "UNKNOWN", "topic": "valdymas" },
+      { "vote_id": "u4", "seimas_vote_id": 6006, "sitting_date": "2026-09-06", "title": "Valdymo F", "vote_choice": "UNKNOWN", "topic": "valdymas" },
+      { "vote_id": "u5", "seimas_vote_id": 6007, "sitting_date": "2026-09-07", "title": "Valdymo G", "vote_choice": "UNKNOWN", "topic": "valdymas" },
+      { "vote_id": "u6", "seimas_vote_id": 6008, "sitting_date": "2026-09-08", "title": "Valdymo H", "vote_choice": "UNKNOWN", "topic": "valdymas" },
+      { "vote_id": "u7", "seimas_vote_id": 6009, "sitting_date": "2026-09-09", "title": "Valdymo I", "vote_choice": "UNKNOWN", "topic": "valdymas" },
+      { "vote_id": "u8", "seimas_vote_id": 6010, "sitting_date": "2026-09-10", "title": "Valdymo J", "vote_choice": "UNKNOWN", "topic": "valdymas" },
+      { "vote_id": "u9", "seimas_vote_id": 6011, "sitting_date": "2026-09-11", "title": "Valdymo K", "vote_choice": "UNKNOWN", "topic": "valdymas" },
+      { "vote_id": "u10", "seimas_vote_id": 6012, "sitting_date": "2026-09-12", "title": "Valdymo L", "vote_choice": "UNKNOWN", "topic": "valdymas" }
+    ],
+    "expected": {
+      "category": "insufficient_data",
+      "alignment_pct": 50.0,
+      "vote_breakdown": {
+        "aligned": 1,
+        "opposed": 1,
+        "abstained": 0,
+        "absent": 0,
+        "unverified": 10,
+        "total_eligible": 12
+      },
+      "evidence_coverage": {
+        "eligible_votes": 12,
+        "directional_classifiable_votes": 2,
+        "recorded_status_votes": 2,
+        "directional_coverage_pct": 16.7,
+        "recorded_status_coverage_pct": 16.7
+      },
+      "headline_contains": "Nepakanka duomenų išvadoms"
+    }
+  },
+  {
+    "id": "zero_match_filter",
+    "description": "Requested topic has 0 roll calls in the database. Must gracefully produce insufficient_data with 0 total_eligible and Lithuanian notice.",
+    "mp_id": 700,
+    "mp_name": "Kazys Tuščiaviduris",
+    "party": "Frakcija „Laisvė“",
+    "preferred_stances": { "aplinka": "for" },
+    "mandate_start": null,
+    "votes": [],
+    "expected": {
+      "category": "insufficient_data",
+      "alignment_pct": 0.0,
+      "vote_breakdown": {
+        "aligned": 0,
+        "opposed": 0,
+        "abstained": 0,
+        "absent": 0,
+        "unverified": 0,
+        "total_eligible": 0
+      },
+      "evidence_coverage": {
+        "eligible_votes": 0,
+        "directional_classifiable_votes": 0,
+        "recorded_status_votes": 0,
+        "directional_coverage_pct": 0.0,
+        "recorded_status_coverage_pct": 0.0
+      },
+      "headline_contains": "Nepakanka duomenų išvadoms"
+    }
+  }
+]

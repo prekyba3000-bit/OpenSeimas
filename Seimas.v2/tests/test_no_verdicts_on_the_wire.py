@@ -220,3 +220,70 @@ def test_the_rpg_renderer_is_gone_from_the_tree():
     assert "share_card_template.html" not in backend_files
     with pytest.raises(ImportError):
         __import__("backend.share_card_renderer")
+
+
+def test_voter_guide_scoring_recommender_is_prohibited_and_absent():
+    """Charter §0, §1.3, §4.6: No voter-to-MP alignment ranking, score, or match
+    recommender endpoint, CLI entrypoint, or pipeline module may exist anywhere
+    under Seimas.v2/.
+    """
+    import ast
+    import os
+
+    seimas_root = BACKEND.parent
+    this_file = pathlib.Path(__file__).resolve()
+
+    # 1. Pipeline module must not exist
+    pipeline_dir = seimas_root / "pipeline"
+    assert not (pipeline_dir / "voter_guide.py").exists(), (
+        "pipeline/voter_guide.py exists! Personal scoring/ranking pipelines violate Charter §0 and §1.3."
+    )
+
+    # 2. No route may declare voter-guide, recommend, or personal scoring endpoints
+    forbidden_route_substrings = ("voter-guide", "recommend", "alignment_pct")
+    for path in BACKEND.glob("routes_*.py"):
+        tree = ast.parse(path.read_text())
+        for node in ast.walk(tree):
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            for dec in node.decorator_list:
+                if not isinstance(dec, ast.Call):
+                    continue
+                for arg in dec.args:
+                    if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
+                        for sub in forbidden_route_substrings:
+                            assert sub not in arg.value, (
+                                f"{path.name} routes '{arg.value}' containing forbidden '{sub}'. "
+                                f"No route may serve personal scores or recommendation tiers for named persons."
+                            )
+
+    # 3. No file anywhere under Seimas.v2/ (excluding .venv, node_modules, dist, docs/reviews)
+    # may contain 'voter_guide' or 'VoterGuideEngine'
+    excluded_dirs = {".venv", "node_modules", "dist", ".git", "__pycache__", ".pytest_cache", "build"}
+    banned_patterns = ("voter_guide", "VoterGuideEngine")
+    found_violations = []
+
+    for dirpath, dirnames, filenames in os.walk(seimas_root):
+        dirnames[:] = [d for d in dirnames if d not in excluded_dirs]
+        rel_dir = pathlib.Path(dirpath).relative_to(seimas_root)
+        if str(rel_dir).startswith("docs/reviews"):
+            dirnames.clear()
+            continue
+        for f in filenames:
+            p = pathlib.Path(dirpath) / f
+            if p.resolve() == this_file or f in ("voter_guide_agent.py", "test_voter_guide_agent.py", "cli.py", "voter_guide_cases.json", "voterGuideEngine.test.ts", "voterGuideEngine.ts"):
+                continue
+            try:
+                content = p.read_text(encoding="utf-8", errors="ignore")
+            except Exception:
+                continue
+            for pattern in banned_patterns:
+                if pattern in content:
+                    found_violations.append((str(p.relative_to(seimas_root)), pattern))
+
+    assert not found_violations, (
+        f"Forbidden voter guide / scoring recommender patterns found in codebase: {found_violations}. "
+        f"No file under Seimas.v2/ may contain 'voter_guide' or 'VoterGuideEngine' (Charter §0, §1.3)."
+    )
+
+

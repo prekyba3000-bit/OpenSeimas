@@ -187,4 +187,24 @@ describe('mpActivitySchema is the wire contract', () => {
     );
     expect(screen.getByText('Padėjėjų neužfiksuota.')).toBeInTheDocument();
   });
+
+  it('groups staff by location and displays ethical privacy notice', () => {
+    render(
+      <MpActivityPanel
+        data={{
+          travel: [], press_releases: [], travel_has_more: false, press_has_more: false,
+          staff: [
+            { first_name: 'Tomas', last_name: 'Vaitkus', in_constituency: false },
+            { first_name: 'Lina', last_name: 'Petrauskaitė', in_constituency: true },
+          ],
+        }}
+      />,
+    );
+    expect(screen.getByText('Seimo kanceliarijoje')).toBeInTheDocument();
+    expect(screen.getByText('Apygardoje')).toBeInTheDocument();
+    expect(screen.getByText('Tomas Vaitkus')).toBeInTheDocument();
+    expect(screen.getByText('Lina Petrauskaitė')).toBeInTheDocument();
+    expect(screen.getByText(/Asmens duomenų apsauga/)).toBeInTheDocument();
+  });
 });
+

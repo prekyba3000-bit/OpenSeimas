@@ -8,10 +8,13 @@
   "scripts": {
     "dashboard:dev": "npm run dev -w dashboard",
     "dashboard:build": "npm run build -w dashboard",
-    "dashboard:test": "npm run test -w dashboard",
+    "dashboard:test": "npm run test -w dashboard -- --run",
     "dashboard:lint": "npm run lint -w dashboard",
+    "dashboard:typecheck": "npm run typecheck -w dashboard",
     "android:apk": "Seimas.v2/dashboard/android-app/build-apk.sh",
-    "dashboard:typecheck": "npm run typecheck -w dashboard"
+    "test": "npm run dashboard:test",
+    "lint": "npm run dashboard:lint",
+    "typecheck": "npm run dashboard:typecheck"
   },
   "devDependencies": {
     "jsdom": "^25.0.1"

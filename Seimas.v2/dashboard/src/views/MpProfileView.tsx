@@ -15,7 +15,15 @@ import { hasFaction } from '../utils/faction';
 import { AttendanceTrajectoryStrip } from '../components/AttendanceTrajectory';
 import { MpActivityPanel } from '../components/MpActivityPanel';
 import { MpDiaryTimeline } from '../components/MpDiaryTimeline';
+import { MpAssetsChart } from '../components/MpAssetsChart';
+import { MpProcurementCard } from '../components/MpProcurementCard';
+import { MpChronoSpeed } from '../components/MpChronoSpeed';
+import { MpSpeechesFeed } from '../components/MpSpeechesFeed';
 import { MpFactionAlignment } from '../components/MpFactionAlignment';
+import { MpSupplierLinksCard } from '../components/MpSupplierLinksCard';
+import { MpFactionFrictionCard } from '../components/MpFactionFriction';
+
+
 import { VoteTopicFilter, TOPIC_LABELS_LT } from '../components/VoteTopicFilter';
 import {
   CIVIC_DIMENSION_ORDER,
@@ -310,13 +318,26 @@ export const MpProfileLayout = ({
 
             <AttendanceTrajectoryStrip data={trajectory} />
 
-              <MpFactionAlignment mpId={profile.mp.id} party={profile.mp.party} />
+            <MpFactionAlignment mpId={profile.mp.id} party={profile.mp.party} />
 
-              <MpActivityPanel data={activity} />
+            <MpActivityPanel data={activity} />
 
-              <MpDiaryTimeline mpId={profile.mp.id} />
+            <MpSpeechesFeed mpId={profile.mp.id} />
+
+            <MpDiaryTimeline mpId={profile.mp.id} />
+
+            <MpAssetsChart mpId={profile.mp.id} />
+
+            <MpProcurementCard mpId={profile.mp.id} />
+
+            <MpSupplierLinksCard mpId={profile.mp.id} />
+
+            <MpFactionFrictionCard mpId={profile.mp.id} />
+
+            <MpChronoSpeed mpId={profile.mp.id} />
 
             <MpReplies mpId={profile.mp.id} />
+
           </div>
         )}
 

@@ -35,6 +35,28 @@ const VoteDetailRoute = () => {
     return <VoteDetailView voteId={id!} />;
 };
 
+import { App as CapacitorApp } from '@capacitor/app';
+import { useNavigate } from 'react-router';
+
+const DeepLinkHandler = () => {
+    const navigate = useNavigate();
+    React.useEffect(() => {
+        const listener = CapacitorApp.addListener('appUrlOpen', (event) => {
+            try {
+                const url = new URL(event.url);
+                const path = url.pathname;
+                if (path && path !== '/') {
+                    navigate(path);
+                }
+            } catch (e) {
+                console.error("Failed to parse deep link URL", e);
+            }
+        });
+        return () => { listener.then(l => l.remove()); };
+    }, [navigate]);
+    return null;
+};
+
 function App() {
     React.useEffect(() => {
         // The theme is resolved before paint by the inline script in
@@ -46,6 +68,7 @@ function App() {
 
     return (
         <HashRouter>
+            <DeepLinkHandler />
             <Routes>
                 <Route path="/" element={<LandingPage />} />
 

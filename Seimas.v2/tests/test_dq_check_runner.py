@@ -195,7 +195,7 @@ def test_fixture_duplicate_asmens_id(conn):
     assert _run_named(conn, key)["status"] == "pass", "clean before injection"
     with conn.cursor() as cur:
         cur.execute("SAVEPOINT inject")
-        cur.execute("ALTER TABLE politicians DROP CONSTRAINT politicians_seimas_mp_id_key")
+        cur.execute("ALTER TABLE politicians DROP CONSTRAINT politicians_seimas_mp_id_key CASCADE")
         for name in ("Dubl A", "Dubl B"):
             cur.execute(
                 "INSERT INTO politicians (id, display_name, full_name_normalized, seimas_mp_id, is_active) "
@@ -272,6 +272,7 @@ def test_fixture_stale_fetch(conn):
     key = "source_freshness"
     with conn.cursor() as cur:
         cur.execute("SAVEPOINT inject")
+        cur.execute("DELETE FROM source_fetches WHERE finished_at < NOW() - interval '26 hours'")
         cur.execute(
             """INSERT INTO source_fetches
                (source_name, source_url, job_id, status, rows_affected, started_at, finished_at)

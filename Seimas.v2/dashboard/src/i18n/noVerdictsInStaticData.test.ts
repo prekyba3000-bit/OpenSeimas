@@ -38,6 +38,8 @@ const FORBIDDEN_KEYS = [
   /grade$/i,
   /risk[_-]?level/i,
   /integrity[_-]?score/i,
+  /alignment[_-]?pct/i,
+  /match[_-]?score/i,
 ];
 
 // Titles that pass judgement rather than describing a measurement.

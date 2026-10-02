@@ -53,9 +53,9 @@ INSERT INTO dq_checks (check_key, description_lt, sql, severity, error_if, warn_
  'Balso reikšmė turi būti „Už", „Prieš" arba „Susilaikė". Tuščia reikšmė reiškia, kad duomenys nepaskelbti, ir tai nėra klaida.',
  $q$WITH bad AS (
       SELECT id, vote_choice FROM mp_votes
-      WHERE vote_choice IS NOT NULL
+      WHERE vote_choice IS NOT NULL AND vote_choice != ''
         AND vote_choice NOT IN ('Už', 'Prieš', 'Susilaikė')
-    ), total AS (SELECT count(*)::numeric AS n FROM mp_votes WHERE vote_choice IS NOT NULL)
+    ), total AS (SELECT count(*)::numeric AS n FROM mp_votes WHERE vote_choice IS NOT NULL AND vote_choice != '')
     SELECT b.id::text AS mp_vote_id, b.vote_choice,
            CASE WHEN (SELECT count(*) FROM bad)::numeric / NULLIF((SELECT n FROM total),0)
                      > 0.001 THEN 'warn' ELSE 'warn' END AS severity
