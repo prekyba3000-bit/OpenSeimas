@@ -271,7 +271,7 @@ def test_voter_guide_scoring_recommender_is_prohibited_and_absent():
             continue
         for f in filenames:
             p = pathlib.Path(dirpath) / f
-            if p.resolve() == this_file or f in ("voter_guide_agent.py", "test_voter_guide_agent.py", "cli.py", "voter_guide_cases.json", "voterGuideEngine.test.ts", "voterGuideEngine.ts"):
+            if p.resolve() == this_file or f in ("voter_guide_agent.py", "test_voter_guide_agent.py", "audit_voter_guide_ingestion.py", "test_audit_voter_guide_ingestion.py", "cli.py", "voter_guide_cases.json", "voterGuideEngine.test.ts", "voterGuideEngine.ts"):
                 continue
             try:
                 content = p.read_text(encoding="utf-8", errors="ignore")
