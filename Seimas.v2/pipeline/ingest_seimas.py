@@ -232,7 +232,9 @@ def sync_db():
             nominating_party = EXCLUDED.nominating_party,
             is_active = EXCLUDED.is_active,
             term_end_date = EXCLUDED.term_end_date,
-            photo_url = EXCLUDED.photo_url,
+            -- keep Commons photos set by pipeline.ingest_photos (lrs.lt blocks cross-origin)
+            photo_url = CASE WHEN politicians.photo_url LIKE 'https://commons.wikimedia.org/%%'
+                             THEN politicians.photo_url ELSE EXCLUDED.photo_url END,
             mandate_start_date = EXCLUDED.mandate_start_date,
             mandate_end_date = EXCLUDED.mandate_end_date,
             last_synced_at = NOW();

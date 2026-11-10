@@ -35,6 +35,7 @@ cd "$REPO/Seimas.v2"
 echo "[$(date -Is)] daily sync start"
 .venv/bin/python apply_migrations.py
 .venv/bin/python -m pipeline.ingest_seimas
+.venv/bin/python -m pipeline.ingest_photos || echo "[$(date -Is)] ingest_photos failed (non-fatal, previous photos kept)"
 # Non-fatal, like every other runner here. It now exits nonzero when some vote
 # results could not be fetched — and under `set -e` that would abort the whole
 # sync over one 404'd vote, taking registrations with it. Registrations
