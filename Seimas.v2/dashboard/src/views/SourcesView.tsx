@@ -51,8 +51,7 @@ export function SourcesView() {
       </Card>
 
       <p className="text-sm text-muted-foreground">
-        Techniniai laukų pavadinimai (pvz. <code className="text-xs bg-muted px-1 rounded">forensic_breakdown</code>,{' '}
-        <code className="text-xs bg-muted px-1 rounded">attributes.INT</code>) naudojami API atsakymuose ir gali būti
+        Techniniai laukų pavadinimai (pvz. <code className="text-xs bg-muted px-1 rounded">forensic_breakdown</code>) naudojami API atsakymuose ir gali būti
         cituojami žiniasklaidoje kartu su pasiekimo data.
       </p>
 

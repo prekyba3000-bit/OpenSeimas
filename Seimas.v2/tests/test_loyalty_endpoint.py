@@ -143,23 +143,67 @@ class _Cur:
         return self._row
 
 
+class _ViewCur:
+    """Cursor stub over a faction_alignment view holding `rows`."""
+
+    def __init__(self, rows, refreshed=True):
+        self._rows, self._refreshed, self.sql = rows, refreshed, []
+
+    def execute(self, sql, params=None):
+        self.sql.append(sql)
+        if "FROM faction_alignment" in sql and not self._refreshed:
+            raise RuntimeError("materialized view has not been populated")
+
+    def fetchall(self):
+        return self._rows
+
+
 def test_no_comparable_basis_is_none_not_zero(monkeypatch):
     """0.0 means "agrees with his faction 0% of the time". For a member who
     sits in no faction that is not a low score, it is a sentence about a thing
-    that does not exist. The Seimo Pirmininkas steps out of his faction, and
-    the SQL join can never match him because NULL never equals NULL."""
+    that does not exist. The view carries NULL for him; so does the profile."""
     from backend import hero_engine
 
-    monkeypatch.setattr(hero_engine, "_table_exists", lambda *a, **k: False)
-    assert hero_engine._fetch_party_loyalty("x", _Cur(None)) is None
-    assert hero_engine._fetch_party_loyalty("x", _Cur({"party_loyalty": None})) is None
+    monkeypatch.setattr(hero_engine, "_table_exists", lambda *a, **k: True)
+    assert hero_engine._fetch_party_loyalty("x", _ViewCur([])) is None
+    assert hero_engine._fetch_party_loyalty(
+        "x", _ViewCur([{"mp_id": "x", "alignment_pct": None}])) is None
 
 
 def test_a_real_figure_still_comes_through(monkeypatch):
     from backend import hero_engine
 
+    monkeypatch.setattr(hero_engine, "_table_exists", lambda *a, **k: True)
+    assert hero_engine._fetch_party_loyalty(
+        "x", _ViewCur([{"mp_id": "x", "alignment_pct": 75.84}])) == 75.84
+
+
+def test_no_view_means_no_figure_and_no_second_definition(monkeypatch):
+    """Charter §1.4. With the view absent or never refreshed there is no
+    figure. There used to be a fallback query here that recomputed agreement
+    another way; production measured it at 47.55 for a member the view put at
+    94.34, both shown on one page under one name."""
+    from backend import hero_engine
+
     monkeypatch.setattr(hero_engine, "_table_exists", lambda *a, **k: False)
-    assert hero_engine._fetch_party_loyalty("x", _Cur({"party_loyalty": 75.84})) == 75.84
+    cur = _ViewCur([{"mp_id": "x", "alignment_pct": 75.84}])
+    assert hero_engine._fetch_party_loyalty("x", cur) is None
+    assert cur.sql == []
+
+    monkeypatch.setattr(hero_engine, "_table_exists", lambda *a, **k: True)
+    cur = _ViewCur([], refreshed=False)
+    assert hero_engine._fetch_party_loyalty("x", cur) is None
+    assert cur.sql[-1].startswith("ROLLBACK TO SAVEPOINT")
+
+
+def test_list_and_profile_take_the_figure_from_the_same_function():
+    import inspect
+    from backend import hero_engine
+
+    src = inspect.getsource(hero_engine)
+    assert src.count("FROM faction_alignment") == 1, "one reader of the view"
+    assert 'row["party_loyalty"]' not in src, "the matview's retired column is read again"
+    assert "SELECT party_loyalty" not in src
 
 
 def test_missing_loyalty_is_not_inverted_into_independence():

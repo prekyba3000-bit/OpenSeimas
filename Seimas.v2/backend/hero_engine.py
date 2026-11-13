@@ -621,110 +621,47 @@ def _build_forensic_breakdown(
     }
 
 
+def _read_faction_alignment(db_cursor, mp_id: Optional[str] = None) -> Dict[str, Optional[float]]:
+    """{mp_id: alignment_pct-or-None} from the faction_alignment view.
+
+    The one definition of agreement with a faction (charter §1.4). Empty when
+    the view is absent or has never been refreshed: no figure, not a guess.
+    The savepoint keeps an unpopulated view from aborting the caller's
+    transaction.
+    """
+    if not _table_exists(db_cursor, "faction_alignment"):
+        return {}
+    where, params = ("WHERE mp_id = %s::uuid", (mp_id,)) if mp_id else ("", ())
+    db_cursor.execute("SAVEPOINT faction_alignment_read")
+    try:
+        db_cursor.execute(
+            f"SELECT mp_id::text AS mp_id, alignment_pct FROM faction_alignment {where}", params
+        )
+        rows = db_cursor.fetchall() or []
+        db_cursor.execute("RELEASE SAVEPOINT faction_alignment_read")
+    except Exception:  # noqa: BLE001 — view exists but was never refreshed
+        db_cursor.execute("ROLLBACK TO SAVEPOINT faction_alignment_read")
+        return {}
+    return {
+        r["mp_id"]: (float(r["alignment_pct"]) if r["alignment_pct"] is not None else None)
+        for r in rows
+    }
+
+
 def _fetch_party_loyalty(mp_id: str, db_cursor) -> Optional[float]:
     """Agreement with the member's own faction, or None when there is no basis.
 
-    None is a real answer here, not a missing one. A member who sits in no
-    faction — the Seimo Pirmininkas, who steps out of his — has nothing to
-    agree with, and the join below can never match him because NULL never
-    equals NULL. Returning 0.0 for that published a figure meaning "agrees with
-    his faction 0% of the time" about a man who has no faction.
+    Reads the faction_alignment view and nothing else. Until 2026-11-13 this
+    read mp_stats_summary.party_loyalty, an older definition with no ten-voter
+    floor, so the profile dial and the card under it gave two different
+    figures under one name for all 121 members who had both — 47.55 against
+    94.34 in the widest case — and the dial showed a figure for 18 members
+    whose faction the view calls too small to have a position.
 
-    The same is true of a member with too few comparable votes: no basis is not
-    the same as total disagreement.
+    None is a real answer: a member in no faction has nothing to agree with,
+    and too few comparable votes is not total disagreement.
     """
-    if _table_exists(db_cursor, "mp_stats_summary"):
-        summary_columns = _fetch_table_columns(db_cursor, "mp_stats_summary")
-        if "party_loyalty" in {c.lower() for c in summary_columns}:
-            db_cursor.execute(
-                """
-                SELECT party_loyalty
-                FROM mp_stats_summary
-                WHERE mp_id = %s::uuid
-                """,
-                (mp_id,),
-            )
-            row = db_cursor.fetchone()
-            if row:
-                value = row["party_loyalty"]
-                return float(value) if value is not None else None
-
-    db_cursor.execute(
-        """
-        WITH normalized_votes AS (
-            SELECT
-                mv.vote_id,
-                mv.politician_id,
-                p.current_party,
-                CASE
-                    WHEN LOWER(COALESCE(mv.vote_choice, '')) IN ('už', 'uz') THEN 'UZ'
-                    WHEN LOWER(COALESCE(mv.vote_choice, '')) IN ('prieš', 'pries') THEN 'PRIES'
-                    WHEN LOWER(COALESCE(mv.vote_choice, '')) LIKE 'susilaik%%' THEN 'SUSILAIKE'
-                    WHEN LOWER(COALESCE(mv.vote_choice, '')) LIKE 'nedalyv%%' THEN 'NEDALYVAVO'
-                    ELSE UPPER(TRIM(COALESCE(mv.vote_choice, '')))
-                END AS vote_choice_norm
-            FROM mp_votes mv
-            JOIN politicians p ON mv.politician_id = p.id
-        ),
-        party_consensus AS (
-            SELECT
-                nv.vote_id,
-                nv.current_party,
-                nv.vote_choice_norm,
-                COUNT(*) AS choice_count,
-                SUM(COUNT(*)) OVER (
-                    PARTITION BY nv.vote_id, nv.current_party
-                ) AS party_total_count,
-                ROW_NUMBER() OVER (
-                    PARTITION BY nv.vote_id, nv.current_party
-                    ORDER BY COUNT(*) DESC, nv.vote_choice_norm ASC
-                ) AS row_num
-            FROM normalized_votes nv
-            WHERE nv.vote_choice_norm != 'NEDALYVAVO'
-            GROUP BY nv.vote_id, nv.current_party, nv.vote_choice_norm
-        ),
-        dominant_choice AS (
-            SELECT
-                vote_id,
-                current_party,
-                vote_choice_norm AS party_majority_choice,
-                choice_count,
-                party_total_count
-            FROM party_consensus
-            WHERE row_num = 1
-        ),
-        loyalty_base AS (
-            SELECT
-                nv.politician_id,
-                COUNT(*) FILTER (
-                    WHERE dc.party_total_count > 0
-                      AND (dc.choice_count::numeric / dc.party_total_count) > 0.5
-                ) AS total_comparable_votes,
-                COUNT(*) FILTER (WHERE nv.vote_choice_norm = dc.party_majority_choice) AS aligned_votes
-            FROM normalized_votes nv
-            JOIN dominant_choice dc
-                ON nv.vote_id = dc.vote_id
-               AND nv.current_party = dc.current_party
-            WHERE nv.vote_choice_norm != 'NEDALYVAVO'
-              AND dc.party_total_count > 0
-              AND (dc.choice_count::numeric / dc.party_total_count) > 0.5
-            GROUP BY nv.politician_id
-        )
-        SELECT
-            CASE
-                WHEN lb.total_comparable_votes > 0 THEN
-                    ROUND((lb.aligned_votes::numeric / lb.total_comparable_votes) * 100, 2)
-                ELSE NULL
-            END AS party_loyalty
-        FROM loyalty_base lb
-        WHERE lb.politician_id = %s::uuid
-        """,
-        (mp_id,),
-    )
-    row = db_cursor.fetchone()
-    if not row or row["party_loyalty"] is None:
-        return None
-    return float(row["party_loyalty"])
+    return _read_faction_alignment(db_cursor, mp_id).get(str(mp_id))
 
 
 # ─── Score formulas ──────────────────────────────────────────────────────────
@@ -1662,6 +1599,7 @@ def calculate_all_hero_profiles_fast(
 
     profiles: List[Dict[str, Any]] = []
     _attendance_by_mp = attendance_overrides(db_cursor)
+    _alignment_by_mp = _read_faction_alignment(db_cursor)
     for row in rows:
         bills_authored = float(row["bills_authored_count"] or 0)
         committee_leadership = float(row["committee_leadership_roles"] or 0)
@@ -1683,7 +1621,9 @@ def calculate_all_hero_profiles_fast(
         amendments_proposed = amendments_proposed_count
         bills_proposed = bills_authored
         years_in_parliament = _years_since(row["first_vote_date"])
-        party_loyalty = float(row["party_loyalty"] or 0)
+        # Same resolver as the profile. The matview column is the retired
+        # definition, coalesced to 0; it is not read.
+        party_loyalty = _alignment_by_mp.get(str(row["mp_id"]))
         social_bonus = 0.0  # politicians.social_links column not present in current schema
 
         forensic_breakdown = _build_forensic_breakdown_fast(row, party_loyalty)

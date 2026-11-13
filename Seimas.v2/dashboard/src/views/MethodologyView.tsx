@@ -132,23 +132,6 @@ export function MethodologyView() {
             palyginti aktyvumą, bet nė vieno savaime netraktuokite kaip etinio verdikto.
           </p>
         </section>
-
-        <section>
-          <h2 className="text-lg font-semibold mb-2">Wiki ataskaitos</h2>
-          <p className="text-muted-foreground text-sm leading-relaxed">
-            Autonominės wiki bylos (kai jos paskelbtos) generuojamos agentu pagal griežtas taisykles: faktai turi
-            remtis <strong>duomenų laukais</strong> arba <strong>viešai nuoroda</strong>. Jei bylos nėra, profilyje
-            matote tik API ir duomenų bazės signalus.
-          </p>
-        </section>
-
-        <section>
-          <h2 className="text-lg font-semibold mb-2">Tyrėjų įrankiai</h2>
-          <p className="text-muted-foreground text-sm leading-relaxed">
-            <strong>OpenPlanter</strong> (terminalo ar darbalaukio aplikacija) naudojamas pipeline’ams ir gilesnei
-            analizei — tai ne privaloma visuomenei. Šis portalas skirtas skaitymui ir dalijimosi nuorodomis.
-          </p>
-        </section>
       </Card>
 
       <section className="space-y-3">
@@ -159,6 +142,12 @@ export function MethodologyView() {
           </p>
         </div>
         <MethodologyVersions metricKey="attendance" />
+      </section>
+
+      <section className="space-y-3">
+        {/* LT-COPY: needs native review */}
+        <h2 className="text-lg font-semibold">Metodikos versijos: sutapimas su frakcija</h2>
+        <MethodologyVersions metricKey="party_loyalty" />
       </section>
 
       <div className="flex flex-wrap items-center gap-3">

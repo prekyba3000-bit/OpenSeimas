@@ -1,6 +1,6 @@
 # RESUME — 2026-11-13
 
-Suites: **453 dashboard / 470 backend**. Detail in
+Suites: **454 dashboard / 472 backend**. Detail in
 `docs/reviews/2026-11-13-profile-cards-audit.md`.
 
 ### Done
@@ -8,6 +8,11 @@ Suites: **453 dashboard / 470 backend**. Detail in
   broke §1.1–§1.4, and the `/faction-friction` route. Guard test added.
 - Removed the voter-guide engine and the guard exemption that hid it.
 - Benford no longer reads "clean" for members with no analysis.
+- „Sutapimas su frakcija" was two numbers on one page for 121 members
+  (47.55 against 94.34 at the widest). One reader of `faction_alignment` now;
+  migration 049 has the methodology entry and two corrections.
+- Hub under-60 list no longer names members at 60 % and 65 %; assets card,
+  two stale methodology sections and a stale sources line removed.
 - All of it pushed and verified on production.
 
 ### Blocked
@@ -18,7 +23,9 @@ Suites: **453 dashboard / 470 backend**. Detail in
 - LT worksheet, unchanged since 12 September.
 
 ### Next concrete step
-Decide the `loyalty_bonus` question and items 1, 2, 4–6 in the audit note.
+Read the hub page top to bottom (audit note, third pass, item 1) and decide
+its copy. Then the `loyalty_bonus` question. Migration 049 reaches production
+on the next daily sync; confirm both corrections appear on /dashboard/corrections.
 
 
 ---

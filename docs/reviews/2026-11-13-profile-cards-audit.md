@@ -87,3 +87,72 @@ the deleted files. Backend 470, unchanged in count.
   VMI and annual declarations; the rows are VRK candidate declarations.
   Now „Deklaruotas turtas (VRK)" / „pagal VRK kandidato deklaraciją".
   `LT-COPY: needs native review`. The big figure still lacks its own label.
+
+## Third pass — every public page read as a hostile reader
+
+Rendered all twelve public routes from production and read the text.
+
+### The largest finding: „Sutapimas su frakcija" was two numbers
+
+The profile dial and the list column read `mp_stats_summary.party_loyalty`.
+The card under the dial, the hub and `/api/forensics/loyalty` read the
+`faction_alignment` view, which migration 037 rebuilt so it could be
+published. Measured in production across 140 active members:
+
+| | |
+|---|---|
+| members with both figures | 121 |
+| of those, figures differ | 121 |
+| differ by more than 2 points | 110 |
+| differ by more than 5 points | 90 |
+| widest gap | 47.55 on the dial, 94.34 in the view |
+| dial figure where the view says `faction_too_small` | 18 |
+
+In place since 1 September. No test compared the two, because the permanent
+agreement test compares list with profile, and both read the same wrong
+source.
+
+Fixed: one reader of the view (`_read_faction_alignment`), used by the
+profile and the list. The fallback query that recomputed agreement a third
+way is deleted. Checked end to end on a seeded database: view, profile and
+list agree for a dissenting member (66.67), a member under the 20-vote floor
+(none) and a member in no faction (none) — where the retired column said
+100 and 0. Migration 049 carries the methodology entry (`party_loyalty` v2)
+and two corrections entries, written in final form under §2.
+
+### Also fixed
+
+- **Hub, „Lankomumas žemiau 60 %".** Listed the five lowest attenders
+  whatever their figure: members at 60 % and 65 % were named under that
+  heading. Now only members under the threshold (`belowAttendance`, tested).
+- **Assets card removed.** `declarations-feasibility.md` rules „Never a
+  total" and the sources page says declarations are not shown; the card
+  showed one euro figure as a headline. `/api/mps/{id}/assets` stays.
+- **Sessions:** „X kadencijos sesijų apžvalga (2024–2028)" → „2024–2028 m.
+  kadencijos sesijų apžvalga". „X" was never a kadencija number.
+- **Sources:** named `attributes.INT` as an API field. It left the wire in
+  September.
+- **Methodology:** removed „Wiki ataskaitos" (the feature was withdrawn on
+  6 September as a charter incident) and „Tyrėjų įrankiai / OpenPlanter"
+  (deleted). Added the version history for „Sutapimas su frakcija".
+
+### Read, not changed — yours to decide
+
+1. **Hub headline:** „Neįmanoma būti suktam." and, lower, „Forensic Engines —
+   Penki varikliai. Nulinis fluffas. Kiekvienas variklis atakuoja specifinį
+   korupcijos vektorių", with the per-member faction-agreement list rendered
+   as engine 03 beneath it. Every named member sits under the words
+   „korupcijos vektorių". This is the most verdict-shaped thing left on the
+   site, and it is copy, so I did not rewrite it.
+2. **The under-60 list itself.** Correct now, but it is a named list selected
+   by a low figure, with a warning icon; its first two entries are the Prime
+   Minister and a minister. An earlier review kept it as a criterion.
+3. **Methodology** still describes Benford, chronology and „Fantominis
+   tinklas" in the present tense („Tikriname", „Siejame"). None has ever run.
+   „Kiti vieši rodikliai" names „pastovumo", which is not one of the five.
+   „Balsavimo geometrija — papildomas metodikos tekstas bus čia."
+4. **Landing:** „Kelias: MP → balsai → palyginimas" and a visible
+   placeholder, „Vietoje stock nuotraukos — neutralus blokas…".
+5. **Overview:** „5,883" uses an English thousands separator; „~42 balsavimai
+   vienam nariui" is 5,883 ÷ 140, which describes nothing.
+6. **Stebėsena** says „Tai ne reitingas" above sort buttons for every column.

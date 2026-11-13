@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   averageAttendance,
+  belowAttendance,
   byAttendance,
   formatAttendance,
   hasAttendance,
@@ -80,5 +81,18 @@ describe("no reachable surface coerces attendance to zero", () => {
       return /attendance\s*(\?\?|\|\|)\s*0\b/.test(code);
     });
     expect(offenders.map((f) => f.replace(SRC, "src"))).toEqual([]);
+  });
+});
+
+describe("a list defined by a threshold", () => {
+  it("names nobody who does not meet it", () => {
+    // Production, 2026-11-13: 42, 53, 58, 60 and 65 were listed under
+    // „Lankomumas žemiau 60 %".
+    const got = belowAttendance([mp(65), mp(42), mp(null), mp(59.6), mp(60), mp(53)], 60);
+    expect(got.map((m) => m.attendance)).toEqual([42, 53, 59.6]);
+  });
+
+  it("is empty, not padded, when nobody is under it", () => {
+    expect(belowAttendance([mp(90), mp(null)], 60)).toEqual([]);
   });
 });

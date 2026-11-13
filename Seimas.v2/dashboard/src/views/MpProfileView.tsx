@@ -15,7 +15,6 @@ import { hasFaction } from '../utils/faction';
 import { AttendanceTrajectoryStrip } from '../components/AttendanceTrajectory';
 import { MpActivityPanel } from '../components/MpActivityPanel';
 import { MpDiaryTimeline } from '../components/MpDiaryTimeline';
-import { MpAssetsChart } from '../components/MpAssetsChart';
 import { MpSpeechesFeed } from '../components/MpSpeechesFeed';
 import { MpFactionAlignment } from '../components/MpFactionAlignment';
 
@@ -321,8 +320,6 @@ export const MpProfileLayout = ({
             <MpSpeechesFeed mpId={profile.mp.id} />
 
             <MpDiaryTimeline mpId={profile.mp.id} />
-
-            <MpAssetsChart mpId={profile.mp.id} />
 
             <MpReplies mpId={profile.mp.id} />
 

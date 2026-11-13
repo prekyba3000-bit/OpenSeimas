@@ -140,7 +140,7 @@ const SessionsView = () => {
           <Calendar className="w-7 h-7 text-primary" />
           Sesijos
         </h2>
-        <p className="text-muted-foreground text-sm">X kadencijos sesijų apžvalga (2024–2028)</p>
+        <p className="text-muted-foreground text-sm">2024–2028 m. kadencijos sesijų apžvalga</p>
       </div>
 
       {/* Timeline bar */}

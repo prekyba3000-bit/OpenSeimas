@@ -382,18 +382,6 @@ export const mpDiarySchema = z.object({
 
 export type MpDiary = z.infer<typeof mpDiarySchema>;
 
-export const mpAssetsSchema = z.object({
-  items: z.array(
-    z.object({
-      year: z.number(),
-      total_value: z.number().nullable(),
-      source_url: z.string().nullable(),
-      raw_json: z.record(z.string(), z.unknown()).optional().default({}),
-    }),
-  ),
-});
-export type MpAssets = z.infer<typeof mpAssetsSchema>;
-
 export const mpSpeechesSchema = z.object({
   items: z.array(
     z.object({
@@ -1188,12 +1176,6 @@ export const api = {
 
   getVoteGeometry: (limit = 30) =>
     request<VoteGeoResponse>(`/forensics/vote-geometry?limit=${limit}`),
-
-  getMpAssets: (id: string, options?: RequestOptions<MpAssets>) =>
-    request<MpAssets>(`/mps/${id}/assets`, {
-      ...options,
-      parse: (data) => mpAssetsSchema.parse(data),
-    }),
 
   getMpSpeeches: (id: string, limit = 30, options?: RequestOptions<MpSpeeches>) =>
     request<MpSpeeches>(`/mps/${id}/speeches?limit=${limit}`, {

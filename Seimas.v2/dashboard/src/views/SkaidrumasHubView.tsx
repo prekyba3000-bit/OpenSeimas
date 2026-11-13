@@ -40,7 +40,7 @@ import {
 import { ProblemDetailsNotice } from '../components/ProblemDetailsNotice';
 import { Button } from '../components/Button';
 import { occupancyLabel } from '../utils/mpCounts';
-import { byAttendance, formatAttendance, hasAttendance, withAttendance } from '../utils/attendance';
+import { belowAttendance, formatAttendance, hasAttendance } from '../utils/attendance';
 
 const EMPTY_CHRONO: ChronoResponse = { items: [], clusters: [] };
 const EMPTY_BENFORD: BenfordResponse = { items: [] };
@@ -175,12 +175,12 @@ export default function SkaidrumasHubView() {
     // Only members with a publishable figure can be ranked as lowest-attending.
     // A suppressed member sorted to the top of this list was being named as a
     // risk on the strength of no data at all.
-    () => withAttendance(mps).sort(byAttendance('asc')).slice(0, 6),
+    () => belowAttendance(mps, 60),
     [mps],
   );
 
   const tickerItems = React.useMemo(() => {
-    const lowAttendanceCount = withAttendance(mps).filter((m) => m.attendance! < 60).length;
+    const lowAttendanceCount = belowAttendance(mps, 60).length;
     const newestVote = votes[0]?.title ?? 'Nėra naujausių įrašų';
     return [
       // A citation must not be ambiguous about which number it quotes: this is
@@ -338,7 +338,7 @@ export default function SkaidrumasHubView() {
               vertinimas — kaip skaičiuojama, žr. metodikoje.
             </p>
           <div className="space-y-2">
-            {riskyMps.slice(0, 5).map((mp) => (
+            {riskyMps.map((mp) => (
               <button
                 key={mp.id}
                 type="button"
@@ -347,7 +347,7 @@ export default function SkaidrumasHubView() {
               >
                 <div className="text-sm font-semibold">{mp.name}</div>
                 <div className="text-xs text-muted-foreground mt-1">
-                    Dalyvavimas: {formatAttendance(mp.attendance)} · {mp.party || 'Nežinoma frakcija'}
+                    Dalyvavimas: {formatAttendance(mp.attendance, 1)} · {mp.party || 'Nežinoma frakcija'}
                 </div>
               </button>
             ))}

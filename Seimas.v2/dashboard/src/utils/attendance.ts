@@ -67,3 +67,19 @@ export function byAttendance(
 export function withAttendance<T extends Pick<MpSummary, "attendance">>(members: readonly T[]): T[] {
   return members.filter(hasAttendance);
 }
+
+/**
+ * Members whose figure is under a threshold, lowest first.
+ *
+ * The hub's „Lankomumas žemiau 60 %" list took the five lowest attenders
+ * whatever their figure, so a member at 65 % was named under a heading that
+ * said below 60. A list defined by a criterion contains only what meets it.
+ */
+export function belowAttendance<T extends Pick<MpSummary, "attendance">>(
+  members: readonly T[],
+  threshold: number,
+): T[] {
+  return withAttendance(members)
+    .filter((m) => (m.attendance as number) < threshold)
+    .sort(byAttendance("asc"));
+}
