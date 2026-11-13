@@ -4,8 +4,10 @@ import { describe, expect, it } from "vitest";
 import userEvent from "@testing-library/user-event";
 import {
   DIMENSION_UNAVAILABLE_LT,
+  FACTION_FIGURE_SUPPRESSED_LT,
   NEVER_TOOK_SEAT_NO_FIGURE_LT,
   NO_FACTION_NO_FIGURE_LT,
+  factionFigureReason,
 } from "../utils/mpLegacyDimensions";
 import { DimensionDial } from "./DimensionDial";
 import { AttendanceTrajectoryStrip } from "./AttendanceTrajectory";
@@ -158,5 +160,15 @@ describe("raw counts in the drawer", () => {
     // A member never fetched is unknown. Printing 0 would say "initiated none".
     expect(screen.queryByText("0")).not.toBeInTheDocument();
     expect(screen.getByText(DIMENSION_UNAVAILABLE_LT)).toBeInTheDocument();
+  });
+});
+
+describe("why a faction figure is absent", () => {
+  it("never falls through to a promise of data that is already loaded", () => {
+    // 18 members in a faction too small for a position read „Rodiklis bus
+    // rodomas, kai bus įkelti šaltinio duomenys" on 2026-11-13.
+    expect(factionFigureReason(true)).toBe(FACTION_FIGURE_SUPPRESSED_LT);
+    expect(factionFigureReason(false)).toBe(NO_FACTION_NO_FIGURE_LT);
+    expect(factionFigureReason(true)).not.toBe(DIMENSION_UNAVAILABLE_LT);
   });
 });

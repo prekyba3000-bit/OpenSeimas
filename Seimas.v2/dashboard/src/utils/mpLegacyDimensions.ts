@@ -71,6 +71,23 @@ export const NO_FACTION_NO_FIGURE_LT =
   "Narys nepriskirtas frakcijai, todėl nėra pozicijos, su kuria būtų galima lyginti.";
 
 /**
+ * A member who has a faction and still no figure. The view suppresses it for
+ * two reasons and the profile payload does not say which, so the sentence
+ * names both. Without it the dial fell through to „Rodiklis bus rodomas, kai
+ * bus įkelti šaltinio duomenys" — a promise of data that is already loaded,
+ * shown to 18 members on 2026-11-13.
+ *
+ * LT-COPY: needs native review.
+ */
+export const FACTION_FIGURE_SUPPRESSED_LT =
+  "Skaičiaus nerodome: frakcijoje balsavo mažiau nei dešimt narių arba palyginamų balsavimų yra mažiau nei dvidešimt.";
+
+/** Why „Sutapimas su frakcija" has no figure. Never the generic fallback. */
+export function factionFigureReason(hasFaction: boolean): string {
+  return hasFaction ? FACTION_FIGURE_SUPPRESSED_LT : NO_FACTION_NO_FIGURE_LT;
+}
+
+/**
  * Wire keys for the three chamber-relative dimensions.
  *
  * These were RPG stat abbreviations — STR, WIS, CHA, plus INT holding the

@@ -9,7 +9,7 @@ import { MpReplies } from '../components/MpReplies';
 import { DimensionDial } from '../components/DimensionDial';
 import {
   NEVER_TOOK_SEAT_NO_FIGURE_LT,
-  NO_FACTION_NO_FIGURE_LT,
+  factionFigureReason,
 } from '../utils/mpLegacyDimensions';
 import { hasFaction } from '../utils/faction';
 import { AttendanceTrajectoryStrip } from '../components/AttendanceTrajectory';
@@ -302,8 +302,8 @@ export const MpProfileLayout = ({
                     unavailableReason={
                       servedNoDays(profile.mp)
                         ? NEVER_TOOK_SEAT_NO_FIGURE_LT
-                        : dim === 'partyLoyalty' && !hasFaction(profile.mp.party)
-                          ? NO_FACTION_NO_FIGURE_LT
+                        : dim === 'partyLoyalty'
+                          ? factionFigureReason(hasFaction(profile.mp.party))
                           : null
                     }
                   />

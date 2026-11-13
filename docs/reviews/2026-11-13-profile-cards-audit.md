@@ -156,3 +156,22 @@ and two corrections entries, written in final form under §2.
 5. **Overview:** „5,883" uses an English thousands separator; „~42 balsavimai
    vienam nariui" is 5,883 ÷ 140, which describes nothing.
 6. **Stebėsena** says „Tai ne reitingas" above sort buttons for every column.
+
+### Found by re-reading my own deploy
+
+After the faction fix went live, the dial for the 18 small-faction members
+read „Rodiklis bus rodomas, kai bus įkelti šaltinio duomenys" — the generic
+fallback, promising data that is already loaded. The figure was right to be
+absent; the reason was wrong. Now `factionFigureReason` gives the no-faction
+sentence or a suppression sentence, never the fallback.
+
+## LT-COPY inventory, 2026-11-13 (all need native review)
+
+| Where | String |
+|---|---|
+| `utils/mpLegacyDimensions.ts` | „Skaičiaus nerodome: frakcijoje balsavo mažiau nei dešimt narių arba palyginamų balsavimų yra mažiau nei dvidešimt." |
+| `views/MethodologyView.tsx` | „Metodikos versijos: sutapimas su frakcija" |
+| `views/SessionsView.tsx` | „2024–2028 m. kadencijos sesijų apžvalga" |
+| `migrations/049` (published) | methodology `party_loyalty` v2, title and body |
+| `migrations/049` (published) | correction `faction-agreement-two-figures` |
+| `migrations/049` (published) | correction `profile-cards-unchecked-claims` |
