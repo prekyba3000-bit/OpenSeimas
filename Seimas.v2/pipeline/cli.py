@@ -32,7 +32,7 @@ def list_modules() -> List[str]:
     return sorted(
         name
         for _, name, _ in pkgutil.iter_modules(package_path)
-        if name.startswith(("ingest", "link", "compute", "tag", "voter_guide"))
+        if name.startswith(("ingest", "link", "compute", "tag"))
     )
 
 
