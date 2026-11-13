@@ -1053,7 +1053,57 @@ export interface Freshness {
 
 // ── Public API ───────────────────────────────────────────────────────────────
 
+/**
+ * /api/government — offices of record (migration 050). A register of who held
+ * which office under which decree; it carries no metric. `mp_id` is set only
+ * where an official CV confirms the minister is a Seimas member: null means
+ * "not confirmed", never "not a member".
+ */
+const officeHolderSchema = z.object({
+  name: z.string(),
+  title: z.string(),
+  from_date: z.string().nullable(),
+  basis: z.string().nullable(),
+  basis_url: z.string().nullable(),
+  source_url: z.string(),
+  mp_id: z.string().nullable(),
+  mp_link_source_url: z.string().nullable(),
+});
+const cabinetPostSchema = officeHolderSchema.extend({
+  ministry_key: z.string(),
+  seq: z.number(),
+});
+const governmentSchema = z.object({
+  number: z.number(),
+  numeral: z.string(),
+  mandate_from: z.string().nullable(),
+  mandate_basis: z.string().nullable(),
+  started_work_on: z.string().nullable(),
+  resigned_on: z.string().nullable(),
+  resign_basis: z.string().nullable(),
+  composition_basis: z.string(),
+  composition_url: z.string(),
+  source_url: z.string(),
+  prime_minister: officeHolderSchema.nullable(),
+  posts: z.array(cabinetPostSchema),
+});
+export const governmentResponseSchema = z.object({
+  available: z.boolean(),
+  president: officeHolderSchema.nullable(),
+  ministries: z.array(z.object({ key: z.string(), name: z.string(), url: z.string() })),
+  governments: z.array(governmentSchema),
+});
+export type OfficeHolder = z.infer<typeof officeHolderSchema>;
+export type CabinetPost = z.infer<typeof cabinetPostSchema>;
+export type Government = z.infer<typeof governmentSchema>;
+export type GovernmentResponse = z.infer<typeof governmentResponseSchema>;
+
 export const api = {
+  getGovernment: () =>
+    request<GovernmentResponse>("/government", {
+      parse: (data) => governmentResponseSchema.parse(data),
+    }),
+
   getStats: () =>
     request<DashboardStats>("/stats", { parse: (data) => dashboardStatsSchema.parse(data) }),
 

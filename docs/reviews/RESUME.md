@@ -1,3 +1,29 @@
+# RESUME — 2026-11-13 (second entry)
+
+Suites: **471 dashboard / 469 backend (+1 skipped)**. Detail in
+`docs/reviews/2026-11-13-valdzios-zemelapis.md`.
+
+### Done
+- „Valdžios žemėlapis" (`/dashboard/valdzia`): President, the three
+  Governments of this Seimas term and all their ministers, each from a signed
+  presidential decree. Migration 050, `GET /api/government`, page, tests.
+- Seven ministers linked to their Seimas profiles on the evidence of their
+  official CVs; seven further exact-name matches left unlinked.
+
+### In flight
+- Production applies migration 050 on the next daily sync (06:00). Until then
+  the page reads „duomenų šiuo metu neturime".
+
+### Blocked
+- Same as below: `apps.lrs.lt` outage; LT native review.
+
+### Next concrete step
+Confirm `/dashboard/valdzia` on production after 06:00. Then ingest the
+presidential decree register (vetoes by title) as step 3.
+
+
+---
+
 # RESUME — 2026-11-13
 
 Suites: **455 dashboard / 472 backend**. Detail in

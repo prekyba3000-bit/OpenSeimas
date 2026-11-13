@@ -16,6 +16,7 @@ import {
   Database,
   Mail,
   ChevronDown,
+  Landmark,
 } from 'lucide-react';
 import { cn } from './ui/utils';
 import { Toaster } from 'sonner';
@@ -37,6 +38,7 @@ const primaryNavItems = [
   { path: '/dashboard/mps', label: 'Seimo nariai', icon: Users },
   { path: '/dashboard/votes', label: 'Balsavimai', icon: FileText },
   { path: '/dashboard/factions', label: 'Frakcijos', icon: Shield },
+  { path: '/dashboard/valdzia', label: 'Valdžia', icon: Landmark },
 ];
 
 const moreNavItems = [

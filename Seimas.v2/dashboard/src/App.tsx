@@ -16,6 +16,7 @@ import SessionsView from './views/SessionsView';
 import SkaidrumasHubView from './views/SkaidrumasHubView';
 import { MethodologyView } from './views/MethodologyView';
 import { SourcesView } from './views/SourcesView';
+import { ValdziaView } from './views/ValdziaView';
 import { CorrectionsView } from './views/CorrectionsView';
 import SummaryHistoryView from './views/SummaryHistoryView';
 import { AppErrorBoundary } from './components/AppErrorBoundary';
@@ -120,6 +121,7 @@ function App() {
                         />
                     </Route>
 
+                    <Route path="valdzia" element={<AppErrorBoundary><ValdziaView /></AppErrorBoundary>} />
                     <Route path="factions" element={<AppErrorBoundary><FactionsView /></AppErrorBoundary>} />
                     <Route path="sessions" element={<AppErrorBoundary><SessionsView /></AppErrorBoundary>} />
                     <Route path="compare" element={<AppErrorBoundary><ComparisonView /></AppErrorBoundary>} />

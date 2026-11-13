@@ -13,6 +13,7 @@ const SOURCES = [
   // LT-COPY: needs native review
   { name: 'Lietuvos Respublikos Seimas (LRS)', detail: 'Balsavimai, posėdžiai, registracijos, sesijų ribos — per sinchronizavimo sluoksnį (p2b, CC BY 4.0).' },
   { name: 'LRS — Seimo narių veikla', detail: 'Darbotvarkės, komandiruotės, pranešimai žiniasklaidai, pasisakymai posėdžiuose, padėjėjai. Padėjėjų kontaktų nerenkame.' },
+  { name: 'Respublikos Prezidento dekretai (lrp.lt) ir Vyriausybės svetainė (lrv.lt)', detail: 'Ministrų Pirmininkų ir ministrų skyrimas, Vyriausybių sudėtis. Kiekvienas įrašas puslapyje „Valdžia“ turi nuorodą į dekretą. Įkelta 2026-11-13, atnaujinama rankiniu būdu, kai pasikeičia Vyriausybės sudėtis.' },
   { name: 'data.gov.lt', detail: 'Vieši duomenų rinkiniai, kai integruoti į projekto pipeline.' },
   { name: 'Turto ir interesų deklaracijos', detail: 'Kol kas nerenkame. VTEK privačių interesų registro paieška apsaugota nuo automatinio nuskaitymo, o atviri duomenys yra tik mėnesio suvestinės — todėl deklaracijų portale nerodome.' },
   { name: 'Projekto PostgreSQL duomenų bazė', detail: 'Agreguoti ir analizuoti įrašai; atnaujinimo laikas priklauso nuo sinchronizacijos.' },

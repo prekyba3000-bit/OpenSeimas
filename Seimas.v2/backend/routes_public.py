@@ -1192,3 +1192,81 @@ def get_mp_supplier_links(mp_id: str):
                     for r in rows
                 ]
             }
+
+
+@router.get("/api/government")
+def get_government():
+    """The President, and the Governments of this Seimas term with their ministers.
+
+    Facts of record only: who held which office, under which decree. Nothing
+    here counts, scores or compares people. `mp_id` is set only where an
+    official CV confirms the minister is a Seimas member (migration 050); null
+    means not confirmed, not "not a member".
+    """
+    with get_db_conn() as conn:
+        if not conn:
+            raise HTTPException(status_code=500, detail="Database connection failed")
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            if not _table_exists(cur, "offices_held"):
+                return {"available": False, "president": None, "ministries": [], "governments": []}
+            cur.execute("SELECT key, name_lt, url FROM ministries ORDER BY sort_order")
+            ministries = [{"key": r["key"], "name": r["name_lt"], "url": r["url"]} for r in cur.fetchall()]
+            cur.execute("""
+                SELECT number, numeral, mandate_from, mandate_basis_lt, started_work_on,
+                       resigned_on, resign_basis_lt, composition_basis_lt, composition_url, source_url
+                FROM governments ORDER BY number
+            """)
+            governments = {
+                r["number"]: {
+                    "number": r["number"],
+                    "numeral": r["numeral"],
+                    "mandate_from": _date_or_none(r["mandate_from"]),
+                    "mandate_basis": r["mandate_basis_lt"],
+                    "started_work_on": _date_or_none(r["started_work_on"]),
+                    "resigned_on": _date_or_none(r["resigned_on"]),
+                    "resign_basis": r["resign_basis_lt"],
+                    "composition_basis": r["composition_basis_lt"],
+                    "composition_url": r["composition_url"],
+                    "source_url": r["source_url"],
+                    "prime_minister": None,
+                    "posts": [],
+                }
+                for r in cur.fetchall()
+            }
+            cur.execute("""
+                SELECT o.office_key, o.government_number, o.ministry_key, o.seq, o.person_name,
+                       o.title_lt, o.from_date, o.basis_lt, o.basis_url,
+                       o.mp_link_source_url, o.source_url, p.id AS mp_id
+                FROM offices_held o
+                LEFT JOIN ministries m ON m.key = o.ministry_key
+                LEFT JOIN politicians p ON p.seimas_mp_id = o.mp_seimas_id
+                ORDER BY o.government_number NULLS FIRST, m.sort_order NULLS FIRST, o.seq
+            """)
+            president = None
+            for r in cur.fetchall():
+                holder = {
+                    "name": r["person_name"],
+                    "title": r["title_lt"],
+                    "from_date": _date_or_none(r["from_date"]),
+                    "basis": r["basis_lt"],
+                    "basis_url": r["basis_url"],
+                    "source_url": r["source_url"],
+                    "mp_id": str(r["mp_id"]) if r["mp_id"] else None,
+                    "mp_link_source_url": r["mp_link_source_url"] if r["mp_id"] else None,
+                }
+                if r["office_key"] == "president":
+                    president = holder
+                    continue
+                gov = governments.get(r["government_number"])
+                if gov is None:
+                    continue
+                if r["office_key"] == "prime_minister":
+                    gov["prime_minister"] = holder
+                else:
+                    gov["posts"].append({"ministry_key": r["ministry_key"], "seq": r["seq"], **holder})
+            return {
+                "available": True,
+                "president": president,
+                "ministries": ministries,
+                "governments": list(governments.values()),
+            }
