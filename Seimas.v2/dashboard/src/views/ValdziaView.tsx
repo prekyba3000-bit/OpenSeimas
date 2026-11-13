@@ -26,9 +26,11 @@ const LRP_FUNCTIONS = 'https://www.lrp.lt/lt/institucija/prezidento-funkcijos/11
 const LRV_CABINET = 'https://lrv.lt/lt/apie-vyriausybe/xxi-vyriausybe/ministru-kabinetas/';
 
 const Ext = ({ href, children }: { href: string; children: React.ReactNode }) => (
-  <a href={href} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-primary underline underline-offset-2">
+  // Inline, not inline-flex: a title that wraps over three lines squeezed the
+  // icon to a dot at the far edge.
+  <a href={href} target="_blank" rel="noreferrer" className="text-primary underline underline-offset-2">
     {children}
-    <ExternalLink className="w-3 h-3" aria-hidden="true" />
+    <ExternalLink className="inline-block w-3 h-3 ml-1 align-baseline" aria-hidden="true" />
   </a>
 );
 
@@ -134,7 +136,7 @@ const ACT_KINDS: { key: 'veto' | 'bill' | 'treaty' | 'nomination'; title: string
 function DecreeList({ items }: { items: Decree[] }) {
   if (items.length === 0) return <p className="px-3 pb-3 text-sm text-muted-foreground">Tokių dekretų šiame laikotarpyje nėra.</p>;
   return (
-    <ul className="divide-y divide-border border-t border-border">
+    <ul className="divide-y divide-border border-t border-border max-h-96 overflow-y-auto">
       {items.map((d) => (
         <li key={`${d.decree_no}-${d.listed_on}-${d.title}`} className="px-3 py-2 text-sm">
           <span className="text-xs text-muted-foreground">
@@ -169,9 +171,10 @@ function PresidentialActsSection({ acts }: { acts: PresidentialActs | null }) {
         )}
       </div>
       {acts && (
-        <div className="grid gap-3 lg:grid-cols-2">
+        <div className="grid gap-3 lg:grid-cols-2 items-start">
           {ACT_KINDS.map((k) => (
-            <details key={k.key} className="rounded-xl border border-border bg-card">
+            // Treaties start open: they are the evidence for the first row of the map.
+            <details key={k.key} open={k.key === 'treaty'} className="rounded-xl border border-border bg-card">
               <summary className="cursor-pointer px-3 py-2">
                 <span className="font-semibold">{k.title}</span>{' '}
                 <span className="text-muted-foreground">({acts[k.key].length})</span>

@@ -136,9 +136,9 @@ score to a native reader, drop the numbers and keep the lists.
 day from the date in the PDF's file name; the register keeps the list's date
 and names the column for what it is.
 
-Not rendered-audited: the four lists in their opened state. They are native
-`<details>` elements and the headless screenshot shows them closed; their
-content is covered by the view tests only.
+Rendered audit of the opened list found the link icon squeezed to a dot beside
+a three-line title and an open list stretching its neighbours; both fixed in a
+follow-up. Treaties now start open, as the evidence for the map's first row.
 
 ## LT-COPY inventory (all need native review)
 
