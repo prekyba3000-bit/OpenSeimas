@@ -1,3 +1,26 @@
+# RESUME — 2026-11-13
+
+Suites: **456 dashboard / 470 backend**. Detail in
+`docs/reviews/2026-11-13-profile-cards-audit.md`.
+
+### Done
+- Removed four profile cards from the 2 October commit that were live and
+  broke §1.1–§1.4, and the `/faction-friction` route. Guard test added.
+
+### Blocked
+- Daily sync: `apps.lrs.lt` unreachable from this machine since ~6 November;
+  data frozen at 5 November, views held by the freshness gate.
+- Corrections entry for the removed cards: draft in the audit note, needs
+  native review.
+- LT worksheet, unchanged since 12 September.
+
+### Next concrete step
+Decide items 2–6 in the audit note, starting with the voter-guide code and
+the guard that exempts it.
+
+
+---
+
 # RESUME — 2026-09-12
 
 Branch `main` at `f8eef7f` (local changes in working tree).

@@ -20,17 +20,13 @@ def test_get_mp_supplier_links():
         assert isinstance(data["items"], list)
 
 
-def test_get_mp_faction_friction():
-    with patch("backend.routes_public.get_db_conn", empty_db(tables_present=True)):
-        response = client.get(f"/api/mps/{DUMMY_MP_ID}/faction-friction")
-        assert response.status_code == 200
-        data = response.json()
-        assert "total_votes" in data
-        assert "friction_count" in data
-        assert "friction_rate_pct" in data
-        assert "notable_dissent_votes" in data
-        assert isinstance(data["notable_dissent_votes"], list)
-        if data["total_votes"] == 0:
-            assert data["friction_rate_pct"] is None
-
-
+def test_faction_agreement_has_one_definition():
+    """Charter §1.4. /faction-friction recomputed agreement with the faction
+    from today's faction, with no ten-voter floor and an arbitrary tie-break,
+    and published a figure that contradicted /faction-alignment on the same
+    profile (6.4% of 3,358 beside the view's figure over its own denominator).
+    The faction_alignment view is the one definition."""
+    response = client.get(f"/api/mps/{DUMMY_MP_ID}/faction-friction")
+    assert response.status_code == 404
+    paths = [r.path for r in app.routes]
+    assert [p for p in paths if "faction-" in p] == ["/api/mps/{mp_id}/faction-alignment"]
