@@ -86,23 +86,71 @@ lrs.lt is reachable again its member pages can settle these seven.
   an official host today, so the page states only what lrp.lt and lrv.lt state.
 - **Seimas committees on the map.** No verified committee list in the data.
 - **Party of each minister.** Not in any source read.
-- **Government-submitted bills and vetoed laws** (steps 2 and 3). The decree
-  register for the term was read (titles, dates, numbers); vetoes are
-  identifiable by title. Not ingested yet.
-- **Keeping it current.** The register is a hand-seeded migration. A change of
-  minister needs a new migration until a decree ingest exists.
-- Production gets migration 050 on the next daily sync (06:00). Until then the
-  page says it has no data.
+- **Government-submitted bills** (step 2). Needs lrs.lt, which is down.
+- **The Seimas vote that follows a veto.** The veto decree names the law's
+  number (e.g. XV-438); matching it to the re-vote needs lrs.lt too.
+- **Keeping the ministers current.** Still a hand-seeded migration, but the
+  page now knows when it has fallen behind (below).
+- Production gets migrations 050 and 051 on the next daily sync (06:00), and
+  that sync's first decree run reads the whole term. Until then the page says
+  it has no data.
+
+## Second commit, same day: the decree register (`514fb9a`)
+
+`migrations/051_presidential_decrees.sql`, `pipeline/ingest_presidential_decrees.py`,
+on the daily sync. Reads lrp.lt/lt/dekretai month by month; one row per listed
+decree; `kind` from the title alone (`classify`, first matching rule wins).
+
+Run for real against a local database: **744 listed, 742 stored** (two are
+second listings of a number already stored), 2 without a decree number
+(lrp.lt links no file, or a file name without "1K"). Re-run: 0 new.
+
+| kind | rows | what the page does with it |
+|---|---|---|
+| treaty | 26 | list: the evidence for "foreign policy" |
+| nomination | 34 | list |
+| bill | 18 | list |
+| veto | 5 | list |
+| cabinet | 16 | not listed; used for the staleness check |
+| other | 643 | not shown |
+
+All 83 treaty, nomination, bill and veto titles were read by eye after the
+run; none is misfiled. Two guards against the obvious false positives are
+tests: "ĮGALIOTOJO MINISTRO" is a diplomatic rank, "ADMINISTRACINIO" is a court.
+
+**The page knows when its ministers are stale.** `/api/government` returns
+`cabinet_decrees_after_register`: cabinet decrees numbered above the newest
+one the minister register cites (today 1K-737; none newer). When one appears
+the map shows a note that the list may be out of date, with the decree,
+instead of presenting yesterday's cabinet as today's.
+
+**Unread is not empty (§1.2).** `presidential_acts` is null when the register
+table is absent or has no rows, and the page then says it has not loaded the
+register. It does not show four empty lists that would read as "no vetoes".
+
+Counts beside the four headings are list lengths, and the page says so. They
+describe an office's documents, not a person's merit; if that still reads as a
+score to a native reader, drop the numbers and keep the lists.
+
+`listed_on` is lrp.lt's list date. For a handful of decrees it differs by a
+day from the date in the PDF's file name; the register keeps the list's date
+and names the column for what it is.
+
+Not rendered-audited: the four lists in their opened state. They are native
+`<details>` elements and the headless screenshot shows them closed; their
+content is covered by the view tests only.
 
 ## LT-COPY inventory (all need native review)
 
 Every string in `dashboard/src/views/ValdziaView.tsx` and the `AREAS` titles,
-hints and President lines in `dashboard/src/utils/valdzia.ts`; the new entry
+hints and President lines in `dashboard/src/utils/valdzia.ts`
+(the view includes the decree lists and the staleness note); the new entry
 in `SourcesView.tsx`; nav label „Valdžia". Statements about powers follow
 lrp.lt and lrv.lt wording closely; the rest is mine.
 
 ## Suites
 
-Dashboard **471** (was 455). Backend **469 passed, 1 skipped** (six new). The
+After the second commit: dashboard **475**, backend **480 passed, 1 skipped**.
+After the first: dashboard **471** (was 455), backend **469 passed, 1 skipped** (six new). The
 previous RESUME entry says 472 backend; that figure does not reconcile with
 today's run minus the six new tests and was probably miscounted by me.

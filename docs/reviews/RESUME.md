@@ -1,6 +1,6 @@
 # RESUME — 2026-11-13 (second entry)
 
-Suites: **471 dashboard / 469 backend (+1 skipped)**. Detail in
+Suites: **475 dashboard / 480 backend (+1 skipped)**. Detail in
 `docs/reviews/2026-11-13-valdzios-zemelapis.md`.
 
 ### Done
@@ -9,17 +9,22 @@ Suites: **471 dashboard / 469 backend (+1 skipped)**. Detail in
   presidential decree. Migration 050, `GET /api/government`, page, tests.
 - Seven ministers linked to their Seimas profiles on the evidence of their
   official CVs; seven further exact-name matches left unlinked.
+- The President's decree register (lrp.lt) ingested daily: treaties, vetoes,
+  bills and nominations sent to the Seimas shown as lists; a newer cabinet
+  decree makes the page say its ministers may be out of date. Migration 051.
 
 ### In flight
-- Production applies migration 050 on the next daily sync (06:00). Until then
-  the page reads „duomenų šiuo metu neturime".
+- Production applies migrations 050 and 051 on the next daily sync (06:00)
+  and that run backfills the decree register (~130 requests to lrp.lt). Until
+  then the page reads „duomenų šiuo metu neturime".
 
 ### Blocked
 - Same as below: `apps.lrs.lt` outage; LT native review.
 
 ### Next concrete step
-Confirm `/dashboard/valdzia` on production after 06:00. Then ingest the
-presidential decree register (vetoes by title) as step 3.
+Confirm `/dashboard/valdzia` on production after 06:00: 14 ministers, the four
+decree lists non-empty, no staleness note. Then, when lrs.lt is back, match
+each veto's law number to the Seimas re-vote.
 
 
 ---
