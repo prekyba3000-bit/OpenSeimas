@@ -31,11 +31,12 @@ export function MpAssetsChart({ mpId }: { mpId: string }) {
       <div className="flex items-center gap-2">
         <Landmark className="w-4 h-4 text-primary shrink-0" />
         <h3 className="text-base font-semibold text-foreground">
-          Deklaruotas turtas (VMI / VRK)
+          {/* LT-COPY: needs native review */}
+          Deklaruotas turtas (VRK)
         </h3>
       </div>
       <p className="text-sm text-muted-foreground mt-1">
-        Privalomas registruoti turtas pagal metines VMI ir VRK deklaracijas. Rodome
+        Privalomas registruoti turtas pagal VRK kandidato deklaraciją. Rodome
         oficialius skaičius iš šaltinių be reitingavimo ar vertinimų.
       </p>
 

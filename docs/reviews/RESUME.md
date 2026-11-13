@@ -1,6 +1,6 @@
 # RESUME — 2026-11-13
 
-Suites: **453 dashboard / 467 backend**. Detail in
+Suites: **453 dashboard / 470 backend**. Detail in
 `docs/reviews/2026-11-13-profile-cards-audit.md`.
 
 ### Done

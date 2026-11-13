@@ -1200,22 +1200,6 @@ export const api = {
       ...options,
       parse: (data) => mpSpeechesSchema.parse(data),
     }),
-
-  fetchMpDeclarations: (mpId: number) =>
-    request<{ seimas_mp_id: number; count: number; declarations: any[] }>(`/mp/${mpId}/declarations`),
-
-  fetchMpProcurementTenders: (mpId: number) =>
-    request<{ seimas_mp_id: number; count: number; tenders: any[] }>(`/mp/${mpId}/procurement`),
-
-  fetchMpLobbyistMeetings: (mpId: number) =>
-    request<{ seimas_mp_id: number; count: number; meetings: any[] }>(`/mp/${mpId}/lobbyist-meetings`),
-
-  fetchMpCommitteeSpeeches: (mpId: number) =>
-    request<{ seimas_mp_id: number; count: number; speeches: any[] }>(`/mp/${mpId}/committee-speeches`),
-
-  fetchMpCampaignDonors: (mpId: number) =>
-    request<{ seimas_mp_id: number; count: number; donations: any[] }>(`/mp/${mpId}/campaign-donors`),
-
 };
 
 

@@ -76,3 +76,14 @@ the deleted files. Backend 470, unchanged in count.
   earlier review kept the sub-objects as evidence (`hero_engine.py:950`). A
   warning/clean label on how independently a named person votes reads as a
   verdict to me (§1.3).
+- **Seven unused public routes removed.** `/api/mp/{int}/declarations`,
+  `/procurement`, `/lobbyist-meetings`, `/committee-speeches`,
+  `/campaign-donors` (all answering `count: 0` over tables never ingested,
+  for any integer), `/api/mps/{id}/procurement` (500 for everyone) and
+  `/api/mps/{id}/amendment-speed`. No client called them. This closes item 4
+  except `/supplier-links`, which serves real rows and stays for the redesign.
+  The migration-048 tables are untouched.
+- **Assets card copy (item 5, partly):** the heading and description named
+  VMI and annual declarations; the rows are VRK candidate declarations.
+  Now „Deklaruotas turtas (VRK)" / „pagal VRK kandidato deklaraciją".
+  `LT-COPY: needs native review`. The big figure still lacks its own label.
