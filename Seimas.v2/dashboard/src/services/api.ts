@@ -1087,12 +1087,36 @@ const governmentSchema = z.object({
   prime_minister: officeHolderSchema.nullable(),
   posts: z.array(cabinetPostSchema),
 });
+/** One decree as lrp.lt lists it. `decree_no` and `url` are null when lrp.lt links no file. */
+const decreeSchema = z.object({
+  decree_no: z.string().nullable(),
+  listed_on: z.string(),
+  title: z.string(),
+  url: z.string().nullable(),
+});
+/**
+ * What the President sent to the Seimas, by kind. The whole object is null
+ * when the decree register has not been read — which is not "sent nothing".
+ */
+const presidentialActsSchema = z.object({
+  since: z.string().nullable(),
+  through: z.string().nullable(),
+  veto: z.array(decreeSchema),
+  bill: z.array(decreeSchema),
+  treaty: z.array(decreeSchema),
+  nomination: z.array(decreeSchema),
+});
 export const governmentResponseSchema = z.object({
   available: z.boolean(),
   president: officeHolderSchema.nullable(),
   ministries: z.array(z.object({ key: z.string(), name: z.string(), url: z.string() })),
   governments: z.array(governmentSchema),
+  presidential_acts: presidentialActsSchema.nullable(),
+  /** Cabinet decrees newer than any the register of ministers cites. */
+  cabinet_decrees_after_register: z.array(decreeSchema),
 });
+export type Decree = z.infer<typeof decreeSchema>;
+export type PresidentialActs = z.infer<typeof presidentialActsSchema>;
 export type OfficeHolder = z.infer<typeof officeHolderSchema>;
 export type CabinetPost = z.infer<typeof cabinetPostSchema>;
 export type Government = z.infer<typeof governmentSchema>;

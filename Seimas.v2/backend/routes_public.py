@@ -1,5 +1,6 @@
 """Public v1 endpoints: stats, activity, MPs, votes."""
 from fastapi import APIRouter, HTTPException, Request
+import re
 import time
 import datetime
 from typing import List, Dict, Optional, Any
@@ -1208,7 +1209,8 @@ def get_government():
             raise HTTPException(status_code=500, detail="Database connection failed")
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             if not _table_exists(cur, "offices_held"):
-                return {"available": False, "president": None, "ministries": [], "governments": []}
+                return {"available": False, "president": None, "ministries": [], "governments": [],
+                        "presidential_acts": None, "cabinet_decrees_after_register": []}
             cur.execute("SELECT key, name_lt, url FROM ministries ORDER BY sort_order")
             ministries = [{"key": r["key"], "name": r["name_lt"], "url": r["url"]} for r in cur.fetchall()]
             cur.execute("""
@@ -1264,9 +1266,73 @@ def get_government():
                     gov["prime_minister"] = holder
                 else:
                     gov["posts"].append({"ministry_key": r["ministry_key"], "seq": r["seq"], **holder})
+            acts, newer = _presidential_acts(cur)
             return {
                 "available": True,
                 "president": president,
                 "ministries": ministries,
                 "governments": list(governments.values()),
+                "presidential_acts": acts,
+                "cabinet_decrees_after_register": newer,
             }
+
+
+_SENT_TO_SEIMAS = ("veto", "bill", "treaty", "nomination")
+
+
+def _decree_number(text):
+    """'Dekretas Nr. 1K-737' -> 737. The register numbers decrees in order."""
+    found = [int(n) for n in re.findall(r"1K-(\d+)", text or "")]
+    return max(found) if found else None
+
+
+def _presidential_acts(cur):
+    """What the President sent to the Seimas, as lists, and the cabinet decrees
+    the hand-kept register of ministers does not cite yet.
+
+    Returns (None, []) when the decree register is absent or empty: that is
+    "we have not read it", which is not the same as "the President sent
+    nothing" and must not be rendered as empty lists.
+    """
+    if not _table_exists(cur, "presidential_decrees"):
+        return None, []
+    cur.execute("SELECT MIN(listed_on) AS since, MAX(listed_on) AS through, COUNT(*) AS n FROM presidential_decrees")
+    span = cur.fetchone()
+    if not span or not span["n"]:
+        return None, []
+    cur.execute("""
+        SELECT decree_no, listed_on, title_lt, url, kind
+        FROM presidential_decrees
+        WHERE kind <> 'other'
+        ORDER BY listed_on DESC, decree_no DESC
+    """)
+    rows = cur.fetchall()
+    acts = {
+        "since": _date_or_none(span["since"]),
+        "through": _date_or_none(span["through"]),
+        **{k: [] for k in _SENT_TO_SEIMAS},
+    }
+    cabinet = []
+    for r in rows:
+        item = {
+            "decree_no": r["decree_no"],
+            "listed_on": _date_or_none(r["listed_on"]),
+            "title": r["title_lt"],
+            "url": r["url"],
+        }
+        if r["kind"] in acts:
+            acts[r["kind"]].append(item)
+        elif r["kind"] == "cabinet":
+            cabinet.append(item)
+
+    cur.execute("""
+        SELECT basis_lt AS t FROM offices_held WHERE basis_lt IS NOT NULL
+        UNION ALL SELECT composition_basis_lt FROM governments
+        UNION ALL SELECT resign_basis_lt FROM governments WHERE resign_basis_lt IS NOT NULL
+    """)
+    cited = [n for n in (_decree_number(r["t"]) for r in cur.fetchall()) if n is not None]
+    if not cited:
+        return acts, []
+    newest_cited = max(cited)
+    newer = [c for c in cabinet if (_decree_number(c["decree_no"]) or 0) > newest_cited]
+    return acts, newer

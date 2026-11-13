@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { NavLink } from 'react-router';
 import { Landmark, ArrowRight, ExternalLink } from 'lucide-react';
 import { api } from '../services/api';
-import type { CabinetPost, Government, OfficeHolder } from '../services/api';
+import type { CabinetPost, Decree, Government, OfficeHolder, PresidentialActs } from '../services/api';
 import { Card } from '../components/Card';
 import { cn } from '../components/ui/utils';
 import { ProblemDetailsNotice } from '../components/ProblemDetailsNotice';
@@ -119,6 +119,73 @@ function MinistryTile({ ministryKey, name, url, post }: { ministryKey: string; n
   );
 }
 
+// What the President sends to the Seimas, in the order a law's life suggests.
+const ACT_KINDS: { key: 'veto' | 'bill' | 'treaty' | 'nomination'; title: string; hint: string }[] = [
+  { key: 'treaty', title: 'Tarptautinės sutartys',
+    hint: 'Prezidentas teikia Seimui ratifikuoti arba denonsuoti. Tai užsienio politikos dalis.' },
+  { key: 'veto', title: 'Grąžinti įstatymai (veto)',
+    hint: 'Seimo priimti įstatymai, kuriuos Prezidentas grąžino Seimui svarstyti pakartotinai.' },
+  { key: 'bill', title: 'Prezidento pateikti projektai',
+    hint: 'Įstatymų ir Seimo nutarimų projektai, kuriuos Prezidentas pateikė Seimui.' },
+  { key: 'nomination', title: 'Skyrimai ir atleidimai per Seimą',
+    hint: 'Teisėjai ir pareigūnai, kuriuos skirti ar atleisti Prezidentas teikia Seimui.' },
+];
+
+function DecreeList({ items }: { items: Decree[] }) {
+  if (items.length === 0) return <p className="px-3 pb-3 text-sm text-muted-foreground">Tokių dekretų šiame laikotarpyje nėra.</p>;
+  return (
+    <ul className="divide-y divide-border border-t border-border">
+      {items.map((d) => (
+        <li key={`${d.decree_no}-${d.listed_on}-${d.title}`} className="px-3 py-2 text-sm">
+          <span className="text-xs text-muted-foreground">
+            {d.listed_on}{d.decree_no && ` · Nr. ${d.decree_no}`}
+          </span>
+          {/* Titles are the register's own, in the capitals it prints them in. */}
+          <span className="block text-xs leading-snug">
+            {d.url ? <Ext href={d.url}>{d.title}</Ext> : d.title}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function PresidentialActsSection({ acts }: { acts: PresidentialActs | null }) {
+  return (
+    <section aria-labelledby="aktai" className="space-y-4">
+      <div className="max-w-3xl">
+        <h2 id="aktai" className="text-xl font-semibold">Ką Prezidentas perdavė Seimui</h2>
+        {acts ? (
+          <p className="text-sm text-muted-foreground mt-1">
+            Prezidento dekretai nuo {acts.since} iki {acts.through}, kaip juos skelbia{' '}
+            <Ext href="https://www.lrp.lt/lt/dekretai">lrp.lt</Ext>. Rūšis nustatoma tik pagal dekreto pavadinimą.
+            Skaičius prie antraštės yra sąrašo ilgis, ne vertinimas.
+          </p>
+        ) : (
+          // §1.2: an unread register is not an empty one.
+          <p className="text-sm text-muted-foreground mt-1">
+            Prezidento dekretų sąrašo dar neįkėlėme, todėl čia nieko nerodome. Tai nereiškia, kad dekretų nebuvo.
+          </p>
+        )}
+      </div>
+      {acts && (
+        <div className="grid gap-3 lg:grid-cols-2">
+          {ACT_KINDS.map((k) => (
+            <details key={k.key} className="rounded-xl border border-border bg-card">
+              <summary className="cursor-pointer px-3 py-2">
+                <span className="font-semibold">{k.title}</span>{' '}
+                <span className="text-muted-foreground">({acts[k.key].length})</span>
+                <span className="block text-xs text-muted-foreground">{k.hint}</span>
+              </summary>
+              <DecreeList items={acts[k.key]} />
+            </details>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
 function govDates(g: Government): string {
   const parts: string[] = [];
   if (g.mandate_from) parts.push(`įgaliojimai nuo ${g.mandate_from}`);
@@ -176,6 +243,13 @@ export function ValdziaView() {
               <p className="text-sm text-muted-foreground">{it.name}</p>
               <p className="text-lg font-semibold">{it.verb}</p>
               <p className="text-sm text-muted-foreground mt-1">{it.text}</p>
+              {it.name === 'Seimas' && (
+                <p className="text-sm mt-2">
+                  <NavLink to="/dashboard/mps" className="text-primary underline underline-offset-2">Seimo nariai</NavLink>
+                  {' · '}
+                  <NavLink to="/dashboard/votes" className="text-primary underline underline-offset-2">Balsavimai</NavLink>
+                </p>
+              )}
             </Card>
           ))}
         </div>
@@ -230,6 +304,16 @@ export function ValdziaView() {
           ))}
         </div>
 
+        {data.cabinet_decrees_after_register.length > 0 && (
+          // The ministers are kept by hand; the decree register is read daily.
+          // When the two disagree the page says so rather than guessing.
+          <div role="note" className="rounded-lg border border-attention/60 bg-attention/15 px-3 py-2 text-sm max-w-3xl">
+            <p className="font-semibold">Šis sąrašas gali būti pasenęs.</p>
+            <p>Po jo sudarymo Prezidentas pasirašė naujų dekretų dėl Vyriausybės, kurių čia dar neįtraukėme:</p>
+            <DecreeList items={data.cabinet_decrees_after_register} />
+          </div>
+        )}
+
         <ul className="text-xs text-muted-foreground space-y-1 max-w-3xl">
           <li>
             Ministrų sąrašas: <Ext href={current.composition_url}>{current.composition_basis}</Ext>. Ministrus Ministro
@@ -242,6 +326,8 @@ export function ValdziaView() {
           <li>Ministerijų grupavimas į keturias sritis yra mūsų, ne oficialus.</li>
         </ul>
       </section>
+
+      <PresidentialActsSection acts={data.presidential_acts} />
 
       <section aria-labelledby="kabinetai" className="space-y-4">
         <div className="max-w-3xl">

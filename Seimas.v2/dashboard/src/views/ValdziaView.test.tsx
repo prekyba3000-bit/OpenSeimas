@@ -46,6 +46,15 @@ const DATA: GovernmentResponse = {
       // finansai: no row on purpose
     ]),
   ],
+  presidential_acts: {
+    since: '2024-11-13', through: '2026-11-09',
+    veto: [{ decree_no: '1K-455', listed_on: '2025-10-03', title: 'DĖL ĮSTATYMO GRĄŽINIMO', url: DECREE }],
+    bill: [], treaty: [
+      { decree_no: '1K-1', listed_on: '2026-01-05', title: 'DĖL TEIKIMO RATIFIKUOTI A', url: DECREE },
+      { decree_no: null, listed_on: '2026-01-06', title: 'DĖL TEIKIMO RATIFIKUOTI B', url: null },
+    ], nomination: [],
+  },
+  cabinet_decrees_after_register: [],
 };
 
 function renderView() {
@@ -121,8 +130,45 @@ describe('ValdziaView', () => {
     expect(within(table).getByText('nuo 2025-11-11:', { exact: false })).toBeInTheDocument();
   });
 
+  it('lists what the President sent to the Seimas, each decree linked where lrp.lt links it', async () => {
+    renderView();
+    const section = (await screen.findByRole('heading', { name: 'Ką Prezidentas perdavė Seimui' })).closest('section')!;
+    expect(within(section).getByText('Grąžinti įstatymai (veto)').parentElement).toHaveTextContent('(1)');
+    expect(within(section).getByText('Tarptautinės sutartys').parentElement).toHaveTextContent('(2)');
+    expect(within(section).getByRole('link', { name: /DĖL TEIKIMO RATIFIKUOTI A/ })).toHaveAttribute('href', DECREE);
+    // No file on lrp.lt: the title stays, without a link that would lead nowhere.
+    expect(within(section).getByText('DĖL TEIKIMO RATIFIKUOTI B')).toBeInTheDocument();
+    expect(within(section).queryByRole('link', { name: /RATIFIKUOTI B/ })).not.toBeInTheDocument();
+  });
+
+  it('says the decree register is unread instead of showing empty lists (§1.2)', async () => {
+    vi.mocked(api.getGovernment).mockResolvedValue({ ...DATA, presidential_acts: null });
+    renderView();
+    expect(await screen.findByText(/dekretų sąrašo dar neįkėlėme/)).toBeInTheDocument();
+    expect(screen.queryByText('Grąžinti įstatymai (veto)')).not.toBeInTheDocument();
+  });
+
+  it('does not warn while the register cites the newest cabinet decree', async () => {
+    renderView();
+    await screen.findByRole('table');
+    expect(screen.queryByText('Šis sąrašas gali būti pasenęs.')).not.toBeInTheDocument();
+  });
+
+  it('shows the newer cabinet decree in that warning', async () => {
+    vi.mocked(api.getGovernment).mockResolvedValue({
+      ...DATA,
+      cabinet_decrees_after_register: [
+        { decree_no: '1K-900', listed_on: '2026-12-01', title: 'DĖL FINANSŲ MINISTRO ATLEIDIMO', url: DECREE },
+      ],
+    });
+    renderView();
+    const note = await screen.findByRole('note');
+    expect(within(note).getByText('Šis sąrašas gali būti pasenęs.')).toBeInTheDocument();
+    expect(within(note).getByRole('link', { name: /DĖL FINANSŲ MINISTRO ATLEIDIMO/ })).toBeInTheDocument();
+  });
+
   it('renders no cabinet when the register is absent', async () => {
-    vi.mocked(api.getGovernment).mockResolvedValue({ available: false, president: null, ministries: [], governments: [] });
+    vi.mocked(api.getGovernment).mockResolvedValue({ available: false, president: null, ministries: [], governments: [], presidential_acts: null, cabinet_decrees_after_register: [] });
     renderView();
     expect(await screen.findByText('Vyriausybės ir Prezidento duomenų šiuo metu neturime.')).toBeInTheDocument();
     expect(screen.queryByRole('table')).not.toBeInTheDocument();

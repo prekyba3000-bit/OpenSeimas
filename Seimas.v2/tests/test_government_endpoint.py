@@ -26,7 +26,8 @@ MIGRATION = Path(__file__).resolve().parents[1] / "migrations" / "050_offices_he
 def test_absent_table_is_reported_not_rendered_as_an_empty_cabinet():
     with patch("backend.routes_public.get_db_conn", empty_db(tables_present=False)):
         body = client.get("/api/government").json()
-    assert body == {"available": False, "president": None, "ministries": [], "governments": []}
+    assert body == {"available": False, "president": None, "ministries": [], "governments": [],
+                    "presidential_acts": None, "cabinet_decrees_after_register": []}
 
 
 def test_every_seeded_office_names_an_official_source():
@@ -86,3 +87,74 @@ def test_member_link_never_appears_without_its_source(seeded):
     for gov in seeded["governments"]:
         for holder in [gov["prime_minister"], *gov["posts"]]:
             assert (holder["mp_id"] is None) == (holder["mp_link_source_url"] is None)
+
+
+class _Cur:
+    """Answers _presidential_acts' four queries from canned rows."""
+
+    def __init__(self, decrees, cited):
+        self.decrees, self.cited, self._rows = decrees, cited, []
+
+    def execute(self, sql, params=None):
+        if "to_regclass" in sql or "information_schema" in sql:
+            self._rows = [{"reg": "presidential_decrees", "exists": True, "table_name": "presidential_decrees"}]
+        elif "MIN(listed_on)" in sql:
+            days = [d["listed_on"] for d in self.decrees]
+            self._rows = [{"since": min(days, default=None), "through": max(days, default=None), "n": len(days)}]
+        elif "FROM presidential_decrees" in sql:
+            self._rows = [d for d in self.decrees if d["kind"] != "other"]
+        else:
+            self._rows = [{"t": t} for t in self.cited]
+
+    def fetchone(self):
+        return self._rows[0] if self._rows else None
+
+    def fetchall(self):
+        return self._rows
+
+
+def _decree(no, day, kind, title="DĖL X"):
+    import datetime
+    return {"decree_no": no, "listed_on": datetime.date.fromisoformat(day), "title_lt": title,
+            "url": f"https://www.lrp.lt/{no}.pdf", "kind": kind}
+
+
+def test_an_unread_register_is_not_an_empty_list_of_vetoes(monkeypatch):
+    """§1.1/§1.2. "We have not read the register" must not render as "no vetoes"."""
+    from backend import routes_public
+    monkeypatch.setattr(routes_public, "_table_exists", lambda cur, t: True)
+    assert routes_public._presidential_acts(_Cur([], ["Dekretas Nr. 1K-737"])) == (None, [])
+    monkeypatch.setattr(routes_public, "_table_exists", lambda cur, t: False)
+    assert routes_public._presidential_acts(_Cur([_decree("1K-1", "2026-01-01", "veto")], [])) == (None, [])
+
+
+def test_acts_are_grouped_by_kind_and_other_kinds_stay_out(monkeypatch):
+    from backend import routes_public
+    monkeypatch.setattr(routes_public, "_table_exists", lambda cur, t: True)
+    cur = _Cur([
+        _decree("1K-455", "2025-10-03", "veto"),
+        _decree("1K-460", "2025-10-17", "bill"),
+        _decree("1K-470", "2025-10-19", "treaty"),
+        _decree("1K-471", "2025-10-20", "nomination"),
+        _decree("1K-472", "2025-10-21", "other"),
+    ], ["Dekretas Nr. 1K-737"])
+    acts, newer = routes_public._presidential_acts(cur)
+    assert [len(acts[k]) for k in ("veto", "bill", "treaty", "nomination")] == [1, 1, 1, 1]
+    assert acts["since"] == "2025-10-03" and acts["through"] == "2025-10-21"
+    assert acts["veto"][0] == {"decree_no": "1K-455", "listed_on": "2025-10-03", "title": "DĖL X",
+                               "url": "https://www.lrp.lt/1K-455.pdf"}
+    assert newer == []
+
+
+def test_a_cabinet_decree_newer_than_the_register_is_reported(monkeypatch):
+    """The ministers are seeded by hand. When the President signs a cabinet
+    decree the register does not cite, the page must be able to say it may be
+    out of date, instead of showing yesterday's cabinet as today's."""
+    from backend import routes_public
+    monkeypatch.setattr(routes_public, "_table_exists", lambda cur, t: True)
+    cur = _Cur([
+        _decree("1K-737", "2026-07-07", "cabinet"),
+        _decree("1K-900", "2026-12-01", "cabinet", "DĖL LIETUVOS RESPUBLIKOS FINANSŲ MINISTRO ATLEIDIMO"),
+    ], ["Dekretas Nr. 1K-737", "Respublikos Prezidento dekretas Nr. 1K-728"])
+    _, newer = routes_public._presidential_acts(cur)
+    assert [d["decree_no"] for d in newer] == ["1K-900"]

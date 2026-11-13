@@ -56,13 +56,15 @@ describe('wire contract', () => {
       president: { ...post('x', 'P'), ministry_key: undefined, seq: undefined },
       ministries: [{ key: 'gynyba', name: 'Krašto apsaugos ministerija', url: 'https://kam.lt/' }],
       governments: [gov(21, [post('gynyba', 'B', 1, 'uuid-1')])],
+      presidential_acts: null,
+      cabinet_decrees_after_register: [],
     });
     expect(parsed.governments[0].posts[0].mp_id).toBe('uuid-1');
     expect(parsed.governments[0].posts[0].mp_link_source_url).toBe('https://x.lrv.lt/cv');
   });
 
   it('accepts the absent-table shape', () => {
-    const parsed = governmentResponseSchema.parse({ available: false, president: null, ministries: [], governments: [] });
+    const parsed = governmentResponseSchema.parse({ available: false, president: null, ministries: [], governments: [], presidential_acts: null, cabinet_decrees_after_register: [] });
     expect(parsed.available).toBe(false);
   });
 });
