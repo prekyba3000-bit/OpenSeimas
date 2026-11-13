@@ -268,12 +268,11 @@ def _build_forensic_breakdown(
             row = db_cursor.fetchone()
             p_value = float(row["p_value"]) if row and row["p_value"] is not None else None
             if p_value is None:
-                benford = {
-                    "status": "clean",
-                    "p_value": None,
-                    "penalty": 0,
-                    "explanation": "No Benford anomaly detected in available analysis records.",
-                }
+                # No analysis exists for this member. That is not a clean
+                # result: the profile read "Požymių nerasta" for 140 members
+                # while benford_analyses held no rows, and the list path
+                # already said unavailable for the same people.
+                pass
             elif p_value < 0.01:
                 benford = {
                     "status": "critical",

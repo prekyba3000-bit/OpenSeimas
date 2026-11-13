@@ -33,12 +33,10 @@ the deleted files. Backend 470, unchanged in count.
 2. **Supplier links, if they return**, need a design note first: what a
    declared workplace is, the date of the contract against the date of the
    mandate, and no „match" counter.
-3. **Voter-guide code is still in the tree** — `pipeline/voter_guide_agent.py`
-   (`alignment_pct`, category `more_aligned` for a named member) and
-   `dashboard/src/utils/voterGuideEngine.ts`. Neither is routed or imported by
-   the app. The near-miss note of 17 September said none of it would be
-   committed. `test_voter_guide_scoring_recommender_is_prohibited_and_absent`
-   passes because its skip-list names exactly these files.
+3. ~~Voter-guide code in the tree~~ — **removed** (`4c152fa`), with the
+   guard exemption that hid it. The skip-list of
+   `test_voter_guide_scoring_recommender_is_prohibited_and_absent` named the
+   recommender's own files; it now exempts only the ingestion audit.
 4. **Unrouted-in-UI endpoints still serving:** `/api/mps/{id}/supplier-links`,
    `/amendment-speed`, `/procurement` (500), and five `/api/mp/{int}/…`
    endpoints over the migration-048 tables, whose ingesters parse nothing.
@@ -53,9 +51,28 @@ the deleted files. Backend 470, unchanged in count.
 ## Ops, same day
 
 - Data is frozen at **5 November**. `apps.lrs.lt` (45.146.192.50) times out
-  on TCP 80 and 443 from this machine; `www.lrs.lt` answers. The daily sync
-  dies at its first fetch and the hourly catch-up retries it.
+  on TCP 443 from this machine over three interfaces **and from 8 of 8
+  outside locations** (check-host.net: ID, IR, MD, NL, SE, SG, US×2). The
+  rest of `lrs.lt` answers every non-browser request with a Cloudflare
+  challenge. This is the source's outage, not a block on this IP. Nothing to
+  fix here; the sync resumes when the host does.
 - Views last refreshed 7 November. The gate is holding correctly:
   `metric_backing_source_stale` fails with 3 rows.
 - The local Postgres the pre-push hook needs is down, which is why
   `a9f7aad` (portraits) had not been pushed.
+
+## Second pass, same day
+
+- **Benford read "clean" for people nobody analysed.** „Ką rodo patikros" on
+  the profile showed „Požymių nerasta — Benfordo dėsnio analizė" for every
+  member. `benford_analyses` holds no rows; the per-member path turned "no
+  row" into `status: clean`, while the list path said `unavailable` for the
+  same person. Now `unavailable` on both. Test:
+  `tests/test_benford_unanalysed_is_not_clean.py` (fails without the fix).
+- **Not changed, needs your call: `loyalty_bonus`.** The same panel shows
+  „Požymių nerasta — Sutapimas su frakcija", from a status that is `warning`
+  when a member votes against their faction 10–40 % of the time and `clean`
+  otherwise, and the wire still carries `bonus` and `penalty` keys. An
+  earlier review kept the sub-objects as evidence (`hero_engine.py:950`). A
+  warning/clean label on how independently a named person votes reads as a
+  verdict to me (§1.3).
