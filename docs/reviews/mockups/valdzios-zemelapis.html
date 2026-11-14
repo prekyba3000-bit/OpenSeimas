@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Valdžios žemėlapis</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,500;7..72,700&family=Source+Sans+3:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  /* Layout idea: three institutions as three columns; policy areas as rows.
+     The President's own row sits on top of the ministries it works with. */
+  --linen: #F7F4EE;
+  --paper: #FDFBF7;
+  --ink: #2E2A26;
+  --stone: #6B655C;
+  --line: #E0D9CB;
+  --pine: #4A7A5E;
+  --pine-soft: #E3ECE5;
+  --honey: #C99A4B;
+  --honey-soft: #F5EBD6;
+  --clay: #A15F47;
+  --ex-a: #4A7A5E;
+  --ex-b: #C99A4B;
+  --ex-c: #7C6FA0;
+  --display: "Literata", Georgia, "Times New Roman", serif;
+  --body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --linen: #211E1A; --paper: #2A2622; --ink: #EDE8E0; --stone: #A9A193;
+    --line: #3D3830; --pine: #7FB394; --pine-soft: #2B3A31;
+    --honey: #D9B068; --honey-soft: #3C3323; --clay: #C98A72;
+    --ex-a: #7FB394; --ex-b: #D9B068; --ex-c: #A99CD0;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --linen: #211E1A; --paper: #2A2622; --ink: #EDE8E0; --stone: #A9A193;
+  --line: #3D3830; --pine: #7FB394; --pine-soft: #2B3A31;
+  --honey: #D9B068; --honey-soft: #3C3323; --clay: #C98A72;
+  --ex-a: #7FB394; --ex-b: #D9B068; --ex-c: #A99CD0;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--linen); color: var(--ink);
+  font-family: var(--body); font-size: 16px; line-height: 1.5;
+}
+main { max-width: 1120px; margin: 0 auto; padding: 32px 20px 64px; display: flex; flex-direction: column; gap: 36px; }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; margin: 0; }
+h1 { font-size: 2.1rem; font-weight: 700; line-height: 1.15; }
+h2 { font-size: 1.35rem; font-weight: 700; }
+h3 { font-size: 1rem; font-weight: 500; }
+p { margin: 0; }
+.lead { max-width: 62ch; color: var(--stone); font-size: 1.05rem; margin-top: 10px; }
+.mock {
+  border: 1px dashed var(--honey); background: var(--honey-soft);
+  border-radius: 8px; padding: 10px 14px; font-size: 0.92rem; max-width: 78ch;
+}
+.small { font-size: 0.86rem; color: var(--stone); }
+section { display: flex; flex-direction: column; gap: 14px; }
+
+/* --- three institutions --- */
+.trio { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.inst { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 6px; }
+.inst .who { font-family: var(--display); font-size: 1.15rem; font-weight: 700; }
+.inst .verb { color: var(--pine); font-weight: 600; }
+.inst.pres { border-top: 4px solid var(--honey); }
+.inst.gov { border-top: 4px solid var(--pine); }
+.inst.seim { border-top: 4px solid var(--stone); }
+
+.flow { display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px; }
+.step { flex: 1 1 180px; background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; font-size: 0.93rem; }
+.step b { display: block; font-size: 0.78rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--stone); font-weight: 600; }
+.arrow { align-self: center; color: var(--stone); font-size: 1.2rem; }
+
+/* --- the map --- */
+.controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.controls button {
+  font: inherit; font-size: 0.92rem; cursor: pointer;
+  border: 1px solid var(--line); background: var(--paper); color: var(--ink);
+  border-radius: 999px; padding: 6px 14px;
+}
+.controls button[aria-pressed="true"] { background: var(--ink); color: var(--linen); border-color: var(--ink); }
+.controls button:focus-visible, .tile:focus-visible { outline: 2px solid var(--pine); outline-offset: 2px; }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 0.86rem; color: var(--stone); min-height: 1.4em; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.dot { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+
+.scroll { overflow-x: auto; }
+.map { min-width: 760px; display: grid; grid-template-columns: 132px 1.05fr 2.6fr 1.5fr; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--paper); }
+.map > div { padding: 12px; border-bottom: 1px solid var(--line); border-right: 1px solid var(--line); }
+.map > div:nth-child(4n) { border-right: 0; }
+.map > .last { border-bottom: 0; }
+.head { font-size: 0.78rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--stone); font-weight: 600; background: var(--linen); }
+.area { font-family: var(--display); font-weight: 700; font-size: 1.02rem; display: flex; flex-direction: column; gap: 4px; }
+.area small { font-family: var(--body); font-weight: 400; color: var(--stone); font-size: 0.82rem; }
+.tiles { display: flex; flex-wrap: wrap; gap: 8px; }
+.tile {
+  flex: 1 1 150px; border: 1px solid var(--line); border-left: 5px solid var(--line);
+  border-radius: 8px; padding: 8px 10px; background: var(--linen);
+  display: flex; flex-direction: column; gap: 2px; min-height: 76px;
+}
+.tile .min { font-weight: 600; font-size: 0.95rem; }
+.tile .slot { font-size: 0.82rem; color: var(--stone); border-bottom: 1px dashed var(--line); padding-bottom: 2px; }
+.tile .tag { font-size: 0.76rem; color: var(--stone); }
+.map[data-mode="party"] .tile[data-p="a"] { border-left-color: var(--ex-a); }
+.map[data-mode="party"] .tile[data-p="b"] { border-left-color: var(--ex-b); }
+.map[data-mode="party"] .tile[data-p="c"] { border-left-color: var(--ex-c); }
+.map[data-mode="mp"] .tile[data-mp="1"] { border-left-color: var(--pine); background: var(--pine-soft); }
+.map[data-mode="mp"] .tile[data-mp="0"] { border-left-style: dashed; }
+.pres-cell { background: var(--honey-soft); display: flex; flex-direction: column; gap: 6px; }
+.pres-cell .role { font-family: var(--display); font-weight: 700; }
+.pres-cell.quiet { background: transparent; color: var(--stone); font-size: 0.88rem; }
+.pres-cell .bracket { font-size: 0.82rem; border-left: 3px solid var(--honey); padding-left: 8px; }
+.tile.with-pres { box-shadow: inset 0 3px 0 var(--honey); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font-size: 0.82rem; border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; background: var(--linen); }
+.chip.topic { border-color: var(--pine); color: var(--pine); }
+
+.reads { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.read { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 14px; font-size: 0.94rem; }
+.read b { font-family: var(--display); display: block; margin-bottom: 4px; }
+
+@media (max-width: 720px) {
+  h1 { font-size: 1.6rem; }
+  .trio, .reads { grid-template-columns: 1fr; }
+  .arrow { display: none; }
+}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Valdžios žemėlapis</h1>
+    <p class="lead">Kas Lietuvoje priima įstatymus, kas juos pasirašo ir kas juos vykdo. Trys institucijos, keturiolika ministerijų, vienas puslapis.</p>
+  </header>
+
+  <p class="mock"><strong>Maketas.</strong> Ministrų vardų ir partijų čia nėra, nes jų dar neįkėlėme iš skyrimo dekretų. Spalvos žemėlapyje yra pavyzdys, kad matytųsi, kaip atrodys tikri duomenys. Komitetų pavadinimus prieš skelbiant reikia sutikrinti su Seimo duomenimis.</p>
+
+  <section aria-labelledby="h-trio">
+    <h2 id="h-trio">Trys institucijos</h2>
+    <div class="trio">
+      <div class="inst seim">
+        <span class="who">Seimas</span>
+        <span class="verb">Priima įstatymus</span>
+        <p class="small">141 narys, renkamas ketveriems metams. Tvirtina biudžetą, pritaria premjero kandidatūrai, gali pareikšti nepasitikėjimą ministru.</p>
+      </div>
+      <div class="inst pres">
+        <span class="who">Prezidentas</span>
+        <span class="verb">Atstovauja valstybei ir saugo</span>
+        <p class="small">Renkamas tiesiogiai penkeriems metams. Sprendžia pagrindinius užsienio politikos klausimus, vadovauja ginkluotosioms pajėgoms, pasirašo įstatymus arba grąžina juos Seimui.</p>
+      </div>
+      <div class="inst gov">
+        <span class="who">Vyriausybė</span>
+        <span class="verb">Vykdo įstatymus</span>
+        <p class="small">Ministras Pirmininkas ir 14 ministrų. Rengia įstatymų projektus ir biudžetą, valdo ministerijas, atsako Seimui.</p>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-law">
+    <h2 id="h-law">Kaip atsiranda įstatymas</h2>
+    <div class="flow">
+      <div class="step"><b>1. Pasiūlo</b>Vyriausybė, Seimo narys, Prezidentas arba 50 tūkst. piliečių</div>
+      <span class="arrow" aria-hidden="true">→</span>
+      <div class="step"><b>2. Priima</b>Seimas svarsto ir balsuoja</div>
+      <span class="arrow" aria-hidden="true">→</span>
+      <div class="step"><b>3. Pasirašo arba grąžina</b>Prezidentas per 10 dienų. Grąžintą įstatymą Seimas gali priimti iš naujo 71 balsu</div>
+      <span class="arrow" aria-hidden="true">→</span>
+      <div class="step"><b>4. Vykdo</b>Vyriausybė ir atsakinga ministerija</div>
+    </div>
+    <h2 id="h-gov" style="margin-top:10px">Kaip atsiranda Vyriausybė</h2>
+    <div class="flow">
+      <div class="step"><b>1. Siūlo</b>Prezidentas teikia premjero kandidatūrą</div>
+      <span class="arrow" aria-hidden="true">→</span>
+      <div class="step"><b>2. Pritaria</b>Seimas balsuoja dėl kandidatūros</div>
+      <span class="arrow" aria-hidden="true">→</span>
+      <div class="step"><b>3. Skiria</b>Prezidentas skiria ministrus premjero teikimu</div>
+      <span class="arrow" aria-hidden="true">→</span>
+      <div class="step"><b>4. Įgalioja</b>Seimas pritaria Vyriausybės programai</div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-map">
+    <h2 id="h-map">Kas už ką atsako</h2>
+    <p class="small" style="max-width:70ch">Eilutės yra sritys. Skaitykite skersai: ta pati sritis turi ministeriją Vyriausybėje, komitetą Seime ir balsavimų temą šiame portale. Prezidentas kasdien dirba tik viršutinėje eilutėje.</p>
+    <div class="controls" role="group" aria-label="Ką rodo spalva">
+      <span class="small">Spalva rodo:</span>
+      <button type="button" id="m-party" aria-pressed="true">kuri partija vadovauja</button>
+      <button type="button" id="m-mp" aria-pressed="false">ar ministras kartu yra Seimo narys</button>
+    </div>
+    <div class="legend" id="legend"></div>
+
+    <div class="scroll">
+      <div class="map" id="map" data-mode="party">
+        <div class="head">Sritis</div>
+        <div class="head">Prezidentas</div>
+        <div class="head">Vyriausybė: ministerijos</div>
+        <div class="head">Seimas: komitetai ir balsavimų temos</div>
+
+        <div class="area">Užsienis ir saugumas<small>Santykiai su kitomis valstybėmis, gynyba, vidaus tvarka</small></div>
+        <div class="pres-cell">
+          <span class="role">Prezidentas</span>
+          <span class="bracket">Sprendžia pagrindinius užsienio politikos klausimus ir vykdo ją kartu su Vyriausybe.</span>
+          <span class="bracket">Vyriausiasis ginkluotųjų pajėgų vadas. Vadovauja Valstybės gynimo tarybai.</span>
+        </div>
+        <div class="tiles">
+          <div class="tile with-pres" data-p="a" data-mp="1" tabindex="0"><span class="min">Užsienio reikalų</span><span class="slot">ministras: iš dekreto</span><span class="tag">dirba kartu su Prezidentu</span></div>
+          <div class="tile with-pres" data-p="b" data-mp="0" tabindex="0"><span class="min">Krašto apsaugos</span><span class="slot">ministras: iš dekreto</span><span class="tag">dirba kartu su Prezidentu</span></div>
+          <div class="tile" data-p="a" data-mp="1" tabindex="0"><span class="min">Vidaus reikalų</span><span class="slot">ministras: iš dekreto</span></div>
+        </div>
+        <div class="chips">
+          <span class="chip">Užsienio reikalų komitetas</span>
+          <span class="chip">Nacionalinio saugumo ir gynybos komitetas</span>
+          <span class="chip">Europos reikalų komitetas</span>
+          <span class="chip topic">tema: Gynyba ir saugumas</span>
+        </div>
+
+        <div class="area">Pinigai ir ūkis<small>Mokesčiai, biudžetas, verslas, energija, keliai, žemės ūkis</small></div>
+        <div class="pres-cell quiet">Kasdienių sprendimų nepriima. Pasirašo arba grąžina šios srities įstatymus, taip pat biudžetą.</div>
+        <div class="tiles">
+          <div class="tile" data-p="a" data-mp="1" tabindex="0"><span class="min">Finansų</span><span class="slot">ministras: iš dekreto</span></div>
+          <div class="tile" data-p="c" data-mp="0" tabindex="0"><span class="min">Ekonomikos ir inovacijų</span><span class="slot">ministras: iš dekreto</span></div>
+          <div class="tile" data-p="b" data-mp="1" tabindex="0"><span class="min">Energetikos</span><span class="slot">ministras: iš dekreto</span></div>
+          <div class="tile" data-p="a" data-mp="0" tabindex="0"><span class="min">Susisiekimo</span><span class="slot">ministras: iš dekreto</span></div>
+          <div class="tile" data-p="c" data-mp="1" tabindex="0"><span class="min">Žemės ūkio</span><span class="slot">ministras: iš dekreto</span></div>
+        </div>
+        <div class="chips">
+          <span class="chip">Biudžeto ir finansų komitetas</span>
+          <span class="chip">Ekonomikos komitetas</span>
+          <span class="chip">Energetikos ir darnios plėtros komitetas</span>
+          <span class="chip">Kaimo reikalų komitetas</span>
+          <span class="chip topic">tema: Pajamos ir mokesčiai</span>
+          <span class="chip topic">tema: Susisiekimas ir infrastruktūra</span>
+        </div>
+
+        <div class="area">Žmonės<small>Sveikata, mokykla, pensijos ir darbas, kultūra</small></div>
+        <div class="pres-cell quiet">Kasdienių sprendimų nepriima. Pasirašo arba grąžina šios srities įstatymus.</div>
+        <div class="tiles">
+          <div class="tile" data-p="a" data-mp="1" tabindex="0"><span class="min">Sveikatos apsaugos</span><span class="slot">ministras: iš dekreto</span></div>
+          <div class="tile" data-p="b" data-mp="1" tabindex="0"><span class="min">Švietimo, mokslo ir sporto</span><span class="slot">ministras: iš dekreto</span></div>
+          <div class="tile" data-p="a" data-mp="1" tabindex="0"><span class="min">Socialinės apsaugos ir darbo</span><span class="slot">ministras: iš dekreto</span></div>
+          <div class="tile" data-p="c" data-mp="0" tabindex="0"><span class="min">Kultūros</span><span class="slot">ministras: iš dekreto</span></div>
+        </div>
+        <div class="chips">
+          <span class="chip">Sveikatos reikalų komitetas</span>
+          <span class="chip">Švietimo ir mokslo komitetas</span>
+          <span class="chip">Socialinių reikalų ir darbo komitetas</span>
+          <span class="chip">Kultūros komitetas</span>
+          <span class="chip topic">tema: Sveikata</span>
+          <span class="chip topic">tema: Švietimas ir kultūra</span>
+        </div>
+
+        <div class="area last">Teisė ir aplinka<small>Teismai ir teisėkūra, gamta, statyba ir būstas</small></div>
+        <div class="pres-cell quiet last">Teikia Seimui teisėjų ir kai kurių pareigūnų kandidatūras. Pasirašo arba grąžina šios srities įstatymus.</div>
+        <div class="tiles last">
+          <div class="tile" data-p="b" data-mp="0" tabindex="0"><span class="min">Teisingumo</span><span class="slot">ministras: iš dekreto</span></div>
+          <div class="tile" data-p="a" data-mp="1" tabindex="0"><span class="min">Aplinkos</span><span class="slot">ministras: iš dekreto</span></div>
+        </div>
+        <div class="chips last">
+          <span class="chip">Teisės ir teisėtvarkos komitetas</span>
+          <span class="chip">Aplinkos apsaugos komitetas</span>
+          <span class="chip">Valstybės valdymo ir savivaldybių komitetas</span>
+          <span class="chip topic">tema: Teisė ir valstybė</span>
+          <span class="chip topic">tema: Aplinka ir energetika</span>
+          <span class="chip topic">tema: Būstas</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-read">
+    <h2 id="h-read">Ką čia galima pamatyti pačiam</h2>
+    <div class="reads">
+      <div class="read"><b>Kas ką gavo</b>Kai spalva rodo partiją, matyti, kaip valdančiosios partijos pasidalijo ministerijas ir kuriose srityse kuri iš jų vadovauja.</div>
+      <div class="read"><b>Kas sėdi dviejose kėdėse</b>Ministras, kuris kartu yra Seimo narys, balsuoja ir už savo ministerijos projektus. Jo lankomumas Seime bus mažesnis, ir dabar aišku kodėl.</div>
+      <div class="read"><b>Kur veda sritis</b>Paspaudus ministeriją atsivers jos pateikti projektai ir Seimo balsavimai dėl jų. Paspaudus temą atsivers tos temos balsavimai.</div>
+    </div>
+    <p class="small" style="max-width:72ch">Puslapis nieko nevertina. Jame nėra ministrų reitingų ir balų. Kiekvienas įrašas turės datą ir nuorodą į dekretą arba įstatymą.</p>
+  </section>
+</main>
+<script>
+(function () {
+  var map = document.getElementById('map');
+  var legend = document.getElementById('legend');
+  var bParty = document.getElementById('m-party');
+  var bMp = document.getElementById('m-mp');
+  var legends = {
+    party: '<span><i class="dot" style="background:var(--ex-a)"></i>Partija A (pavyzdys)</span>' +
+           '<span><i class="dot" style="background:var(--ex-b)"></i>Partija B (pavyzdys)</span>' +
+           '<span><i class="dot" style="background:var(--ex-c)"></i>Partija C (pavyzdys)</span>' +
+           '<span><i class="dot" style="background:var(--honey)"></i>viršuje geltona juosta: dirba kartu su Prezidentu</span>',
+    mp: '<span><i class="dot" style="background:var(--pine)"></i>ministras kartu yra Seimo narys (pavyzdys)</span>' +
+        '<span><i class="dot" style="border:1px dashed var(--stone)"></i>ministras nėra Seimo narys (pavyzdys)</span>'
+  };
+  function set(mode) {
+    map.setAttribute('data-mode', mode);
+    bParty.setAttribute('aria-pressed', String(mode === 'party'));
+    bMp.setAttribute('aria-pressed', String(mode === 'mp'));
+    legend.innerHTML = legends[mode];
+  }
+  bParty.addEventListener('click', function () { set('party'); });
+  bMp.addEventListener('click', function () { set('mp'); });
+  set('party');
+})();
+</script>
+</body>
+</html>
