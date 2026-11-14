@@ -20,6 +20,8 @@ mkdir -p "$OPS_LOG_DIR"
 # ops_notify <urgency: low|normal|critical> <summary> <body>
 ops_notify() {
   local urgency="$1" summary="$2" body="$3"
+  # OPS_NOTIFY=off silences desktop popups; failures are still logged.
+  [ "${OPS_NOTIFY:-on}" = "off" ] && return 0
   export DISPLAY="${DISPLAY:-:0}"
   export DBUS_SESSION_BUS_ADDRESS="${DBUS_SESSION_BUS_ADDRESS:-unix:path=/run/user/$(id -u)/bus}"
 
