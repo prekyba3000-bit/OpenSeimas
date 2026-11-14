@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Atviras Seimas — pradžios puslapio maketas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,500;7..72,700&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F7F4EE; --card:#FFFDF8; --ink:#211E1A; --mute:#6E675C; --line:#E4DDCF;
+  --pine:#3F6E54; --pine-soft:#E3EDE5; --for:#4A7A5E; --against:#B4534B; --abst:#C2A24A;
+  --shadow:0 1px 2px rgba(33,30,26,.05),0 12px 32px -12px rgba(33,30,26,.18);
+  --serif:"Literata",Georgia,serif; --sans:"Source Sans 3",system-ui,sans-serif;
+}
+:root[data-theme="dark"]{
+  --bg:#1B1916; --card:#25221E; --ink:#F2EDE3; --mute:#A39B8D; --line:#3A352E;
+  --pine:#8FBF9F; --pine-soft:#2A342D; --for:#7FA98C; --against:#D0817A; --abst:#D6BC6E;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 16px 40px -16px rgba(0,0,0,.6);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.55 var(--sans);-webkit-font-smoothing:antialiased}
+a{color:inherit}
+.wrap{max-width:1120px;margin:0 auto;padding:0 24px}
+h1,h2,h3{font-family:var(--serif);letter-spacing:-.015em;margin:0;text-wrap:balance}
+.mock{background:var(--ink);color:var(--bg);font-size:13px;text-align:center;padding:6px 12px}
+
+/* top bar: four questions, not four data types */
+header{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--bg) 86%,transparent);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+header .wrap{display:flex;align-items:center;gap:28px;height:64px}
+.brand{font:700 20px var(--serif);text-decoration:none;white-space:nowrap}
+.brand span{color:var(--pine)}
+nav{display:flex;gap:4px;margin-left:auto;overflow-x:auto}
+nav a{text-decoration:none;font-weight:600;font-size:15px;padding:8px 14px;border-radius:999px;white-space:nowrap;color:var(--mute)}
+nav a:hover{background:var(--pine-soft);color:var(--ink)}
+.tog{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;width:38px;height:38px;cursor:pointer;font-size:16px;flex:none}
+
+/* hero: the search is the product */
+.hero{padding:72px 0 40px;text-align:center}
+.eyebrow{display:inline-flex;gap:8px;align-items:center;font-size:14px;font-weight:600;color:var(--pine);background:var(--pine-soft);padding:6px 14px;border-radius:999px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--pine)}
+.hero h1{font-size:clamp(40px,7vw,76px);line-height:1.02;margin:22px auto 16px}
+.hero h1 em{font-style:normal;color:var(--pine)}
+.hero p.lead{font-size:clamp(18px,2.2vw,21px);color:var(--mute);max-width:46ch;margin:0 auto 34px}
+.search{position:relative;max-width:640px;margin:0 auto}
+.search input{width:100%;font:inherit;font-size:19px;padding:20px 22px 20px 58px;border-radius:18px;border:1.5px solid var(--line);background:var(--card);color:var(--ink);box-shadow:var(--shadow);outline:none}
+.search input:focus{border-color:var(--pine)}
+.search svg{position:absolute;left:22px;top:22px;color:var(--mute)}
+.results{position:absolute;left:0;right:0;top:calc(100% + 8px);background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);text-align:left;overflow:hidden;display:none;z-index:5}
+.results.on{display:block}
+.res{display:flex;gap:14px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line)}
+.res:last-child{border:0}
+.res img{width:48px;height:48px;border-radius:50%;object-fit:cover;object-position:top;background:var(--line)}
+.res b{display:block;line-height:1.2}
+.res small{color:var(--mute)}
+.chips{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:18px;font-size:15px;color:var(--mute)}
+.chips button{font:inherit;font-size:15px;border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:999px;padding:6px 14px;cursor:pointer}
+.chips button:hover{border-color:var(--pine);color:var(--pine)}
+
+/* faces: the Seimas is people */
+.faces{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:48px auto 0;max-width:980px}
+.face{width:64px;height:64px;border-radius:50%;padding:3px;background:var(--fc);position:relative;cursor:pointer;transition:transform .15s}
+.face:hover{transform:scale(1.18);z-index:2}
+.face img{width:100%;height:100%;border-radius:50%;object-fit:cover;object-position:top;display:block;background:var(--line);border:2px solid var(--bg)}
+.face:hover::after{content:attr(data-n);position:absolute;left:50%;top:calc(100% + 6px);transform:translateX(-50%);background:var(--ink);color:var(--bg);font-size:13px;padding:4px 10px;border-radius:8px;white-space:nowrap}
+.more{display:block;text-align:center;margin-top:22px;font-weight:600;color:var(--pine)}
+
+section{padding:72px 0}
+.q{font-size:14px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--pine);margin-bottom:10px}
+section h2{font-size:clamp(30px,4.2vw,44px);line-height:1.1;max-width:20ch}
+.sub{color:var(--mute);max-width:56ch;margin:14px 0 0}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:18px;margin-top:36px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:24px;box-shadow:var(--shadow)}
+.vote h3{font:600 19px/1.3 var(--sans);letter-spacing:0;min-height:3.9em}
+.meta{font-size:14px;color:var(--mute);display:flex;justify-content:space-between;margin-bottom:12px}
+.bar{display:flex;height:14px;border-radius:999px;overflow:hidden;margin:18px 0 12px;background:var(--line)}
+.bar i{display:block}
+.tally{display:flex;gap:16px;font-size:15px;flex-wrap:wrap}
+.tally span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;background:var(--k)}
+.tally b{font-variant-numeric:tabular-nums}
+.link{display:inline-block;margin-top:18px;font-weight:600;color:var(--pine);text-decoration:none}
+.link:hover{text-decoration:underline}
+
+/* hemicycle */
+.split{display:grid;grid-template-columns:1.05fr .95fr;gap:48px;align-items:center}
+@media(max-width:860px){.split{grid-template-columns:1fr}}
+svg.hemi{width:100%;height:auto;overflow:visible}
+svg.hemi circle{transition:r .12s;cursor:pointer}
+svg.hemi circle:hover{r:9}
+.legend{display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:22px;font-size:15px}
+.legend span::before{content:"";display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:7px;background:var(--k);vertical-align:-1px}
+.who{margin-top:18px;min-height:28px;font-weight:600}
+
+/* three doors */
+.doors{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:18px;margin-top:36px}
+.door{display:block;text-decoration:none;background:var(--card);border:1px solid var(--line);border-radius:22px;padding:28px;transition:transform .15s,border-color .15s}
+.door:hover{transform:translateY(-3px);border-color:var(--pine)}
+.door .n{font:700 44px/1 var(--serif);color:var(--pine)}
+.door h3{font-size:22px;margin:14px 0 6px}
+.door p{margin:0;color:var(--mute);font-size:16px}
+
+.trust{background:var(--pine-soft);border-radius:28px;padding:44px;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:28px}
+.trust h3{font-size:21px;margin-bottom:6px}
+.trust p{margin:0;color:var(--mute);font-size:16px}
+footer{padding:36px 0 56px;color:var(--mute);font-size:14px;border-top:1px solid var(--line);margin-top:40px}
+</style>
+</head>
+<body>
+<div class="mock">Maketas, ne veikiantis puslapis. Duomenys tikri (2026-11-05 posėdis); nuorodos niekur neveda.</div>
+
+<header><div class="wrap">
+  <a class="brand" href="#">Atviras <span>Seimas</span></a>
+  <nav>
+    <a href="#atstovai">Kas mane atstovauja</a>
+    <a href="#sprendimai">Ką nusprendė</a>
+    <a href="#sale">Seimo sudėtis</a>
+    <a href="#valdzia">Kas valdo</a>
+    <a href="#pasitikejimas">Kaip skaičiuojame</a>
+  </nav>
+  <button class="tog" id="tog" aria-label="Šviesi arba tamsi tema">◐</button>
+</div></header>
+
+<div class="wrap">
+  <div class="hero" id="atstovai">
+    <span class="eyebrow"><span class="dot"></span><span id="eyebrow"></span></span>
+    <h1>Ką Seimas<br><em>iš tikrųjų</em> padarė</h1>
+    <p class="lead">Raskite savo Seimo narį ir pažiūrėkite, kaip jis balsavo. Kiekvienas skaičius turi šaltinį. Vertinimų nerašome.</p>
+    <div class="search">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="q" type="search" placeholder="Pavardė arba apygarda, pvz. Telšių" autocomplete="off">
+      <div class="results" id="results"></div>
+    </div>
+    <div class="chips">Pabandykite: <button>Telšių</button><button>Antakalnio</button><button>Šimonytė</button><button>Pasaulio lietuvių</button></div>
+    <div class="faces" id="faces"></div>
+    <a class="more" href="#">Visi <span id="nActive"></span> Seimo nariai →</a>
+  </div>
+</div>
+
+<section id="sprendimai"><div class="wrap">
+  <div class="q">Ką nusprendė</div>
+  <h2 id="dayTitle"></h2>
+  <p class="sub" id="daySub"></p>
+  <div class="grid3" id="votes"></div>
+  <a class="link" href="#">Visi tos dienos balsavimai →</a>
+</div></section>
+
+<section id="sale"><div class="wrap split">
+  <div>
+    <div class="q">Seimo sudėtis</div>
+    <h2>141 vieta. Kas kur sėdi.</h2>
+    <p class="sub">Kiekvienas taškas — vienas Seimo narys. Spalva rodo frakciją. Užveskite pelę ir pamatysite vardą.</p>
+    <div class="legend" id="legend"></div>
+    <div class="who" id="who">&nbsp;</div>
+  </div>
+  <svg class="hemi" id="hemi" viewBox="0 0 600 330" role="img" aria-label="Seimo salė pagal frakcijas"></svg>
+</div></section>
+
+<section id="valdzia"><div class="wrap">
+  <div class="q">Kas valdo</div>
+  <h2>Trys institucijos, vienas kelias</h2>
+  <p class="sub">Įstatymą priima Seimas, pasirašo arba grąžina Prezidentas, vykdo Vyriausybė.</p>
+  <div class="doors">
+    <a class="door" href="#"><div class="n">1</div><h3>Seimas</h3><p>141 narys. Priima įstatymus ir tvirtina Vyriausybės programą.</p></a>
+    <a class="door" href="#"><div class="n">2</div><h3>Prezidentas</h3><p>Pasirašo įstatymus arba grąžina juos Seimui. Dekretai su nuorodomis.</p></a>
+    <a class="door" href="#"><div class="n">3</div><h3>Vyriausybė</h3><p>Ministras Pirmininkas ir 14 ministrų. Kas ir nuo kada.</p></a>
+  </div>
+</div></section>
+
+<section id="pasitikejimas"><div class="wrap">
+  <div class="trust">
+    <div><h3>Be balų ir reitingų</h3><p>Rodome, kas padaryta. Kas geriau, sprendžiate jūs.</p></div>
+    <div><h3>Kiekvienas skaičius su šaltiniu</h3><p>Prie rodiklio parašyta, iš kur jis ir kaip skaičiuojamas.</p></div>
+    <div><h3>Klaidas taisome viešai</h3><p>Pataisymų sąrašas atviras, su datomis.</p></div>
+  </div>
+</div></section>
+
+<footer><div class="wrap">Atviras Seimas — nepriklausomas projektas, ne LR Seimo svetainė. Šaltiniai: lrs.lt, vrk.lt, lrp.lt, lrv.lt.</div></footer>
+
+<script>
+const D = {"mps": [{"n": "Agnė Jakavičiutė-Miliauskienė", "f": "Vardan LT", "c": "#5D8A6C", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2435985.jpeg", "a": "Telšių", "nr": 40, "t": "single_mandate"}, {"n": "Agnė Širinskienė", "f": "Vardan LT", "c": "#5D8A6C", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437049.jpeg", "a": null, "nr": null, "t": "multimandate"}, {"n": "Aidas Gedvilas", "f": "Nemuno aušra", "c": "#C9823F", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437050.jpeg", "a": null, "nr": null, "t": "multimandate"}, {"n": "Aistė Gedvilienė", "f": "TS-LKD", "c": "#5E86B8", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2436672.jpeg", "a": null, "nr": null, "t": "multimandate"}, {"n": "Algimantas Radvila", "f": "LSDP", "c": "#C25B5B", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437161.jpeg", "a": "Kaišiadorių–Elektrėnų", "nr": 59, "t": "single_mandate"}, {"n": "Algirdas Butkevičius", "f": "Vardan LT", "c": "#5D8A6C", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2436053.jpeg", "a": "Vilkaviškio", "nr": 68, "t": "single_mandate"}, {"n": "Algirdas Sysas", "f": "LSDP", "c": "#C25B5B", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437151.jpeg", "a": null, "nr": null, "t": "multimandate"}, {"n": "Alvydas Mockus", "f": "LSDP", "c": "#C25B5B", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437129.jpeg", "a": "Gargždų", "nr": 31, "t": "single_mandate"}, {"n": "Andrius Bagdonas", "f": "LRLS", "c": "#937DAA", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2436106.jpeg", "a": null, "nr": null, "t": "multimandate"}, {"n": "Andrius Busila", "f": "LSDP", "c": "#C25B5B", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437134.jpeg", "a": "Panevėžio vakarinė", "nr": 29, "t": "single_mandate"}, {"n": "Angelė Jakavonytė", "f": "TS-LKD", "c": "#5E86B8", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2436690.jpeg", "a": null, "nr": null, "t": null}, {"n": "Antanas Nedzinskas", "f": "LSDP", "c": "#C25B5B", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437265.jpeg", "a": null, "nr": null, "t": "multimandate"}, {"n": "Arminas Lydeka", "f": "LRLS", "c": "#937DAA", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2436141.jpeg", "a": null, "nr": null, "t": "multimandate"}, {"n": "Artūras Skardžius", "f": "Nemuno aušra", "c": "#C9823F", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437035.jpeg", "a": null, "nr": null, "t": "multimandate"}, {"n": "Artūras Zuokas", "f": "Mišri grupė", "c": "#8C857A", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2436915.jpeg", "a": "Naujininkų–Rasų", "nr": 14, "t": "single_mandate"}, {"n": "Arūnas Dudėnas", "f": "LSDP", "c": "#C25B5B", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437169.jpeg", "a": "Deltuvos šiaurinė", "nr": 49, "t": "single_mandate"}, {"n": "Arūnas Valinskas", "f": "TS-LKD", "c": "#5E86B8", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2436696.jpeg", "a": null, "nr": null, "t": "multimandate"}, {"n": "Arvydas Anušauskas", "f": "TS-LKD", "c": "#5E86B8", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2436633.jpeg", "a": "Kalniečių", "nr": 15, "t": "single_mandate"}, {"n": "Arvydas Pocius", "f": "TS-LKD", "c": "#5E86B8", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2436635.jpeg", "a": null, "nr": null, "t": "multimandate"}, {"n": "Audrius Petrošius", "f": "TS-LKD", "c": "#5E86B8", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2436697.jpeg", "a": "Danės", "nr": 23, "t": "single_mandate"}, {"n": "Audrius Radvilavičius", "f": "LSDP", "c": "#C25B5B", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437155.jpeg", "a": "Panemunės", "nr": 18, "t": "single_mandate"}, {"n": "Audronius Ažubalis", "f": "TS-LKD", "c": "#5E86B8", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2436861.jpeg", "a": null, "nr": null, "t": "multimandate"}, {"n": "Aušrinė Norkienė", "f": "LVŽS", "c": "#7E9A6A", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2436750.jpeg", "a": null, "nr": null, "t": "multimandate"}, {"n": "Birutė Vėsaitė", "f": "LSDP", "c": "#C25B5B", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437214.jpeg", "a": null, "nr": null, "t": "multimandate"}, {"n": "Bronis Ropė", "f": "LVŽS", "c": "#7E9A6A", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2436759.jpeg", "a": null, "nr": null, "t": "multimandate"}, {"n": "Česlav Olševski", "f": "LVŽS", "c": "#7E9A6A", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2436330.jpeg", "a": "Vilniaus pietinė", "nr": 11, "t": "single_mandate"}, {"n": "Dainius Gaižauskas", "f": "LVŽS", "c": "#7E9A6A", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2436724.jpeg", "a": null, "nr": null, "t": "multimandate"}, {"n": "Dainius Kreivys", "f": "TS-LKD", "c": "#5E86B8", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2436630.jpeg", "a": "Verkių", "nr": 12, "t": "single_mandate"}, {"n": "Dainius Varnas", "f": "Vardan LT", "c": "#5D8A6C", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437011.jpeg", "a": null, "nr": null, "t": "multimandate"}, {"n": "Dainoras Bradauskas", "f": "Mišri grupė", "c": "#8C857A", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437003.jpeg", "a": null, "nr": null, "t": "multimandate"}, {"n": "Daiva Petkevičienė", "f": "Nemuno aušra", "c": "#C9823F", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2436997.jpeg", "a": "Pajūrio", "nr": 22, "t": "single_mandate"}, {"n": "Daiva Ulbinaitė", "f": "TS-LKD", "c": "#5E86B8", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2436680.jpeg", "a": "Riešės", "nr": 55, "t": "single_mandate"}, {"n": "Daiva Žebelienė", "f": "Nemuno aušra", "c": "#C9823F", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437005.jpeg", "a": "Šilutės", "nr": 32, "t": "single_mandate"}, {"n": "Dalia Asanavičiūtė-Gružauskienė", "f": "TS-LKD", "c": "#5E86B8", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2436637.jpeg", "a": "Pasaulio lietuvių", "nr": 71, "t": "single_mandate"}, {"n": "Darius Jakavičius", "f": "LSDP", "c": "#C25B5B", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437165.jpeg", "a": "Sūduvos šiaurinė", "nr": 64, "t": "single_mandate"}, {"n": "Darius Razmislevičius", "f": "LSDP", "c": "#C25B5B", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437154.jpeg", "a": "Petrašiūnų–Gričiupio", "nr": 17, "t": "single_mandate"}, {"n": "Domas Griškevičius", "f": "Vardan LT", "c": "#5D8A6C", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2436054.jpeg", "a": "Saulės", "nr": 26, "t": "single_mandate"}, {"n": "Dovilė Šakalienė", "f": "LSDP", "c": "#C25B5B", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437144.jpeg", "a": null, "nr": null, "t": "multimandate"}, {"n": "Edita Rudelienė", "f": "LRLS", "c": "#937DAA", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2436126.jpeg", "a": null, "nr": null, "t": "multimandate"}, {"n": "Eimantas Kirkutis", "f": "LVŽS", "c": "#7E9A6A", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2436713.jpeg", "a": "Šiaulių krašto", "nr": 45, "t": "single_mandate"}, {"n": "Emanuelis Zingeris", "f": "TS-LKD", "c": "#5E86B8", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2436639.jpeg", "a": null, "nr": null, "t": "multimandate"}, {"n": "Eugenijus Gentvilas", "f": "LRLS", "c": "#937DAA", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2436142.jpeg", "a": "Pašilaičių", "nr": 13, "t": "single_mandate"}, {"n": "Eugenijus Sabutis", "f": "LSDP", "c": "#C25B5B", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437162.jpeg", "a": "Jonavos", "nr": 60, "t": "single_mandate"}, {"n": "Giedrė Balčytytė", "f": "TS-LKD", "c": "#5E86B8", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2436655.jpeg", "a": null, "nr": null, "t": "multimandate"}, {"n": "Giedrius Drukteinis", "f": "LSDP", "c": "#C25B5B", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437167.jpeg", "a": null, "nr": null, "t": "multimandate"}, {"n": "Gintarė Skaistė", "f": "TS-LKD", "c": "#5E86B8", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2436693.jpeg", "a": null, "nr": null, "t": "multimandate"}, {"n": "Gintautas Paluckas", "f": "LSDP", "c": "#C25B5B", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437189.jpeg", "a": null, "nr": null, "t": "multimandate"}, {"n": "Ignas Vėgėlė", "f": "Mišri grupė", "c": "#8C857A", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2436836.jpeg", "a": null, "nr": null, "t": "multimandate"}, {"n": "Ilona Gelažnikienė", "f": "LSDP", "c": "#C25B5B", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437142.jpeg", "a": "Žiemgalos rytinė", "nr": 47, "t": "single_mandate"}, {"n": "Indrė Kižienė", "f": "LSDP", "c": "#C25B5B", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437191.jpeg", "a": "Deltuvos pietinė", "nr": 61, "t": "single_mandate"}, {"n": "Inga Ruginienė", "f": "LSDP", "c": "#C25B5B", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437179.jpeg", "a": null, "nr": null, "t": "multimandate"}, {"n": "Ingrida Braziulienė", "f": "LSDP", "c": "#C25B5B", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437184.jpeg", "a": "Mažeikių", "nr": 38, "t": "single_mandate"}, {"n": "Ingrida Šimonytė", "f": "TS-LKD", "c": "#5E86B8", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2436629.jpeg", "a": "Antakalnio", "nr": 3, "t": "single_mandate"}, {"n": "Jaroslav Narkevič", "f": "LVŽS", "c": "#7E9A6A", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2436434.jpeg", "a": "Šalčininkų–Vilniaus", "nr": 56, "t": "single_mandate"}, {"n": "Jekaterina Rojaka", "f": "Vardan LT", "c": "#5D8A6C", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2436044.jpeg", "a": null, "nr": null, "t": "multimandate"}, {"n": "Julius Sabatauskas", "f": "LSDP", "c": "#C25B5B", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437166.jpeg", "a": null, "nr": null, "t": "multimandate"}, {"n": "Juozas Olekas", "f": "Be frakcijos", "c": "#B8B0A2", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437260.jpeg", "a": null, "nr": null, "t": "multimandate"}, {"n": "Jūratė Zailskienė", "f": "LSDP", "c": "#C25B5B", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437172.jpeg", "a": "Dainavos", "nr": 67, "t": "single_mandate"}, {"n": "Jurgis Razma", "f": "TS-LKD", "c": "#5E86B8", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2436658.jpeg", "a": null, "nr": null, "t": "multimandate"}, {"n": "Jurgita Sejonienė", "f": "TS-LKD", "c": "#5E86B8", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2436666.jpeg", "a": null, "nr": null, "t": null}, {"n": "Jurgita Šukevičienė", "f": "LSDP", "c": "#C25B5B", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437128.jpeg", "a": "Alytaus", "nr": 30, "t": "single_mandate"}, {"n": "Karolis Neimantas", "f": "Nemuno aušra", "c": "#C9823F", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437026.jpeg", "a": "Mėguvos", "nr": 36, "t": "single_mandate"}, {"n": "Karolis Podolskis", "f": "LSDP", "c": "#C25B5B", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437193.jpeg", "a": "Marijampolės", "nr": 54, "t": "single_mandate"}, {"n": "Kęstutis Bilius", "f": "Nemuno aušra", "c": "#C9823F", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437000.jpeg", "a": null, "nr": null, "t": "multimandate"}, {"n": "Kęstutis Masiulis", "f": "TS-LKD", "c": "#5E86B8", "p": "https://commons.wikimedia.org/wiki/Special:FilePath/K%C4%99stutis%20Masiulis%20in%202018.jpg?width=600", "a": null, "nr": null, "t": null}, {"n": "Kęstutis Mažeika", "f": "Vardan LT", "c": "#5D8A6C", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2436056.jpeg", "a": "Sūduvos pietinė", "nr": 63, "t": "single_mandate"}, {"n": "Kęstutis Vilkauskas", "f": "LSDP", "c": "#C25B5B", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437160.jpeg", "a": "Trakų–Vievio", "nr": 58, "t": "single_mandate"}, {"n": "Laura Asadauskaitė-Zadneprovskienė", "f": "LSDP", "c": "#C25B5B", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437256.jpeg", "a": null, "nr": null, "t": "multimandate"}, {"n": "Laurynas Kasčiūnas", "f": "TS-LKD", "c": "#5E86B8", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2436647.jpeg", "a": "Lazdynų", "nr": 9, "t": "single_mandate"}, {"n": "Laurynas Šedvydis", "f": "LSDP", "c": "#C25B5B", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437158.jpeg", "a": "Šilainių", "nr": 21, "t": "single_mandate"}, {"n": "Ligita Girskienė", "f": "LVŽS", "c": "#7E9A6A", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2436706.jpeg", "a": "Marių", "nr": 25, "t": "single_mandate"}, {"n": "Lilija Vaitiekūnienė", "f": "LSDP", "c": "#C25B5B", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437187.jpeg", "a": "Sėlos vakarinė", "nr": 48, "t": "single_mandate"}, {"n": "Lina Šukytė-Korsakė", "f": "Nemuno aušra", "c": "#C9823F", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2436998.jpeg", "a": null, "nr": null, "t": "multimandate"}, {"n": "Linas Balsys", "f": "LSDP", "c": "#C25B5B", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437242.jpeg", "a": null, "nr": null, "t": "multimandate"}, {"n": "Linas Jonauskas", "f": "LSDP", "c": "#C25B5B", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437176.jpeg", "a": null, "nr": null, "t": "multimandate"}, {"n": "Linas Kukuraitis", "f": "Vardan LT", "c": "#5D8A6C", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2436052.jpeg", "a": "Justiniškių–Viršuliškių", "nr": 7, "t": "single_mandate"}, {"n": "Linas Urmanavičius", "f": "Mišri grupė", "c": "#8C857A", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2436067.jpeg", "a": "Jotvingių", "nr": 70, "t": "single_mandate"}, {"n": "Liutauras Kazlavickas", "f": "TS-LKD", "c": "#5E86B8", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2436698.jpeg", "a": "Naujosios Vilnios", "nr": 10, "t": "single_mandate"}, {"n": "Lukas Savickas", "f": "Vardan LT", "c": "#5D8A6C", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2436051.jpeg", "a": null, "nr": null, "t": "multimandate"}, {"n": "Mantas Poškus", "f": "Nemuno aušra", "c": "#C9823F", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437039.jpeg", "a": null, "nr": null, "t": "multimandate"}, {"n": "Martynas Gedvilas", "f": "Nemuno aušra", "c": "#C9823F", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437051.jpeg", "a": null, "nr": null, "t": "multimandate"}, {"n": "Martynas Katelynas", "f": "LSDP", "c": "#C25B5B", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437174.jpeg", "a": "Dzūkijos", "nr": 69, "t": "single_mandate"}, {"n": "Matas Maldeikis", "f": "TS-LKD", "c": "#5E86B8", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2436645.jpeg", "a": null, "nr": null, "t": "multimandate"}, {"n": "Matas Skamarakas", "f": "LSDP", "c": "#C25B5B", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437137.jpeg", "a": "Raseinių–Josvainių", "nr": 42, "t": "single_mandate"}, {"n": "Mindaugas Lingė", "f": "TS-LKD", "c": "#5E86B8", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2436673.jpeg", "a": "Šeškinės–Šnipiškių", "nr": 6, "t": "single_mandate"}, {"n": "Modesta Petrauskaitė", "f": "LSDP", "c": "#C25B5B", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437131.jpeg", "a": "Aukštaitijos", "nr": 33, "t": "single_mandate"}, {"n": "Orinta Leiputė", "f": "LSDP", "c": "#C25B5B", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437153.jpeg", "a": "Savanorių", "nr": 16, "t": "single_mandate"}, {"n": "Paulė Kuzmickienė", "f": "TS-LKD", "c": "#5E86B8", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2436644.jpeg", "a": "Žirmūnų", "nr": 4, "t": "single_mandate"}, {"n": "Paulius Visockas", "f": "LSDP", "c": "#C25B5B", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437258.jpeg", "a": null, "nr": null, "t": null}, {"n": "Petras Dargis", "f": "Nemuno aušra", "c": "#C9823F", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437099.jpeg", "a": null, "nr": null, "t": "multimandate"}, {"n": "Radvilė Morkūnaitė-Mikulėnienė", "f": "TS-LKD", "c": "#5E86B8", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2436646.jpeg", "a": null, "nr": null, "t": "multimandate"}, {"n": "Raimondas Kuodis", "f": "TS-LKD", "c": "#5E86B8", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2436854.jpeg", "a": null, "nr": null, "t": "multimandate"}, {"n": "Raimondas Šukys", "f": "Nemuno aušra", "c": "#C9823F", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437009.jpeg", "a": null, "nr": null, "t": "multimandate"}, {"n": "Raminta Popovienė", "f": "LSDP", "c": "#C25B5B", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437170.jpeg", "a": "Raudondvario", "nr": 65, "t": "single_mandate"}, {"n": "Ramūnas Vyžintas", "f": "LSDP", "c": "#C25B5B", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437133.jpeg", "a": "Nevėžio", "nr": 28, "t": "single_mandate"}, {"n": "Rasa Budbergytė", "f": "LSDP", "c": "#C25B5B", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437148.jpeg", "a": null, "nr": null, "t": "multimandate"}, {"n": "Remigijus Motuzas", "f": "LSDP", "c": "#C25B5B", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437147.jpeg", "a": "Fabijoniškių", "nr": 5, "t": "single_mandate"}, {"n": "Remigijus Žemaitaitis", "f": "Nemuno aušra", "c": "#C9823F", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437045.jpeg", "a": "Kelmės–Šilalės", "nr": 41, "t": "single_mandate"}, {"n": "Ričardas Juška", "f": "LRLS", "c": "#937DAA", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2436130.jpeg", "a": "Karšuvos", "nr": 62, "t": "single_mandate"}, {"n": "Rima Baškienė", "f": "Vardan LT", "c": "#5D8A6C", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2436055.jpeg", "a": null, "nr": null, "t": "multimandate"}, {"n": "Rimantas Sinkevičius", "f": "LSDP", "c": "#C25B5B", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437257.jpeg", "a": null, "nr": null, "t": "multimandate"}, {"n": "Rimas Jonas Jankūnas", "f": "Mišri grupė", "c": "#8C857A", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2436735.jpeg", "a": null, "nr": null, "t": null}, {"n": "Rita Tamašunienė", "f": "LVŽS", "c": "#7E9A6A", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2436433.jpeg", "a": "Nemenčinės", "nr": 57, "t": "single_mandate"}, {"n": "Robert Puchovič", "f": "Nemuno aušra", "c": "#C9823F", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437029.jpeg", "a": null, "nr": null, "t": "multimandate"}, {"n": "Robertas Kaunas", "f": "LSDP", "c": "#C25B5B", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437156.jpeg", "a": "Aleksoto–Vilijampolės", "nr": 19, "t": "single_mandate"}, {"n": "Roma Janušonienė", "f": "LSDP", "c": "#C25B5B", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437127.jpeg", "a": "Aušros", "nr": 27, "t": "single_mandate"}, {"n": "Ruslanas Baranovas", "f": "LSDP", "c": "#C25B5B", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437150.jpeg", "a": null, "nr": null, "t": "multimandate"}, {"n": "Rūta Miliūtė", "f": "Vardan LT", "c": "#5D8A6C", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2436013.jpeg", "a": null, "nr": null, "t": null}, {"n": "Šarūnas Birutis", "f": "LSDP", "c": "#C25B5B", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437192.jpeg", "a": "Nalšios pietinė", "nr": 53, "t": "single_mandate"}, {"n": "Šarūnas Šukevičius", "f": "LSDP", "c": "#C25B5B", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437171.jpeg", "a": "Garliavos", "nr": 66, "t": "single_mandate"}, {"n": "Saulius Bucevičius", "f": "Nemuno aušra", "c": "#C9823F", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437007.jpeg", "a": null, "nr": null, "t": "multimandate"}, {"n": "Saulius Čaplinskas", "f": "LSDP", "c": "#C25B5B", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437143.jpeg", "a": null, "nr": null, "t": "multimandate"}, {"n": "Saulius Luščikas", "f": "LSDP", "c": "#C25B5B", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437139.jpeg", "a": "Radviliškio–Tytuvėnų", "nr": 44, "t": "single_mandate"}, {"n": "Saulius Skvernelis", "f": "Mišri grupė", "c": "#8C857A", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2436050.jpeg", "a": null, "nr": null, "t": "multimandate"}, {"n": "Simonas Gentvilas", "f": "LRLS", "c": "#937DAA", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2436151.jpeg", "a": null, "nr": null, "t": "multimandate"}, {"n": "Simonas Kairys", "f": "LRLS", "c": "#937DAA", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2436149.jpeg", "a": "Centro–Žaliakalnio", "nr": 20, "t": "single_mandate"}, {"n": "Tadas Barauskas", "f": "LSDP", "c": "#C25B5B", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437188.jpeg", "a": "Sėlos rytinė", "nr": 50, "t": "single_mandate"}, {"n": "Tadas Prajara", "f": "LSDP", "c": "#C25B5B", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437164.jpeg", "a": null, "nr": null, "t": "multimandate"}, {"n": "Tadas Sadauskis", "f": "Nemuno aušra", "c": "#C9823F", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437041.jpeg", "a": "Tauragės", "nr": 34, "t": "single_mandate"}, {"n": "Tomas Domarkas", "f": "Nemuno aušra", "c": "#C9823F", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437042.jpeg", "a": "Plungės–Rietavo", "nr": 35, "t": "single_mandate"}, {"n": "Tomas Martinaitis", "f": "LSDP", "c": "#C25B5B", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437185.jpeg", "a": "Žemaitijos šiaurinė", "nr": 39, "t": "single_mandate"}, {"n": "Tomas Tomilinas", "f": "Vardan LT", "c": "#5D8A6C", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2436046.jpeg", "a": null, "nr": null, "t": "multimandate"}, {"n": "Vaida Aleknavičienė", "f": "LSDP", "c": "#C25B5B", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437141.jpeg", "a": "Žiemgalos vakarinė", "nr": 46, "t": "single_mandate"}, {"n": "Valdas Rakutis", "f": "TS-LKD", "c": "#5E86B8", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2436906.jpeg", "a": null, "nr": null, "t": "multimandate"}, {"n": "Valius Ąžuolas", "f": "LVŽS", "c": "#7E9A6A", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2436718.jpeg", "a": null, "nr": null, "t": "multimandate"}, {"n": "Viktoras Fiodorovas", "f": "Mišri grupė", "c": "#8C857A", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2435905.jpeg", "a": "Kėdainių", "nr": 43, "t": "single_mandate"}, {"n": "Viktoras Pranckietis", "f": "LRLS", "c": "#937DAA", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2436101.jpeg", "a": null, "nr": null, "t": "multimandate"}, {"n": "Viktorija Čmilytė-Nielsen", "f": "LRLS", "c": "#937DAA", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2436160.jpeg", "a": "Senamiesčio–Žvėryno", "nr": 1, "t": "single_mandate"}, {"n": "Vilija Targamadzė", "f": "LSDP", "c": "#C25B5B", "p": "https://commons.wikimedia.org/wiki/Special:FilePath/Vilija%20Targamadze%20by%20Augustas%20Didzgalvis.jpg?width=600", "a": null, "nr": null, "t": null}, {"n": "Violeta Turauskaitė", "f": "LSDP", "c": "#C25B5B", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437183.jpeg", "a": "Kuršo", "nr": 37, "t": "single_mandate"}, {"n": "Virgilijus Alekna", "f": "LRLS", "c": "#937DAA", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2436132.jpeg", "a": null, "nr": null, "t": "multimandate"}, {"n": "Vitalijus Gailius", "f": "LRLS", "c": "#937DAA", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2436161.jpeg", "a": null, "nr": null, "t": "multimandate"}, {"n": "Vitalijus Šeršniovas", "f": "Mišri grupė", "c": "#8C857A", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2435865.jpeg", "a": "Utenos", "nr": 51, "t": "single_mandate"}, {"n": "Vytautas Grubliauskas", "f": "LSDP", "c": "#C25B5B", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437177.jpeg", "a": "Baltijos", "nr": 24, "t": "single_mandate"}, {"n": "Vytautas Jucius", "f": "Nemuno aušra", "c": "#C9823F", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437098.jpeg", "a": null, "nr": null, "t": "multimandate"}, {"n": "Vytautas Juozapaitis", "f": "TS-LKD", "c": "#5E86B8", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2436642.jpeg", "a": null, "nr": null, "t": null}, {"n": "Vytautas Kernagis", "f": "TS-LKD", "c": "#5E86B8", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2436631.jpeg", "a": null, "nr": null, "t": "multimandate"}, {"n": "Vytautas Sinica", "f": "Mišri grupė", "c": "#8C857A", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2437416.jpeg", "a": "Pilaitės–Karoliniškių", "nr": 8, "t": "single_mandate"}, {"n": "Zigmantas Balčytis", "f": "Vardan LT", "c": "#5D8A6C", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2436048.jpeg", "a": null, "nr": null, "t": "multimandate"}, {"n": "Žygimantas Pavilionis", "f": "TS-LKD", "c": "#5E86B8", "p": "https://www.vrk.lt/statiniai/puslapiai/rinkimai/1544/rnk1870/kandidatai/kandImg/photo_2436643.jpeg", "a": "Naujamiesčio–Vilkpėdės", "nr": 2, "t": "single_mandate"}], "votes": [{"t": "Pagalbinio apvaisinimo įstatymo pakeitimo projektas (nauja redakcija)", "nr": "XVP-1315(2)", "h": "13:20", "u": 7, "p": 62, "s": 13}, {"t": "Vietos savivaldos įstatymo pakeitimo projektas", "nr": "XVP-1334(2)", "h": "16:34", "u": 16, "p": 33, "s": 17}, {"t": "Energetikos įstatymo 2 straipsnio pakeitimo projektas", "nr": "XVP-1830(2)", "h": "16:29", "u": 67, "p": 4, "s": 10}], "present": 112, "dayVotes": 111, "active": 140, "seats": 141, "allVotes": "5,883", "days": 105};
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fold = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+
+$('eyebrow').textContent = `Duomenys iki 2026 m. lapkričio 5 d. · ${D.allVotes} balsavimai`;
+$('nActive').textContent = D.active;
+$('dayTitle').textContent = 'Paskutinė posėdžių diena: lapkričio 5 d.';
+$('daySub').textContent = `${D.dayVotes} balsavimų. Užsiregistravo ${D.present} iš ${D.active} Seimo narių. Trys iš jų:`;
+
+// search by surname or constituency
+const row = (m) => `<div class="res"><img loading="lazy" src="${esc(m.p)}" alt=""><div><b>${esc(m.n)}</b><small>${esc(m.f)} · ${m.t === 'single_mandate' && m.a ? esc(m.a) + ' apygarda (Nr. ' + m.nr + ')' : 'išrinkta(s) pagal sąrašą'}</small></div></div>`;
+function search(v) {
+  const k = fold(v.trim()), box = $('results');
+  if (k.length < 2) { box.classList.remove('on'); return; }
+  const hit = D.mps.filter((m) => fold(m.n).includes(k) || (m.a && fold(m.a).includes(k))).slice(0, 5);
+  box.innerHTML = hit.length ? hit.map(row).join('') : '<div class="res"><small>Nieko neradome. Bandykite pavardę arba apygardos pavadinimą.</small></div>';
+  box.classList.add('on');
+}
+$('q').addEventListener('input', (e) => search(e.target.value));
+document.querySelectorAll('.chips button').forEach((b) => b.addEventListener('click', () => { $('q').value = b.textContent; search(b.textContent); $('q').focus(); }));
+
+// faces: every 6th member, so all factions appear
+$('faces').innerHTML = D.mps.filter((_, i) => i % 6 === 0).slice(0, 22).map((m) =>
+  `<div class="face" style="--fc:${m.c}" data-n="${esc(m.n)} · ${esc(m.f)}"><img loading="lazy" src="${esc(m.p)}" alt="${esc(m.n)}"></div>`).join('');
+
+// votes of the day
+$('votes').innerHTML = D.votes.map((v) => {
+  const t = v.u + v.p + v.s, w = (n) => (100 * n / t).toFixed(1);
+  return `<div class="card vote"><div class="meta"><span>${v.h}</span><span>Nr. ${esc(v.nr)}</span></div><h3>${esc(v.t)}</h3>
+  <div class="bar"><i style="width:${w(v.u)}%;background:var(--for)"></i><i style="width:${w(v.p)}%;background:var(--against)"></i><i style="width:${w(v.s)}%;background:var(--abst)"></i></div>
+  <div class="tally"><span style="--k:var(--for)">Už <b>${v.u}</b></span><span style="--k:var(--against)">Prieš <b>${v.p}</b></span><span style="--k:var(--abst)">Susilaikė <b>${v.s}</b></span></div>
+  <a class="link" href="#">Kas kaip balsavo →</a></div>`;
+}).join('');
+
+// hemicycle: seats on 7 arcs, filled faction by faction from left to right
+const order = [...new Set(D.mps.map((m) => m.f))].sort((a, b) => D.mps.filter((m) => m.f === b).length - D.mps.filter((m) => m.f === a).length);
+const sorted = order.flatMap((f) => D.mps.filter((m) => m.f === f));
+const rows = 7, seats = [];
+const per = Array.from({ length: rows }, (_, r) => 130 + r * 26);
+const total = per.reduce((a, b) => a + b, 0);
+let left = D.seats;
+per.forEach((rad, r) => {
+  const n = r === rows - 1 ? left : Math.round(D.seats * rad / total); left -= n;
+  for (let i = 0; i < n; i++) { const a = Math.PI * (i + 0.5) / n; seats.push({ a, x: 300 - rad * Math.cos(a), y: 310 - rad * Math.sin(a) }); }
+});
+seats.sort((p, q) => p.a - q.a);
+$('hemi').innerHTML = seats.map((s, i) => {
+  const m = sorted[i];
+  return m ? `<circle cx="${s.x.toFixed(1)}" cy="${s.y.toFixed(1)}" r="6.5" fill="${m.c}" data-n="${esc(m.n)} — ${esc(m.f)}"/>`
+           : `<circle cx="${s.x.toFixed(1)}" cy="${s.y.toFixed(1)}" r="6" fill="none" stroke="var(--mute)" stroke-dasharray="2 2" data-n="Laisva vieta"/>`;
+}).join('');
+$('hemi').addEventListener('mouseover', (e) => { if (e.target.dataset.n) $('who').textContent = e.target.dataset.n; });
+$('legend').innerHTML = order.map((f) => { const g = D.mps.filter((m) => m.f === f); return `<span style="--k:${g[0].c}">${esc(f)} <b>${g.length}</b></span>`; }).join('');
+
+// theme
+const root = document.documentElement;
+if (matchMedia('(prefers-color-scheme: dark)').matches) root.dataset.theme = 'dark';
+$('tog').addEventListener('click', () => { root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark'; });
+</script>
+</body>
+</html>
