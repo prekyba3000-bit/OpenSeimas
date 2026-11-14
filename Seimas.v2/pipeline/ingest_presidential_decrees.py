@@ -133,6 +133,19 @@ def read_month(year: int, month: int, fetch=fetch_with_retry, pause=PAUSE_SECOND
         time.sleep(pause)
 
 
+def reconciliation_note(parsed: int, inserted: int):
+    """Say why fewer rows were stored than listed, or None when none were.
+
+    Every run after the first lists decrees it already holds, and the insert
+    skips them. Without a note that reads as rows lost between parse and
+    store, and `three_way_reconciliation` holds publication for it.
+    """
+    already = parsed - inserted
+    if not already:
+        return None
+    return f"{already} listed decrees already stored (idempotent re-run)"
+
+
 def main(argv=None) -> int:
     argv = sys.argv[1:] if argv is None else argv
     setup_logging()
@@ -185,6 +198,7 @@ def main(argv=None) -> int:
             fetch["rows"] = inserted
             fetch["parsed"] = parsed
             fetch["inserted"] = inserted
+            fetch["note"] = reconciliation_note(parsed, inserted)
         print(f"decrees: {parsed} listed, {inserted} new")
         return 0
     finally:

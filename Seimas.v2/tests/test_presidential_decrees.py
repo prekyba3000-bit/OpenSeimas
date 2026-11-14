@@ -139,3 +139,12 @@ def test_pagination_stops_when_a_page_brings_nothing_new():
         "https://www.lrp.lt/lt/dekretai/2026-07/p8",
         "https://www.lrp.lt/lt/dekretai/2026-07/p16",
     ]
+
+
+def test_a_rerun_that_stores_nothing_new_explains_itself():
+    # 42 listed, 0 new is every hourly run after the first; unexplained, the
+    # reconciliation check reads it as lost rows and holds publication.
+    from pipeline.ingest_presidential_decrees import reconciliation_note
+    assert reconciliation_note(744, 744) is None
+    assert "42" in reconciliation_note(42, 0)
+    assert "2" in reconciliation_note(744, 742)

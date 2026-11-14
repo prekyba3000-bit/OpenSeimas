@@ -34,6 +34,14 @@ cd "$REPO/Seimas.v2"
 
 echo "[$(date -Is)] daily sync start"
 .venv/bin/python apply_migrations.py
+# The President's decree register (lrp.lt), for „Valdžios žemėlapis": vetoes,
+# bills, treaties and nominations sent to the Seimas, and the cabinet decrees
+# that tell the page when its hand-kept list of ministers has fallen behind.
+# Independent of lrs.lt, so it runs before ingest_seimas: that step is fatal and
+# an lrs outage would otherwise stop the script before it got here. The first
+# run reads every month since November 2024 (~130 requests, a pause between
+# each); later runs read two months.
+.venv/bin/python -m pipeline.ingest_presidential_decrees || echo "[$(date -Is)] decree register ingest failed (non-fatal, previous rows kept)"
 .venv/bin/python -m pipeline.ingest_seimas
 .venv/bin/python -m pipeline.ingest_photos || echo "[$(date -Is)] ingest_photos failed (non-fatal, previous photos kept)"
 # Non-fatal, like every other runner here. It now exits nonzero when some vote
@@ -87,13 +95,6 @@ echo "[$(date -Is)] daily sync start"
 # entries late, so insert-once would miss them. Write work is skipped for the
 # ~140 diaries whose fingerprint is unchanged, which is the usual case.
 .venv/bin/python -m pipeline.ingest_diary || echo "[$(date -Is)] diary ingest failed (non-fatal, previous rows kept)"
-# The President's decree register (lrp.lt), for „Valdžios žemėlapis": vetoes,
-# bills, treaties and nominations sent to the Seimas, and the cabinet decrees
-# that tell the page when its hand-kept list of ministers has fallen behind.
-# Independent of lrs.lt, so it keeps working through an lrs outage. The first
-# run reads every month since November 2024 (~130 requests, a pause between
-# each); later runs read two months.
-.venv/bin/python -m pipeline.ingest_presidential_decrees || echo "[$(date -Is)] decree register ingest failed (non-fatal, previous rows kept)"
 
 # Legal-act projects. Built from the sitting agendas already ingested above —
 # no network call, because the endpoint the old version fetched

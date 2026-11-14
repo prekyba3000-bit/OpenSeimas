@@ -1,3 +1,39 @@
+# RESUME — 2026-11-14
+
+Suites, run this session: dashboard `npx vitest run` → **476 passed**;
+`npx tsc --noEmit` exit 0; `npx vite build` built. Backend `pytest tests`
+against a fresh database with all 51 migrations → **490 passed**.
+
+### Done
+- Decree register backfilled on production by hand (744 listed, 742 stored).
+  `/#/dashboard/valdzia` read on production: 14 ministers, lists of 26
+  treaties, 5 vetoes, 18 bills, 34 nominations, no staleness note.
+- `daily_sync.sh`: the decree step runs before the fatal `ingest_seimas`.
+- The decree ingest now writes a reconciliation note when it stores fewer rows
+  than it lists. Without it every re-run failed `three_way_reconciliation`,
+  a `block_publish` check.
+- Valdžia has its own browser-tab title (it showed „Apžvalga").
+- Recon of the open-data vote source: sound, and not built — see
+  `2026-11-14-open-data-votes-recon.md`.
+- Design note for a voter evidence layer; set aside by the human the same day.
+
+### Blocked
+- **Unexplained `lrp_decrees` rows already in `source_fetches`** (the backfill
+  and the hourly runs before the fix) still fail `three_way_reconciliation`.
+  They need a `reconciliation_note`; a production UPDATE, not run.
+- `apps.lrs.lt` still unreachable; data frozen at 5 November; refresh held by
+  `metric_backing_source_stale` as designed.
+- LT native review, unchanged.
+- rclone warns its shared Google Drive client ID is retired during 2026; the
+  offsite backup needs its own.
+
+### Next concrete step
+Annotate the old `lrp_decrees` fetch rows, then confirm
+`three_way_reconciliation` passes on the next refresh.
+
+
+---
+
 # RESUME — 2026-11-13 (second entry)
 
 Suites: **475 dashboard / 480 backend (+1 skipped)**. Detail in
@@ -14,9 +50,14 @@ Suites: **475 dashboard / 480 backend (+1 skipped)**. Detail in
   decree makes the page say its ministers may be out of date. Migration 051.
 
 ### In flight
-- Production applies migrations 050 and 051 on the next daily sync (06:00)
-  and that run backfills the decree register (~130 requests to lrp.lt). Until
-  then the page reads „duomenų šiuo metu neturime".
+- **Corrected 2026-11-14.** This entry said the 06:00 sync would backfill the
+  decree register. It could not: `ingest_seimas` is fatal and ran first, so
+  with lrs.lt down the script never reached the decree step. Migrations 050
+  and 051 did apply. The register was backfilled by hand on 2026-11-14
+  (744 listed, 742 stored) and `/api/government` on production now returns
+  5 vetoes, 18 bills, 26 treaties, 34 nominations, 14 XXI ministers, no
+  staleness note. `daily_sync.sh` now runs the decree step before
+  `ingest_seimas` (uncommitted). The rendered page has not been read by eye.
 
 ### Blocked
 - Same as below: `apps.lrs.lt` outage; LT native review.

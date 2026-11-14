@@ -6,6 +6,7 @@ const ROUTE_TITLES: Array<{ pattern: string; title: string }> = [
   { pattern: '/dashboard/mps', title: 'Seimo nariai' },
   { pattern: '/dashboard/votes', title: 'Balsavimai' },
   { pattern: '/dashboard/factions', title: 'Frakcijos' },
+  { pattern: '/dashboard/valdzia', title: 'Valdžia' },
   { pattern: '/dashboard/sessions', title: 'Sesijos' },
   { pattern: '/dashboard/compare', title: 'Palyginimas' },
   { pattern: '/dashboard/stebejimas', title: 'Stebėsena' },
