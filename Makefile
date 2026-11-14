@@ -17,7 +17,7 @@ build:
 
 test:
 	npm run dashboard:test
-	@if [ -d ".venv" ]; then set -a; [ -f .env ] && . ./.env; set +a; .venv/bin/python -m pytest Seimas.v2/tests/ || true; fi
+	@if [ -d "Seimas.v2/.venv" ]; then set -a; [ -f .env ] && . ./.env; set +a; Seimas.v2/.venv/bin/python -m pytest Seimas.v2/tests/ || true; fi
 
 lint:
 	npm run dashboard:lint

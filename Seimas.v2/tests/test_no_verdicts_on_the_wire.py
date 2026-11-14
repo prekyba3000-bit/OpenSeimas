@@ -271,10 +271,10 @@ def test_voter_guide_scoring_recommender_is_prohibited_and_absent():
             continue
         for f in filenames:
             p = pathlib.Path(dirpath) / f
-            # The only exemption is the ingestion audit, which checks data and
-            # scores nobody. This list once named the recommender's own files,
-            # so the test passed while the thing it bans sat in the tree.
-            if p.resolve() == this_file or f in ("audit_voter_guide_ingestion.py", "test_audit_voter_guide_ingestion.py"):
+            # No exemption but this file. The list once named the
+            # recommender's own files, so the test passed while the thing it
+            # bans sat in the tree.
+            if p.resolve() == this_file:
                 continue
             try:
                 content = p.read_text(encoding="utf-8", errors="ignore")

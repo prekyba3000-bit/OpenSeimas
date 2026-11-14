@@ -18,9 +18,6 @@ against a fresh database with all 51 migrations → **490 passed**.
 - Design note for a voter evidence layer; set aside by the human the same day.
 
 ### Blocked
-- **Unexplained `lrp_decrees` rows already in `source_fetches`** (the backfill
-  and the hourly runs before the fix) still fail `three_way_reconciliation`.
-  They need a `reconciliation_note`; a production UPDATE, not run.
 - `apps.lrs.lt` still unreachable; data frozen at 5 November; refresh held by
   `metric_backing_source_stale` as designed.
 - LT native review, unchanged.
@@ -28,9 +25,40 @@ against a fresh database with all 51 migrations → **490 passed**.
   offsite backup needs its own.
 
 ### Next concrete step
-Annotate the old `lrp_decrees` fetch rows, then confirm
-`three_way_reconciliation` passes on the next refresh.
+Confirm a scheduled refresh records `three_way_reconciliation` as passing
+(the old `lrp_decrees` fetch rows were annotated on production the same day;
+the check query returned 0 rows afterwards).
 
+### Later the same day: dead-file removal
+Asked by the human ("what is not used means not needed"). Recon by reference
+search, then removed, 60 tracked files:
+- `pipeline/audit_voter_guide_ingestion.py` and its test; the guard in
+  `test_no_verdicts_on_the_wire.py` no longer exempts any file but itself.
+- Loose one-off scripts in `Seimas.v2/`, `Seimas.v2/tools/`,
+  `scripts/validate_data.py`, `scripts/figma_token_sync.py`.
+- Other agents' config and stale notes (`.cursor/`, `.clinerules`, `GEMINI.md`,
+  `.kimi-code/`, `memory-bank/`, `.plan_drafts_tmp/`, `APPLY.md`,
+  `SYSTEM_STATUS.md`, `INTEGRATION_SUMMARY.md`).
+- Dashboard files nothing imports: `Header`, `MpSelector`, `NavItem`,
+  `StatCard`, `TickerTape`, `UniversalButton`, `ui/use-mobile`,
+  `utils/activityLine`, with their stories and tests, and `dead_exports.txt`.
+  Charter P6 called the story-documented components "a separate call, not
+  hygiene"; the human made that call here.
+- Makefile `test` now uses `Seimas.v2/.venv` (the root `.venv` was removed).
+
+**Kept, against my first list:** `utils/contextBand.ts` (charter P6: shelved by
+design); the five GitHub workflows (a dashboard test reads `ci.yml`, and they
+are the fallback when Actions returns) and `export_stats.py` with them; the
+hand-run scripts `build_lt_copy_pack`, `verify_attendance_v2`,
+`pilot_vote_summaries`, `publish_summaries`, `diary_baseline`,
+`probe_cz3_feeds`; the remote branches (each has 4 commits not in `main`).
+
+**Not done, STOP §4.5:** dropping the empty production tables
+`recommendations` and `recommendation_feedback`.
+
+Suites after removal: dashboard **459 passed** (476 before; the difference is
+the removed files' own tests), `tsc --noEmit` exit 0, build ok. Backend run
+by the pre-push hook.
 
 ---
 
