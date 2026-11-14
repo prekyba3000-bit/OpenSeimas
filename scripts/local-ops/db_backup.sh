@@ -42,3 +42,10 @@ echo "[$(date -Is)] backup ok: $OUT ($(du -h "$OUT" | cut -f1))"
 ls -t "$BACKUP_DIR"/seimas-*.dump 2>/dev/null | tail -n +31 | xargs -r rm --
 
 mark_success "$JOB"
+
+# A dump that cannot be restored is not a backup. The dump above is kept and
+# counted as taken either way; a failed restore is reported as its own job.
+if ! "$HERE/db_restore_test.sh" "$OUT"; then
+  ops_fail restore-test "newest dump did not restore cleanly: $OUT"
+  exit 1
+fi

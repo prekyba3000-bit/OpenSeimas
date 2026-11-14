@@ -88,6 +88,24 @@ tar -xzf bundle.tar.gz
 Verified 2026-08-12: keystore restores bit-identical (sha256 match) and the dump
 is a valid `pg_restore` archive.
 
+To load the dump into a database that is not Neon, drop Neon's per-column
+option on the way in — stock Postgres rejects it and skips the whole table:
+
+```bash
+pg_restore -f - --no-owner --no-privileges seimas-<date>.dump \
+  | sed '/ SET (pg_attver=/d' \
+  | psql -v ON_ERROR_STOP=1 "<target DSN>"
+```
+
+`pg_restore` must be version 18 or newer (the system client here is 14; use
+the `postgres:18-alpine` image as `db_backup.sh` does).
+
+"A valid archive" was not enough: on 2026-11-14 the first real restore lost
+`ministries`, `governments`, `offices_held` and `presidential_decrees` for
+that reason. `db_restore_test.sh` now restores the newest dump into a
+throwaway container after every nightly backup and fails the job if any
+listed table or materialized view is missing.
+
 ## Notifications
 
 Failures — not skips — raise a desktop notification and append to

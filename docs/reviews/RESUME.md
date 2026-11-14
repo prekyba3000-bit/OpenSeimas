@@ -74,6 +74,19 @@ corrections entry in migration 053. Details in the same review note.
 140 active members, each verified against its VRK page), Commons for the
 other two — see `2026-11-14-member-portraits-from-vrk.md`.
 
+**Backups did not restore; now they are tested.** Restoring last night's
+dump into stock Postgres 18.6 lost `ministries`, `governments`,
+`offices_held` and `presidential_decrees`: Neon stores a per-column option
+(`pg_attver`, present on exactly those four tables in `pg_attribute`),
+pg_dump writes it inside the CREATE TABLE entry, and stock Postgres rejects
+the entry. `scripts/local-ops/db_restore_test.sh` restores a dump into a
+throwaway container with those lines dropped and compares tables and
+materialized views with the dump's own list; `db_backup.sh` runs it after
+every dump. Run for real: `tables 47/47, materialized views 4/4, politicians
+149, votes 5883`; the same test without the filter exits 3. Restore steps
+are in `scripts/local-ops/README.md`. Not checked: whether the offsite bundle
+on Google Drive restores (same dump format, so the same filter applies).
+
 Suites after removal: dashboard **459 passed** (476 before; the difference is
 the removed files' own tests), `tsc --noEmit` exit 0, build ok. Backend run
 by the pre-push hook.
