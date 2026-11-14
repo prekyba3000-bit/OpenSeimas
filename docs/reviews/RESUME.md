@@ -53,8 +53,19 @@ hand-run scripts `build_lt_copy_pack`, `verify_attendance_v2`,
 `pilot_vote_summaries`, `publish_summaries`, `diary_baseline`,
 `probe_cz3_feeds`; the remote branches (each has 4 commits not in `main`).
 
-**Not done, STOP §4.5:** dropping the empty production tables
-`recommendations` and `recommendation_feedback`.
+**Second pass, approved by the human:** migration 052 drops `recommendations`
+and `recommendation_feedback` (0 rows on production when checked; applies on
+the next daily sync — not yet confirmed there). Removed the five "expanded"
+ingesters nothing ran (campaign donors, committee stenograms, lobbyist
+meetings, procurement tenders, VTEK declarations); their empty tables stay.
+Backend after this: **487 passed** on a fresh database with 52 migrations.
+
+**Forensics, recon only, nothing changed.** Production answers: `chrono`,
+`benford`, `phantom`, `vote-geometry` return empty lists; `loyalty` and
+`heroes` return real data and feed live pages. The four empty ones are shown
+on `/dashboard/skaidrumas` under „Penki varikliai" as "no data yet", and
+`hero_engine.py` reads their tables on the profile path. Removal is a product
+decision waiting on the human.
 
 Suites after removal: dashboard **459 passed** (476 before; the difference is
 the removed files' own tests), `tsc --noEmit` exit 0, build ok. Backend run
