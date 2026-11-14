@@ -31,7 +31,7 @@ the check query returned 0 rows afterwards).
 
 ### Later the same day: dead-file removal
 Asked by the human ("what is not used means not needed"). Recon by reference
-search, then removed, 60 tracked files:
+search, then removed, 59 tracked files:
 - `pipeline/audit_voter_guide_ingestion.py` and its test; the guard in
   `test_no_verdicts_on_the_wire.py` no longer exempts any file but itself.
 - Loose one-off scripts in `Seimas.v2/`, `Seimas.v2/tools/`,
