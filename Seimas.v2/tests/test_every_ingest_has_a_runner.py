@@ -66,27 +66,6 @@ UNWIRED_BY_DECISION = {
         "engine reports unavailable rather than inventing a figure when the "
         "table is stale. Manual until the engine is on a surface."
     ),
-    "ingest_vtek_declarations": (
-        "Expanded VTEK Private Interests Declarations ingestion module (migration 048). "
-        "Provides 3-Tier Hybrid fetcher (Direct HTTP -> Scraper Proxy -> Fortress Stealth "
-        "Chromium) for MP asset, corporate, and gift declarations. Scheduled on-demand."
-    ),
-    "ingest_procurement_tenders": (
-        "Expanded CVP IS Public Procurement Contracts ingestion module (migration 048). "
-        "Fetches state procurement notices and winning supplier details with anti-blocking proxy."
-    ),
-    "ingest_lobbyist_meetings": (
-        "Expanded VTEK Lobbyist Meetings ingestion module (migration 048). "
-        "Fetches declared lobbyist meetings with MPs and legislative bill numbers with stealth fallback."
-    ),
-    "ingest_committee_stenograms": (
-        "Expanded Seimas Committee Stenograms ingestion module (migration 048). "
-        "Fetches committee minutes, agenda topics, and attendance records."
-    ),
-    "ingest_campaign_donors": (
-        "Expanded VRK Campaign Finance & Donors ingestion module (migration 048). "
-        "Fetches political donor lists, contribution amounts, and party funding data."
-    ),
 }
 
 
