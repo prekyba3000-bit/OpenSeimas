@@ -60,3 +60,27 @@ and five numbered sections, four of which said „Duomenų dar nėra".
 Dashboard `tsc --noEmit` exit 0, `vitest run` **459 passed**. Backend on a
 fresh database with 52 migrations **486 passed** (487 before; the graph
 route's test went with the route).
+
+## Found by reading the live page afterwards (§1.7): the sources box
+
+The Skaidrumas page ended with a hardcoded „Duomenų šaltiniai" box marking six
+sources „aktyvus" or „dalinis": data.gov.lt, Seimas XML, VMI + VRK, Registrų
+Centras, Rekvizitai, OpenSanctions / ICIJ. Checked the same day:
+
+- `grep -rli` over `pipeline/`, `scripts/`, `backend/` finds no reader for
+  data.gov.lt, Rekvizitai, Registrų centras or ICIJ; "vmi" matches one
+  unrelated string in `routes_public.py`.
+- Production: `open_sanctions_id` is set on 0 of 149 `politicians` rows.
+- The real Sources page (`SourcesView.tsx`) says declarations are not
+  collected; this page's headline said „deklaracijos ir ryšiai vienoje vietoje".
+
+Fixed, approved by the human: the box is removed and a „Duomenų šaltiniai"
+link to the Sources page added to the quick links; the headline now reads
+„balsavimai, dalyvavimas ir pasisakymai vienoje vietoje". Corrections entry
+`skaidrumas-sources-box-unloaded` in migration 053.
+
+**LT-COPY, needs native review:** the new headline sentence in
+`SkaidrumasHubView.tsx`; the corrections entry text in migration 053.
+
+Suites after this: dashboard **459 passed**, `tsc` exit 0; backend
+**486 passed** on a fresh database with 53 migrations.

@@ -66,6 +66,10 @@ and the uncalled graph route are removed — see
 profile's `forensic_breakdown` and the empty tables are untouched. Backend
 **486 passed**, dashboard **459 passed**.
 
+**Fourth pass:** the hardcoded sources box on the Skaidrumas page claimed
+five sources the project does not load. Removed, headline corrected,
+corrections entry in migration 053. Details in the same review note.
+
 Suites after removal: dashboard **459 passed** (476 before; the difference is
 the removed files' own tests), `tsc --noEmit` exit 0, build ok. Backend run
 by the pre-push hook.

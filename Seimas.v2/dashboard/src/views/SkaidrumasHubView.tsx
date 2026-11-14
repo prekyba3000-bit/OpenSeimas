@@ -32,21 +32,6 @@ import { belowAttendance, formatAttendance, hasAttendance } from '../utils/atten
 
 const EMPTY_LOYALTY: LoyaltyResponse = { alignment: [], total_mps: 0 };
 
-type SourceStatus = {
-  name: string;
-  detail: string;
-  state: 'active' | 'partial';
-};
-
-const SOURCES: SourceStatus[] = [
-  { name: 'data.gov.lt API', detail: 'Viešieji rinkiniai ir registrai', state: 'active' },
-  { name: 'Seimas XML API', detail: 'Balsavimai, posėdžiai, pataisos', state: 'active' },
-  { name: 'VMI + VRK', detail: 'Deklaracijos ir finansiniai duomenys', state: 'active' },
-  { name: 'Registrų Centras', detail: 'Įmonių ir ryšių duomenys', state: 'active' },
-  { name: 'Rekvizitai', detail: 'Papildomas kontekstas (dalinis)', state: 'partial' },
-  { name: 'OpenSanctions / ICIJ', detail: 'Tarptautiniai ryšiai ir PEP', state: 'active' },
-];
-
 /**
  * Five distinguishable lines for the loyalty trend chart. Taken from the muted
  * faction palette rather than a rainbow of saturated primaries — these are
@@ -151,7 +136,8 @@ export default function SkaidrumasHubView() {
           Neįmanoma būti <span className="text-primary">suktam</span>.
         </h1>
         <p className="mt-4 max-w-2xl text-muted-foreground">
-          Viešoji atskaitomybės platforma: balsavimai, dalyvavimas, deklaracijos ir ryšiai vienoje vietoje.
+          {/* LT-COPY: needs native review */}
+          Viešoji atskaitomybės platforma: balsavimai, dalyvavimas ir pasisakymai vienoje vietoje.
         </p>
         <p className="mt-2 text-xs text-muted-foreground max-w-2xl">
           Tai ne LR Seimo oficiali svetainė — nepriklausomas civic tech projektas; šaltiniai ir metodika nurodyti atskiruose puslapiuose.
@@ -214,6 +200,13 @@ export default function SkaidrumasHubView() {
           >
             <FileText className="w-4 h-4" />
             Balsavimai
+          </NavLink>
+          <NavLink
+            to="/dashboard/sources"
+            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-2 text-sm hover:bg-muted/50"
+          >
+            <Database className="w-4 h-4" />
+            Duomenų šaltiniai
           </NavLink>
           <NavLink
             to="/dashboard/compare"
@@ -419,26 +412,6 @@ export default function SkaidrumasHubView() {
             balsavimus, iš kurių jis susideda.
           </p>
         )}
-      </section>
-
-      <section className="rounded-xl border border-border bg-card p-4">
-        <div className="flex items-center gap-2 mb-4">
-          <Database className="w-4 h-4 text-primary" />
-          <h2 className="text-base font-semibold text-foreground">Duomenų šaltiniai</h2>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2">
-          {SOURCES.map((source) => (
-            <div key={source.name} className="rounded-md border border-border p-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">{source.name}</span>
-                <span className={source.state === 'active' ? 'text-vote-for text-xs' : 'text-vote-abstain text-xs'}>
-                  {source.state === 'active' ? 'aktyvus' : 'dalinis'}
-                </span>
-              </div>
-              <div className="text-xs text-muted-foreground mt-1">{source.detail}</div>
-            </div>
-          ))}
-        </div>
       </section>
 
       <style>{`
