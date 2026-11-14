@@ -198,7 +198,7 @@ const FactionsView = () => {
                           onClick={e => e.stopPropagation()}
                           className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted/50 transition-colors group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         >
-                          <img
+                          <img loading="lazy" decoding="async"
                             src={mp.photo_url}
                             alt=""
                             className="w-9 h-9 rounded-lg object-cover bg-muted"

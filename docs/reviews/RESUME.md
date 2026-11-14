@@ -70,6 +70,10 @@ profile's `forensic_breakdown` and the empty tables are untouched. Backend
 five sources the project does not load. Removed, headline corrected,
 corrections entry in migration 053. Details in the same review note.
 
+**Portraits:** member photos now come from VRK candidate portraits (138 of
+140 active members, each verified against its VRK page), Commons for the
+other two — see `2026-11-14-member-portraits-from-vrk.md`.
+
 Suites after removal: dashboard **459 passed** (476 before; the difference is
 the removed files' own tests), `tsc --noEmit` exit 0, build ok. Backend run
 by the pre-push hook.

@@ -79,7 +79,7 @@ export function MpCard({ name, party, avatarUrl, to, onClick, mp }: MpCardProps)
               boxShadow: isHovered ? `0 0 0 3px ${partyColor}40` : 'none',
             }}
           >
-            <img
+            <img loading="lazy" decoding="async"
               src={photoUrl}
               alt={displayName}
               className="w-full h-full object-cover"

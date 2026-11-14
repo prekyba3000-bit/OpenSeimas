@@ -1530,6 +1530,12 @@ def calculate_all_hero_profiles_fast(
     if not rows:
         return []
 
+    # The portrait is identity, not a metric. Read it live: the view refresh
+    # can be held for days by the publish gate, and the list would keep
+    # serving an address that no longer loads while the profile shows the new one.
+    db_cursor.execute("SELECT id, photo_url FROM politicians")
+    photo_by_mp = {str(r["id"]): r["photo_url"] for r in db_cursor.fetchall()}
+
     maxima = _maxima_from_rows(rows)
     max_bills_authored = maxima["max_bills_authored"]
     max_committee_leadership = maxima["max_committee_leadership"]
@@ -1638,7 +1644,7 @@ def calculate_all_hero_profiles_fast(
                 "id": str(row["mp_id"]),
                 "name": row["display_name"],
                 "party": row["current_party"],
-                "photo": row["photo_url"],
+                "photo": photo_by_mp.get(str(row["mp_id"]), row["photo_url"]),
                 "active": row["is_active"],
                 "seimas_id": row["seimas_mp_id"],
                 "last_synced_at": str(row["last_synced_at"]) if row.get("last_synced_at") else None,

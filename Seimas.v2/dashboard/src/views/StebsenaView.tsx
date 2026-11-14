@@ -278,7 +278,7 @@ export default function StebsenaView() {
                     className="w-full rounded-xl border border-border bg-card p-4 text-left"
                   >
                     <div className="flex items-center gap-3">
-                      <img
+                      <img loading="lazy" decoding="async"
                         src={row.mp.photo || DEFAULT_PHOTO}
                         alt=""
                         className="h-10 w-10 rounded-xl object-cover bg-muted ring-1 ring-border"
@@ -335,7 +335,7 @@ export default function StebsenaView() {
                   >
                     <td className="p-4">
                       <div className="flex items-center gap-3">
-                        <img
+                        <img loading="lazy" decoding="async"
                           src={row.mp.photo || DEFAULT_PHOTO}
                           alt={row.mp.name}
                           className="w-9 h-9 rounded-xl object-cover bg-muted ring-1 ring-border"

@@ -69,7 +69,7 @@ const MpSelector = ({ mps, selected, onSelect, placeholder }: {
             >
                 {selectedMp ? (
                     <>
-                        <img src={selectedMp.photo_url} alt="" className="w-10 h-10 rounded-full object-cover bg-muted ring-2 ring-border" />
+                        <img loading="lazy" decoding="async" src={selectedMp.photo_url} alt="" className="w-10 h-10 rounded-full object-cover bg-muted ring-2 ring-border" />
                         <div className="flex flex-col flex-1">
                             <span className="text-sm font-semibold text-foreground">{selectedMp.name}</span>
                             <span className="text-xs text-muted-foreground">{selectedMp.party}</span>
@@ -135,7 +135,7 @@ const MpSelector = ({ mps, selected, onSelect, placeholder }: {
                                     onClick={() => { onSelect(mp.id); close(); }}
                                     className="w-full text-left p-3 flex items-center gap-3 hover:bg-muted transition-colors border-b border-border last:border-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
                                 >
-                                    <img src={mp.photo_url} alt="" className="w-8 h-8 rounded-full object-cover bg-muted" />
+                                    <img loading="lazy" decoding="async" src={mp.photo_url} alt="" className="w-8 h-8 rounded-full object-cover bg-muted" />
                                     <div className="flex flex-col">
                                         <span className="text-sm font-medium text-foreground">{mp.name}</span>
                                         <span className="text-xs text-muted-foreground">{mp.party}</span>
