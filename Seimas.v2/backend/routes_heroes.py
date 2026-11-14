@@ -1,4 +1,4 @@
-"""v2 heroes endpoints: leaderboard, search, profile, share card, OpenPlanter graph."""
+"""v2 heroes endpoints: leaderboard, search, profile."""
 from fastapi import APIRouter, HTTPException, Request, Query
 import time
 import datetime
@@ -10,14 +10,12 @@ from backend.models import (
     HeroProfileResponse,
     HeroSearchResponse,
 )
-from backend.graph import _build_openplanter_graph_payload
 
 from backend import core
 from backend.core import (
     _leaderboard_cache,
     _leaderboard_cache_lock,
     CACHE_DURATION_SEC,
-    OPENPLANTER_GRAPH_CACHE_SEC,
     logger,
 )
 
@@ -163,45 +161,6 @@ def get_hero_profile(mp_id: str):
             except Exception:
                 logger.exception("Failed to build hero profile")
                 raise HTTPException(status_code=500, detail="Failed to build hero profile")
-
-
-@router.get("/api/v2/openplanter/graph")
-def get_openplanter_graph(request: Request):
-    """
-    Export a Cytoscape.js graph: active MPs, phantom-network links, parties (belongs_to),
-    committees (serves_on), wealth/asset declarations, VTEK interests, and recent roll-call votes (voted_on).
-    """
-    # core.client_ip reads X-Forwarded-For. request.client.host is Render's
-    # proxy for every visitor, which puts the whole site in one 60/min
-    # bucket — throttling everyone at once and an abuser not at all.
-    client_ip = core.client_ip(request)
-    if not check_rate_limit(client_ip):
-        raise HTTPException(status_code=429, detail="Rate limit exceeded")
-
-    now = time.time()
-    with _leaderboard_cache_lock:
-        cached = _leaderboard_cache.get("openplanter_graph")
-        if cached and (now - float(cached["timestamp"])) < OPENPLANTER_GRAPH_CACHE_SEC:
-            return cached["data"]
-
-    with get_db_conn() as conn:
-        if not conn:
-            raise HTTPException(status_code=500, detail="Database connection failed")
-
-        with conn.cursor() as cur:
-            try:
-                payload = _build_openplanter_graph_payload(cur)
-                with _leaderboard_cache_lock:
-                    _leaderboard_cache["openplanter_graph"] = {
-                        "data": payload,
-                        "timestamp": now,
-                    }
-                return payload
-            except Exception:
-                logger.exception("Failed to build OpenPlanter graph")
-                raise HTTPException(
-                    status_code=500, detail="Failed to build OpenPlanter graph"
-                )
 
 
 # Retired 2026-09-07: /api/v2/heroes/{mp_id}/share-card.

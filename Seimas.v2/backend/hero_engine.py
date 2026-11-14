@@ -1353,64 +1353,6 @@ def calculate_hero_profile(mp_id: str, db_cursor) -> Dict[str, Any]:
     }
 
 
-def fetch_graph_mp_summaries(db_cursor, active_only: bool = True) -> List[Dict[str, Any]]:
-    """Fast path for the OpenPlanter graph: one batched SQL query against politicians +
-    mp_stats_summary, then xp/level/alignment computed in Python. Skips per-MP forensic
-    queries — graph nodes use baseline integrity_score=100 (the per-MP `/heroes/{id}`
-    endpoint still does the precise forensic calculation for detail views)."""
-    where = "WHERE p.is_active = TRUE" if active_only else ""
-    db_cursor.execute(
-        f"""
-        SELECT
-            p.id AS mp_id,
-            p.display_name,
-            NULLIF(p.current_party, '') AS current_party,
-            COALESCE(p.bills_authored_count, 0) AS bills_authored_count,
-            p.bills_initiated_total,
-            p.bills_initiated_individually,
-            COALESCE(s.total_votes_cast, 0) AS total_votes_cast,
-            -- Not COALESCE(..., 0). Charter §1.4 forbids it in a read path by
-            -- name, and this is why: a member with no row in the summary view
-            -- would be published as zero attendance, which states that they
-            -- never showed up rather than that we do not know. NULL travels;
-            -- resolve_attendance keeps it NULL and the surface renders unknown.
-            -- Deliberately no per-cent sign anywhere in this comment: psycopg2
-            -- interpolates the whole query string, comments included, so one
-            -- would be read as a parameter placeholder and raise IndexError
-            -- before Postgres ever sees the query. Cost one 500 in production.
-            s.attendance_percentage AS attendance_percentage,
-            COALESCE(s.party_loyalty, 0) AS party_loyalty
-        FROM politicians p
-        LEFT JOIN mp_stats_summary s ON s.mp_id = p.id
-        {where}
-        ORDER BY p.display_name
-        """
-    )
-    rows = db_cursor.fetchall()
-    _attendance_by_mp = attendance_overrides(db_cursor)
-
-    summaries: List[Dict[str, Any]] = []
-    for row in rows:
-        total_votes_cast = float(row["total_votes_cast"] or 0)
-        bills_authored = float(row["bills_authored_count"] or 0)
-        # bills_passed and high_risk_alerts require per-MP queries; treated as 0 in graph
-        # summary (xp drift vs detail endpoint is small in practice — bills_authored=0 for
-        # most MPs in current dataset, and forensic alerts populate per-MP detail only).
-        xp = int(round(total_votes_cast + (bills_authored * 10)))
-        if xp < 100:
-            level = 0
-        else:
-            level = max(0, int(math.floor(math.log(xp / 100))))
-        summaries.append(
-            {
-                "mp_id": str(row["mp_id"]),
-                "display_name": row["display_name"],
-                "current_party": row["current_party"],
-            }
-        )
-    return summaries
-
-
 def calculate_all_hero_profiles(
     db_cursor, active_only: bool = True, limit: int | None = None
 ) -> List[Dict[str, Any]]:

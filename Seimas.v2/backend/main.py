@@ -32,7 +32,6 @@ from backend.core import (  # noqa: F401 — re-exported for backward compatibil
     calculate_hero_profile,
     calculate_all_hero_profiles,
     calculate_all_hero_profiles_fast,
-    fetch_graph_mp_summaries,
     sync_mps,
     sync_votes,
     logger,

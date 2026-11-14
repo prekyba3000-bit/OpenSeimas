@@ -24,14 +24,12 @@ try:
         calculate_hero_profile,
         calculate_all_hero_profiles,
         calculate_all_hero_profiles_fast,
-        fetch_graph_mp_summaries,
     )
 except ImportError:
     from hero_engine import (
         calculate_hero_profile,
         calculate_all_hero_profiles,
         calculate_all_hero_profiles_fast,
-        fetch_graph_mp_summaries,
     )
 # Add root directory to sys.path to allow importing ingestion scripts
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -54,15 +52,9 @@ _refresh_state = {
 _refresh_stop = threading.Event()
 _leaderboard_cache = {
     "entries": {},
-    "openplanter_graph": None,  # {"timestamp": float, "data": dict} | None
 }
 _leaderboard_cache_lock = threading.Lock()
 CACHE_DURATION_SEC = 3600
-OPENPLANTER_GRAPH_CACHE_SEC = 300
-# Caps keep the Cytoscape payload responsive when vote/declaration tables are large.
-OPENPLANTER_GRAPH_MAX_VOTE_NODES = 55
-OPENPLANTER_GRAPH_MAX_WEALTH_ROWS = 280
-OPENPLANTER_GRAPH_MAX_INTEREST_ROWS = 120
 
 
 def _refresh_materialized_view():

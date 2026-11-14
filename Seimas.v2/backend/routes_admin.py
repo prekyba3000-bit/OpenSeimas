@@ -9,7 +9,6 @@ from backend.core import (
     _leaderboard_cache,
     _leaderboard_cache_lock,
     CACHE_DURATION_SEC,
-    OPENPLANTER_GRAPH_CACHE_SEC,
     logger,
 )
 

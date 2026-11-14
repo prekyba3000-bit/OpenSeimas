@@ -60,12 +60,11 @@ ingesters nothing ran (campaign donors, committee stenograms, lobbyist
 meetings, procurement tenders, VTEK declarations); their empty tables stay.
 Backend after this: **487 passed** on a fresh database with 52 migrations.
 
-**Forensics, recon only, nothing changed.** Production answers: `chrono`,
-`benford`, `phantom`, `vote-geometry` return empty lists; `loyalty` and
-`heroes` return real data and feed live pages. The four empty ones are shown
-on `/dashboard/skaidrumas` under „Penki varikliai" as "no data yet", and
-`hero_engine.py` reads their tables on the profile path. Removal is a product
-decision waiting on the human.
+**Third pass, approved by the human:** the four always-empty forensic engines
+and the uncalled graph route are removed — see
+`2026-11-14-empty-forensic-engines-removed.md`. Loyalty and heroes stay. The
+profile's `forensic_breakdown` and the empty tables are untouched. Backend
+**486 passed**, dashboard **459 passed**.
 
 Suites after removal: dashboard **459 passed** (476 before; the difference is
 the removed files' own tests), `tsc --noEmit` exit 0, build ok. Backend run

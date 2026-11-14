@@ -53,18 +53,9 @@ UNWIRED_BY_DECISION = {
         "Superseded. amendment_profiles is empty and the amendments dimension "
         "runs off amendments_proposed_count from mp_stats_summary instead."
     ),
-    "ingest_opensanctions": (
-        "Third-party PEP dataset, refreshed rarely and by hand. Nothing on a "
-        "public surface reads it; it is context for the graph."
-    ),
     "ingest_vrk_results": (
         "Election results are fixed for the term. Re-running it daily would "
         "re-fetch a file that cannot change until the next election."
-    ),
-    "ingest_cvp_is_procurement": (
-        "Procurement feed, used by the phantom-network engine only, and that "
-        "engine reports unavailable rather than inventing a figure when the "
-        "table is stale. Manual until the engine is on a surface."
     ),
 }
 

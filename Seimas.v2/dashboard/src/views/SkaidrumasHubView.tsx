@@ -7,11 +7,7 @@ import {
   Radio,
   Search,
   ShieldAlert,
-  Clock,
-  BarChart3,
   GitBranch,
-  Network,
-  TrendingUp,
   FileText,
   Scale,
   Trophy,
@@ -22,19 +18,11 @@ import { CitationCopyButton } from '../components/CitationCopyButton';
 import { VerifiedVotesPanel } from '../components/VerifiedVotesPanel';
 import { CorrectionsAndRepliesPanel } from '../components/CorrectionsAndRepliesPanel';
 import {
-  ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  BarChart, Bar, Cell, LineChart, Line, Legend,
-} from 'recharts';
-import {
   api,
-  type BenfordResponse,
-  type ChronoResponse,
   type DashboardStats,
   type ForensicFlag,
   type LoyaltyResponse,
   type MpSummary,
-  type PhantomResponse,
-  type VoteGeoResponse,
   type VoteSummary,
 } from '../services/api';
 import { ProblemDetailsNotice } from '../components/ProblemDetailsNotice';
@@ -42,11 +30,7 @@ import { Button } from '../components/Button';
 import { occupancyLabel } from '../utils/mpCounts';
 import { belowAttendance, formatAttendance, hasAttendance } from '../utils/attendance';
 
-const EMPTY_CHRONO: ChronoResponse = { items: [], clusters: [] };
-const EMPTY_BENFORD: BenfordResponse = { items: [] };
 const EMPTY_LOYALTY: LoyaltyResponse = { alignment: [], total_mps: 0 };
-const EMPTY_PHANTOM: PhantomResponse = { items: [] };
-const EMPTY_VOTE_GEO: VoteGeoResponse = { items: [], total_analyzed: 0 };
 
 type SourceStatus = {
   name: string;
@@ -89,28 +73,6 @@ export default function SkaidrumasHubView() {
       { queryKey: ['skaidrumas', 'mps'] as const, queryFn: () => api.getMps() },
       { queryKey: ['skaidrumas', 'votesPreview'] as const, queryFn: () => api.getVotes(8, 0) },
       {
-        queryKey: ['skaidrumas', 'chrono'] as const,
-        queryFn: async () => {
-          try {
-            return await api.getChronoForensics(30);
-          } catch {
-            return EMPTY_CHRONO;
-          }
-        },
-        retry: false,
-      },
-      {
-        queryKey: ['skaidrumas', 'benford'] as const,
-        queryFn: async () => {
-          try {
-            return await api.getBenfordResults(20);
-          } catch {
-            return EMPTY_BENFORD;
-          }
-        },
-        retry: false,
-      },
-      {
         queryKey: ['skaidrumas', 'loyalty'] as const,
         queryFn: async () => {
           try {
@@ -121,32 +83,10 @@ export default function SkaidrumasHubView() {
         },
         retry: false,
       },
-      {
-        queryKey: ['skaidrumas', 'phantom'] as const,
-        queryFn: async () => {
-          try {
-            return await api.getPhantomNetwork(20);
-          } catch {
-            return EMPTY_PHANTOM;
-          }
-        },
-        retry: false,
-      },
-      {
-        queryKey: ['skaidrumas', 'voteGeo'] as const,
-        queryFn: async () => {
-          try {
-            return await api.getVoteGeometry(15);
-          } catch {
-            return EMPTY_VOTE_GEO;
-          }
-        },
-        retry: false,
-      },
     ],
   });
 
-  const [statsQ, mpsQ, votesQ, chronoQ, benfordQ, loyaltyQ, phantomQ, voteGeoQ] = hubQueries;
+  const [statsQ, mpsQ, votesQ, loyaltyQ] = hubQueries;
 
   const loading = hubQueries.some((q) => q.isPending);
   const coreError = [statsQ, mpsQ, votesQ].find((q) => q.isError)?.error;
@@ -157,11 +97,7 @@ export default function SkaidrumasHubView() {
   const stats = statsQ.data ?? null;
   const mps = React.useMemo(() => mpsQ.data ?? [], [mpsQ.data]);
   const votes = React.useMemo(() => votesQ.data ?? [], [votesQ.data]);
-  const chrono = chronoQ.data ?? null;
-  const benford = benfordQ.data ?? null;
   const loyalty = loyaltyQ.data ?? null;
-  const phantom = phantomQ.data ?? null;
-  const voteGeo = voteGeoQ.data ?? null;
 
   const filteredMps = React.useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -407,208 +343,12 @@ export default function SkaidrumasHubView() {
             its coverage note and a methodology drawer. That is the evidence.
             The ranking was the verdict. See docs/corrections. */}
 
-      {/* ── FORENSIC ENGINES ─────────────────────────────────────────── */}
-
-      <section className="rounded-xl border border-primary/30 bg-card p-6">
-        <p className="text-sm] text-primary mb-2">Forensic Engines</p>
-        <h2 className="text-2xl font-black">Penki varikliai. Nulinis fluffas.</h2>
-        <p className="mt-2 text-sm text-muted-foreground max-w-2xl">
-          Kiekvienas variklis atakuoja specifinį korupcijos vektorių — nuo laikinio pirštų antspaudų iki statistinės balsavimų geometrijos.
-        </p>
-      </section>
-
-      {/* Engine 01: Chrono-Forensics */}
-      <section className="rounded-xl border border-border bg-card p-4">
-        <div className="flex items-center gap-2 mb-4">
-          <Clock className="w-4 h-4 text-vote-abstain" />
-          <h2 className="text-base font-semibold text-foreground">
-            01 · Pakeitimų greitis
-          </h2>
-          <span className="ml-auto text-xs text-muted-foreground">Pataisų laiko analizė</span>
-        </div>
-
-        {(chrono?.items?.length ?? 0) > 0 ? (
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <ScatterChart margin={{ top: 10, right: 10, bottom: 20, left: 10 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-                  <XAxis
-                    dataKey="drafting_window_min" name="Laikas (min)"
-                    label={{ value: 'Laikas (min)', position: 'insideBottom', offset: -10, fontSize: 11 }}
-                    tick={{ fontSize: 10 }}
-                  />
-                  <YAxis
-                    dataKey="complexity" name="Sudėtingumas"
-                    label={{ value: 'Sudėtingumas', angle: -90, position: 'insideLeft', fontSize: 11 }}
-                    tick={{ fontSize: 10 }}
-                  />
-                  <Tooltip
-                    content={({ payload }) => {
-                      if (!payload?.[0]) return null;
-                      const d = payload[0].payload;
-                      return (
-                        <div className="rounded border border-border bg-popover p-2 text-xs shadow">
-                          <div className="font-semibold">{d.amendment_id}</div>
-                          <div>Laikas: {d.drafting_window_min} min</div>
-                          <div>Sudėtingumas: {d.complexity?.toFixed(1)}</div>
-                          <div>Z-score: {d.zscore?.toFixed(2)}</div>
-                          {d.cluster_id && <div className="text-vote-abstain">Klasteris #{d.cluster_id}</div>}
-                        </div>
-                      );
-                    }}
-                  />
-                  <Scatter
-                    data={chrono!.items.filter((i) => i.drafting_window_min != null)}
-                    fill="var(--color-primary)"
-                  >
-                    {chrono!.items.filter((i) => i.drafting_window_min != null).map((item, idx) => (
-                      <Cell
-                        key={idx}
-                        fill={
-                          item.zscore !== null && item.zscore < -2
-                            ? 'hsl(var(--destructive))'
-                            : item.cluster_id
-                              ? 'hsl(var(--attention))'
-                              : 'var(--color-primary)'
-                        }
-                      />
-                    ))}
-                  </Scatter>
-                </ScatterChart>
-              </ResponsiveContainer>
-            </div>
-
-            {/* TODO(v4): chrono items have no mp_id — add profile deep link + ?flag=chrono when API exposes MP on each item */}
-            <div className="space-y-2 max-h-64 overflow-y-auto">
-              {chrono!.items
-                .filter((i) => i.zscore !== null && i.zscore < -2)
-                .slice(0, 10)
-                .map((item) => (
-                  <div key={item.amendment_id} className="rounded-md border border-destructive/30 bg-destructive/5 p-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-mono font-semibold">{item.amendment_id}</span>
-                      <span className="text-xs font-mono text-destructive">z = {item.zscore?.toFixed(2)}</span>
-                    </div>
-                    <div className="text-xs text-muted-foreground mt-1">
-                      {item.drafting_window_min} min · {item.word_count} žodžiai · {item.citation_count} citatos
-                      {item.cluster_id && <span className="text-vote-abstain ml-2">Klasteris #{item.cluster_id}</span>}
-                    </div>
-                  </div>
-                ))}
-            </div>
-          </div>
-        ) : (
-          <p className="text-sm text-muted-foreground">Duomenų dar nėra — pakeitimų analizė bus paleista po duomenų surinkimo.</p>
-        )}
-      </section>
-
-      {/* Engine 02: Benford's Lens */}
-      <section className="rounded-xl border border-border bg-card p-4">
-        <div className="flex items-center gap-2 mb-4">
-          <BarChart3 className="w-4 h-4 text-primary" />
-          <h2 className="text-base font-semibold text-foreground">
-            02 · Deklaracijų patikimumas
-          </h2>
-          <span className="ml-auto text-xs text-muted-foreground">Benfordo dėsnio analizė</span>
-        </div>
-
-        {(benford?.items?.length ?? 0) > 0 ? (
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={Object.entries(BENFORD_EXPECTED).map(([digit, expected]) => {
-                    const worst = benford!.items.find((i) => i.conformity === 'non-conforming');
-                    const actual = worst?.digit_distribution?.[digit] ?? expected;
-                    return {
-                      digit: `D${digit}`,
-                      expected: +(expected * 100).toFixed(1),
-                      actual: +(actual * 100).toFixed(1),
-                      deviation: +((actual - expected) * 100).toFixed(1),
-                    };
-                  })}
-                  margin={{ top: 10, right: 10, bottom: 20, left: 10 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-                  <XAxis dataKey="digit" tick={{ fontSize: 10 }} />
-                  <YAxis tick={{ fontSize: 10 }} unit="%" />
-                  <Tooltip
-                    content={({ payload }) => {
-                      if (!payload?.[0]) return null;
-                      const d = payload[0].payload;
-                      return (
-                        <div className="rounded border border-border bg-popover p-2 text-xs shadow">
-                          <div className="font-semibold">{d.digit}</div>
-                          <div>Tikėtina: {d.expected}%</div>
-                          <div>Faktinė: {d.actual}%</div>
-                          <div className={d.deviation > 0 ? 'text-destructive' : 'text-vote-for'}>
-                            Δ {d.deviation > 0 ? '+' : ''}{d.deviation}%
-                          </div>
-                        </div>
-                      );
-                    }}
-                  />
-                  <Bar dataKey="expected" fill="var(--color-primary)" opacity={0.3} name="Tikėtina (Benford)" />
-                  <Bar dataKey="actual" name="Faktinė">
-                    {Object.entries(BENFORD_EXPECTED).map(([digit, expected]) => {
-                      const worst = benford!.items.find((i) => i.conformity === 'non-conforming');
-                      const actual = worst?.digit_distribution?.[digit] ?? expected;
-                      const diff = Math.abs(actual - expected);
-                      return <Cell key={digit} fill={diff > 0.05 ? 'hsl(var(--destructive))' : diff > 0.02 ? 'hsl(var(--attention))' : 'hsl(var(--vote-for))'} />;
-                    })}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-
-            <div className="space-y-2 max-h-64 overflow-y-auto">
-              {benford!.items.slice(0, 10).map((item) => (
-                <button
-                  key={item.mp_id}
-                  type="button"
-                  onClick={() => goToMpForensicFlag(item.mp_id, 'benford')}
-                  className={`w-full text-left rounded-md border p-3 cursor-pointer hover:bg-muted/50 transition-colors ${
-                    item.conformity === 'non-conforming'
-                      ? 'border-destructive/30 bg-destructive/5'
-                      : item.conformity === 'marginal'
-                        ? 'border-attention/40 bg-attention/15'
-                        : 'border-border'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-semibold">{item.mp_id}</span>
-                    <span className={`text-xs font-mono ${
-                      item.conformity === 'non-conforming' ? 'text-destructive'
-                        : item.conformity === 'marginal' ? 'text-vote-abstain'
-                          : 'text-vote-for'
-                    }`}>
-                      {item.conformity} · p={item.p_value.toFixed(4)}
-                    </span>
-                  </div>
-                  <div className="text-xs text-muted-foreground mt-1">
-                    MAD: {item.mad.toFixed(4)} · χ²: {item.chi_squared.toFixed(2)} · Imtis: {item.sample_size}
-                  </div>
-                  {item.flagged_fields.length > 0 && (
-                    <div className="text-xs text-destructive mt-1">
-                      Pažymėti: {item.flagged_fields.map((f) => f.field).join(', ')}
-                    </div>
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <p className="text-sm text-muted-foreground">Duomenų dar nėra — Benfordo analizė reikalauja turto deklaracijų duomenų.</p>
-        )}
-      </section>
-
-      {/* Engine 03: Loyalty Graph */}
+      {/* Agreement with the member's own faction */}
       <section className="rounded-xl border border-border bg-card p-4">
         <div className="flex items-center gap-2 mb-4">
           <GitBranch className="w-4 h-4 text-sky-400" />
           <h2 className="text-base font-semibold text-foreground">
-            03 · Sutapimas su frakcija
+            Sutapimas su frakcija
           </h2>
           <span className="ml-auto text-xs text-muted-foreground">Kaip dažnai sutapo</span>
         </div>
@@ -678,137 +418,6 @@ export default function SkaidrumasHubView() {
             puslapis rodys ne tik suvestinį skaičių, bet ir konkrečius
             balsavimus, iš kurių jis susideda.
           </p>
-        )}
-      </section>
-
-      {/* Engine 04: Phantom Network */}
-      <section className="rounded-xl border border-border bg-card p-4">
-        <div className="flex items-center gap-2 mb-4">
-          <Network className="w-4 h-4 text-attention" />
-          <h2 className="text-base font-semibold text-foreground">
-            04 · Paslėpti ryšiai
-          </h2>
-          <span className="ml-auto text-xs text-muted-foreground">Paslėptų ryšių tinklas</span>
-        </div>
-
-        {(phantom?.items?.length ?? 0) > 0 ? (
-          <div className="space-y-3">
-            {phantom!.items.slice(0, 10).map((link, idx) => (
-              <button
-                key={idx}
-                type="button"
-                onClick={() => goToMpForensicFlag(link.mp_id, 'phantom')}
-                className={`w-full text-left rounded-md border p-4 cursor-pointer hover:bg-muted/50 transition-colors ${
-                  link.procurement_hit
-                    ? 'border-destructive/40 bg-destructive/5'
-                    : link.debtor_hit
-                      ? 'border-attention/40 bg-attention/15'
-                      : 'border-border'
-                }`}
-              >
-                <div className="flex items-center gap-2 flex-wrap">
-                  {link.path.map((node, nodeIdx) => (
-                    <React.Fragment key={nodeIdx}>
-                      {nodeIdx > 0 && <span className="text-muted-foreground text-xs">→</span>}
-                      <span className={`text-xs px-2 py-1 rounded ${
-                        nodeIdx === 0
-                          ? 'bg-primary/20 text-primary font-semibold'
-                          : nodeIdx === link.path.length - 1
-                            ? link.procurement_hit
-                              ? 'bg-destructive/15 text-destructive font-semibold'
-                              : 'bg-attention/15 text-vote-abstain font-semibold'
-                            : 'bg-muted text-muted-foreground'
-                      }`}>
-                        {node}
-                      </span>
-                    </React.Fragment>
-                  ))}
-                </div>
-                <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-                  <span>{link.hops} žingsniai</span>
-                  <span>{link.target_name}</span>
-                  {link.procurement_hit && <span className="text-destructive font-semibold">Viešasis pirkimas</span>}
-                  {link.debtor_hit && <span className="text-vote-abstain font-semibold">Mokesčių skolininkas</span>}
-                </div>
-              </button>
-            ))}
-          </div>
-        ) : (
-          <p className="text-sm text-muted-foreground">Duomenų dar nėra — verslo ryšių grafo analizė reikalauja Registrų Centro duomenų.</p>
-        )}
-      </section>
-
-      {/* Engine 05: Vote Geometry */}
-      <section className="rounded-xl border border-border bg-card p-4">
-        <div className="flex items-center gap-2 mb-4">
-          <TrendingUp className="w-4 h-4 text-fuchsia-400" />
-          <h2 className="text-base font-semibold text-foreground">
-            05 · Statistinės anomalijos
-          </h2>
-          <span className="ml-auto text-xs text-muted-foreground">Balsavimo geometrija</span>
-        </div>
-
-        {(voteGeo?.items?.length ?? 0) > 0 ? (
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={voteGeo!.items.slice(0, 8).map((v) => ({
-                    label: (v.title ?? '').slice(0, 30) + '...',
-                    'Tikėtina Už': v.expected.for,
-                    'Faktinė Už': v.actual.for,
-                    sigma: v.sigma,
-                  }))}
-                  margin={{ top: 10, right: 10, bottom: 20, left: 10 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-                  <XAxis dataKey="label" tick={{ fontSize: 8 }} interval={0} angle={-20} textAnchor="end" height={60} />
-                  <YAxis tick={{ fontSize: 10 }} />
-                  <Tooltip
-                    content={({ payload }) => {
-                      if (!payload?.[0]) return null;
-                      const d = payload[0].payload;
-                      return (
-                        <div className="rounded border border-border bg-popover p-2 text-xs shadow max-w-xs">
-                          <div className="font-semibold">{d.label}</div>
-                          <div>Tikėtina: {d['Tikėtina Už']?.toFixed(0)} Už</div>
-                          <div>Faktinė: {d['Faktinė Už']} Už</div>
-                          <div className="text-destructive">{d.sigma?.toFixed(1)}σ nuokrypis</div>
-                        </div>
-                      );
-                    }}
-                  />
-                  <Bar dataKey="Tikėtina Už" fill="var(--color-primary)" opacity={0.3} />
-                  <Bar dataKey="Faktinė Už" fill="hsl(var(--destructive))" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-
-            {/* TODO(v4): vote geometry rows are per vote, not MP — add ?flag=vote_geometry deep link when items include mp_id or a vote→MP mapping */}
-            <div className="space-y-2 max-h-64 overflow-y-auto">
-              {voteGeo!.items.slice(0, 10).map((item) => (
-                <div key={item.vote_id} className="rounded-md border border-destructive/30 bg-destructive/5 p-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-semibold line-clamp-1">{item.title ?? `#${item.vote_id}`}</span>
-                    <span className="text-xs font-mono text-destructive shrink-0 ml-2">{item.sigma.toFixed(1)}σ</span>
-                  </div>
-                  <div className="text-xs text-muted-foreground mt-1">
-                    {item.date} · {item.anomaly_type?.replace('_', ' ')}
-                  </div>
-                  <div className="text-xs mt-1">
-                    <span className="text-muted-foreground">Tikėtina:</span>{' '}
-                    <span className="text-vote-for">{item.expected.for.toFixed(0)} Už</span>{' / '}
-                    <span className="text-destructive">{item.expected.against.toFixed(0)} Prieš</span>
-                    <span className="text-muted-foreground ml-3">Faktinė:</span>{' '}
-                    <span className="text-vote-for">{item.actual.for} Už</span>{' / '}
-                    <span className="text-destructive">{item.actual.against} Prieš</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <p className="text-sm text-muted-foreground">Duomenų dar nėra — balsavimų geometrija bus apskaičiuota po balsavimų duomenų surinkimo.</p>
         )}
       </section>
 
