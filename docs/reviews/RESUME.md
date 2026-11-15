@@ -18,9 +18,13 @@ collected), `tsc --noEmit`, dashboard **468 passed**, build.
 - Unchanged: `apps.lrs.lt` down (data frozen at 5 November); LT native review;
   rclone client ID.
 
+- Thumbnails deployed as `f24c3f5`, verified on production: front page 12
+  copies / 100 kB, members list 98 copies / 813 kB, no vrk.lt requests, none
+  broken.
+
 ### Next concrete step
-Read the front page and members list on production after the thumbnail
-deploy and confirm no image loads from vrk.lt except on profiles.
+The human's call whether the remaining pages get the front page's look; until
+then, the open items above.
 
 ---
 
