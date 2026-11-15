@@ -95,6 +95,11 @@ neturime.") — minutes, then verify on production.
 
 ## Open
 
-- Portraits are the VRK originals, about 450 kB each; the front page loads
-  twelve. Not resized.
+- ~~Portraits are the VRK originals, about 450 kB each.~~ Resized
+  2026-11-15 — see `2026-11-14-member-portraits-from-vrk.md`, "Thumbnails".
 - The other pages still have the old look.
+
+Verified on production after deploy (`fafaa55`): Render served the new fields
+about a minute after the push; `/` shows three cards with counts on desktop
+and at 390 px; the first card (15 / 23 / 10) matches the per-member ballots
+on its vote page.

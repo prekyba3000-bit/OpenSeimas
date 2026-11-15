@@ -18,6 +18,7 @@ import {
 } from './seatMapModes';
 import type { LastSittingDay, VoteDetail } from '../services/api';
 import { factionLabel } from '../utils/faction';
+import { portraitThumb } from '../utils/portraitThumb';
 
 export interface Seat {
   id: string;
@@ -356,7 +357,7 @@ export function SeimasMap({
                         <div className="px-4 pb-3 -mt-5 flex flex-col gap-1.5">
                           <div className="flex items-end gap-3">
                             <img loading="lazy" decoding="async"
-                              src={seat.mp.photo_url}
+                              src={portraitThumb(seat.mp.photo_url)}
                               alt=""
                               className="w-10 h-10 rounded-lg bg-muted object-cover border-2 border-background shadow-sm"
                               onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
@@ -396,7 +397,7 @@ export function SeimasMap({
           <div className="absolute inset-x-2 bottom-2 z-30 rounded-xl border border-border bg-background/95 p-3 shadow-xl backdrop-blur">
             <div className="flex items-start gap-3">
               <img loading="lazy" decoding="async"
-                src={revealedMp.photo_url}
+                src={portraitThumb(revealedMp.photo_url)}
                 alt=""
                 className="h-12 w-12 shrink-0 rounded-lg border border-border bg-muted object-cover"
                 onError={e => {

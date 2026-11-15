@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback } from './ui/avatar';
 import { getPartyColor, getPartyShort } from '../utils/partyColors';
 import { formatAttendance } from '../utils/attendance';
 import { factionLabel } from '../utils/faction';
+import { portraitThumb } from '../utils/portraitThumb';
 
 interface MpCardProps {
   name?: string;
@@ -30,7 +31,7 @@ interface MpCardProps {
 export function MpCard({ name, party, avatarUrl, to, onClick, mp }: MpCardProps) {
   const displayName = name || mp?.display_name || mp?.name || 'Unknown';
   const displayParty = factionLabel(party || mp?.current_party || mp?.party);
-  const photoUrl = avatarUrl || mp?.photo_url;
+  const photoUrl = portraitThumb(avatarUrl || mp?.photo_url);
   const voteCount = mp?.vote_count ?? 0;
   const attendance = mp?.attendance ?? null;
 

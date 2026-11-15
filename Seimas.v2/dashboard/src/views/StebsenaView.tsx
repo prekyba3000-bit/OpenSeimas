@@ -21,6 +21,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '../components/ui/popove
 import { ProblemDetailsNotice } from '../components/ProblemDetailsNotice';
 import { LT } from '../i18n/lt';
 import { ltPlural } from '../utils/ltPlural';
+import { portraitThumb } from '../utils/portraitThumb';
 
 type SortKey = 'rank' | 'name' | 'faction' | MpCivicDimension;
 type SortDirection = 'asc' | 'desc';
@@ -279,7 +280,7 @@ export default function StebsenaView() {
                   >
                     <div className="flex items-center gap-3">
                       <img loading="lazy" decoding="async"
-                        src={row.mp.photo || DEFAULT_PHOTO}
+                        src={portraitThumb(row.mp.photo) || DEFAULT_PHOTO}
                         alt=""
                         className="h-10 w-10 rounded-xl object-cover bg-muted ring-1 ring-border"
                         onError={(e) => {
@@ -336,7 +337,7 @@ export default function StebsenaView() {
                     <td className="p-4">
                       <div className="flex items-center gap-3">
                         <img loading="lazy" decoding="async"
-                          src={row.mp.photo || DEFAULT_PHOTO}
+                          src={portraitThumb(row.mp.photo) || DEFAULT_PHOTO}
                           alt={row.mp.name}
                           className="w-9 h-9 rounded-xl object-cover bg-muted ring-1 ring-border"
                           onError={(e) => {

@@ -11,6 +11,7 @@ import { getPartyMeta, PartyMeta } from '../utils/partyColors';
 import { cn } from '../components/ui/utils';
 import { ProblemDetailsNotice } from '../components/ProblemDetailsNotice';
 import { averageAttendance, byAttendance, formatAttendance, hasAttendance } from '../utils/attendance';
+import { portraitThumb } from '../utils/portraitThumb';
 
 interface FactionData {
   name: string;
@@ -199,7 +200,7 @@ const FactionsView = () => {
                           className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted/50 transition-colors group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         >
                           <img loading="lazy" decoding="async"
-                            src={mp.photo_url}
+                            src={portraitThumb(mp.photo_url)}
                             alt=""
                             className="w-9 h-9 rounded-lg object-cover bg-muted"
                             onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}

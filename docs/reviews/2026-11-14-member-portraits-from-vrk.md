@@ -43,10 +43,29 @@
 
 ## Open
 
-- Each VRK file is about 450 kB and the site draws it at 32–112 px. Lazy
-  loading limits how many are fetched; resizing is a separate step.
-- The photos are the candidates' 2024 filings, hot-linked from vrk.lt, not
-  copied. No licence statement was found or looked for on vrk.lt.
+- ~~Each VRK file is about 450 kB and the site draws it at 32–112 px.~~
+  **Done 2026-11-15**, see below.
+- ~~The photos are hot-linked from vrk.lt, not copied.~~ Since 2026-11-15 the
+  avatars are small copies hosted by us; the profile still links the
+  original. vrk.lt has no site-wide copyright or terms notice; its open-data
+  page („Duomenų teikimo sąlygos") allows free reuse with VRK credited and
+  does not mention photos. Photographers, not VRK, hold the copyright. The
+  human decided to host the copies; the Sources page credits VRK. If anyone
+  objects, reverting `portraitThumb` returns every page to linking.
+
+## Thumbnails (2026-11-15)
+
+Asked by the human. `scripts/make_portrait_thumbs.py` reads photo addresses
+from the public API, writes a 192 px wide JPEG of each VRK portrait into
+`dashboard/public/portraits/` and the ids into `src/data/portraits.json`
+(138 portraits: 44,004 kB at VRK, 1,160 kB as copies). `portraitThumb()` swaps
+in a copy only when the list has it, so a member without one keeps the
+original; a test asserts the list and the files agree. Used at all ten
+avatar-size images (front page, member cards, factions, seat map, comparison,
+Stebėsena); the profile keeps the original. Measured in the browser: front
+page 11 copies, 93 kB, no vrk.lt requests; member list after scrolling 95
+copies, 793 kB, none broken. **Rerun the script and commit when a portrait
+changes.**
 
 **LT-COPY, needs native review:** the „Seimo narių nuotraukos" entry in
 `SourcesView.tsx`.

@@ -9,6 +9,7 @@ import { getPartyColor, getPartyShort } from '../utils/partyColors';
 import { formatLtDateLong, formatLtDateShort } from '../utils/ltDate';
 import { ltPlural } from '../utils/ltPlural';
 import { latestQuestions, sampleFaces, searchMembers, voteTime, type CountedVote } from '../utils/frontPage';
+import { portraitThumb } from '../utils/portraitThumb';
 
 // The front door. Built around the questions a visitor arrives with — who
 // represents me, what was decided, who sits where, who governs — rather than
@@ -134,7 +135,7 @@ export function LandingPage() {
                     <li key={m.id} className="border-b border-border last:border-0">
                       <Link to={`/dashboard/mps/${m.id}`} className="flex items-center gap-3.5 px-4 py-3 hover:bg-muted/50">
                         <img
-                          src={m.photo_url ?? undefined}
+                          src={portraitThumb(m.photo_url)}
                           alt=""
                           loading="lazy"
                           decoding="async"
@@ -179,7 +180,7 @@ export function LandingPage() {
                   style={{ background: getPartyColor(m.party) }}
                 >
                   <img
-                    src={m.photo_url ?? undefined}
+                    src={portraitThumb(m.photo_url)}
                     alt={m.name}
                     loading="lazy"
                     decoding="async"

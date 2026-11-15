@@ -8,18 +8,19 @@ collected), `tsc --noEmit`, dashboard **468 passed**, build.
   counts and times added to `/api/votes` (additive). Detail, audit and LT-COPY
   inventory in `2026-11-14-front-page.md`.
 
-### In flight
-- Not committed. Waiting for the human's yes after the local preview; the
-  push deploys both sides.
+- Deployed as `fafaa55` and verified on production (desktop and 390 px).
+- Avatar-size portraits are now 192 px copies hosted by us (44 MB → 1.2 MB
+  for all 138; members list 30 MB → 0.8 MB). The human chose hosting copies
+  over linking. Detail in `2026-11-14-member-portraits-from-vrk.md`.
+  Dashboard **473 passed**.
 
 ### Blocked
 - Unchanged: `apps.lrs.lt` down (data frozen at 5 November); LT native review;
   rclone client ID.
 
 ### Next concrete step
-On the yes: commit (coupling noted), push, then read `/` on production on
-desktop and phone, checking that the three vote cards show counts once Render
-is live.
+Read the front page and members list on production after the thumbnail
+deploy and confirm no image loads from vrk.lt except on profiles.
 
 ---
 
