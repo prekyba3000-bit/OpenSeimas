@@ -160,3 +160,52 @@ def test_a_malformed_date_is_rejected_rather_than_ignored():
 def test_no_range_still_lists_the_most_recent_votes():
     with mock.patch.object(rp, "get_db_conn", lambda: _db(empty_cursor())):
         assert rp.get_votes() == []
+
+
+class _VoteRowsCursor:
+    def __init__(self, rows):
+        self._rows = rows
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *a):
+        return None
+
+    def execute(self, sql, params=None):
+        pass
+
+    def fetchall(self):
+        return self._rows
+
+
+def _vote_row(vid, f, a, s):
+    return {"id": vid, "sitting_date": dt.date(2026, 11, 5), "title": "t", "result_type": None,
+            "votes_for": f, "votes_against": a, "votes_abstained": s,
+            "voted_at": dt.datetime(2026, 11, 5, 11, 20, tzinfo=dt.timezone.utc)}
+
+
+def test_the_vote_list_carries_the_count_and_the_time():
+    """The front page shows each vote's result; it needs the count the source
+    published and when the vote was taken, not only a title."""
+    cur = _VoteRowsCursor([_vote_row(1, 7, 62, 13)])
+    with mock.patch.object(rp, "get_db_conn", lambda: _db(cur)):
+        (vote,) = rp.get_votes()
+    assert (vote["votes_for"], vote["votes_against"], vote["votes_abstained"]) == (7, 62, 13)
+    assert vote["voted_at"] == "2026-11-05T11:20:00+00:00"
+
+
+def test_a_vote_without_a_published_count_says_so_rather_than_zero():
+    """0/0/0 in the column means the source published no count (§1.1)."""
+    cur = _VoteRowsCursor([_vote_row(1, 0, 0, 0), _vote_row(2, None, None, None)])
+    with mock.patch.object(rp, "get_db_conn", lambda: _db(cur)):
+        votes = rp.get_votes()
+    for v in votes:
+        assert (v["votes_for"], v["votes_against"], v["votes_abstained"]) == (None, None, None)
+
+
+def test_a_real_zero_beside_other_counts_is_kept():
+    cur = _VoteRowsCursor([_vote_row(1, 67, 0, 10)])
+    with mock.patch.object(rp, "get_db_conn", lambda: _db(cur)):
+        (vote,) = rp.get_votes()
+    assert vote["votes_against"] == 0

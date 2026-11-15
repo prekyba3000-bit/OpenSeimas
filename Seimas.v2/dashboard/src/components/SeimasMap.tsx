@@ -76,6 +76,12 @@ interface SeimasMapProps {
   latestVote?: VoteDetail | null;
   /** Last-sitting-day presence, for the „Dalyvavimas" encoding. */
   lastSittingDay?: LastSittingDay | null;
+  /**
+   * Drop the caption, name search and seat count. Only for a host that states
+   * the encoding in its own text and has its own search — the front page.
+   * The legend stays: the colours still need their key.
+   */
+  hideControls?: boolean;
 }
 
 export function SeimasMap({
@@ -83,6 +89,7 @@ export function SeimasMap({
   compact = false,
   latestVote = null,
   lastSittingDay = null,
+  hideControls = false,
 }: SeimasMapProps) {
   const navigate = useNavigate();
   const [hoveredSeat, setHoveredSeat] = useState<number | null>(null);
@@ -198,6 +205,7 @@ export function SeimasMap({
           </div>
         )}
 
+        {!hideControls && (<>
         <p className="text-sm text-muted-foreground line-clamp-2">{encoding.caption}</p>
 
         {/* „Rask savo narį“ — by name. The wireframe asked for a district
@@ -243,6 +251,7 @@ export function SeimasMap({
               ? ` · ${vacancyLabel(SEIMAS_SEATS_TOTAL - activeMps.length)}` : ''}
           </span>
         </div>
+        </>)}
 
         {!compact && activeMode === 'frakcijos' && (
           <div className="flex items-center gap-2 overflow-x-auto pb-1 hide-scrollbar">

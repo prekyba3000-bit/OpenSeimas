@@ -980,6 +980,21 @@ def get_attendance_trajectory(mp_id: str):
     }
 
 
+def _vote_tally(row) -> dict:
+    """For / against / abstained as the source counted them, or all three null.
+
+    The source publishes no count for some votes, and the column holds 0/0/0
+    for them. Nobody for, against or abstaining is not a result a recorded vote
+    can have, so that reads as "no count", not as a vote nobody took part in.
+    The state open-data copy of the same votes says null for exactly these
+    (docs/reviews/2026-11-14-open-data-votes-recon.md).
+    """
+    counts = (row.get("votes_for"), row.get("votes_against"), row.get("votes_abstained"))
+    if any(c is None for c in counts) or sum(counts) == 0:
+        return {"votes_for": None, "votes_against": None, "votes_abstained": None}
+    return {"votes_for": counts[0], "votes_against": counts[1], "votes_abstained": counts[2]}
+
+
 @router.get("/api/votes")
 def get_votes(
     limit: int = 50,
@@ -1010,7 +1025,8 @@ def get_votes(
 
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute("""
-                SELECT id, sitting_date, title, result_type
+                SELECT id, sitting_date, title, result_type,
+                       votes_for, votes_against, votes_abstained, voted_at
                 FROM votes
                 WHERE (%s::date IS NULL OR sitting_date >= %s::date)
                   AND (%s::date IS NULL OR sitting_date <= %s::date)
@@ -1025,6 +1041,8 @@ def get_votes(
                     "date": _date_or_none(row["sitting_date"]),
                     "title": row["title"],
                     "result": row["result_type"],
+                    **_vote_tally(row),
+                    "voted_at": row["voted_at"].isoformat() if row.get("voted_at") else None,
                 }
                 for row in rows
             ]

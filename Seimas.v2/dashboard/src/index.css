@@ -357,6 +357,14 @@
   transition: var(--transition-state-snappy);
 }
 
+/* Scrolls sideways without showing a bar (front-page nav, seat-map toolbar) */
+.hide-scrollbar {
+  scrollbar-width: none;
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 /* ============================================
    PRINT — journalist-friendly export
    ============================================ */

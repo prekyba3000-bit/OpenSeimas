@@ -153,4 +153,14 @@ export interface VoteSummary {
   title: string | null;
   /** `result_type` is null on all 5,286 rows — the source does not supply it. */
   result: string | null;
+  /**
+   * The count the source published. All three are null together when it
+   * published none — never 0/0/0, which would read as a vote nobody took part
+   * in. Optional because older API deploys do not send them.
+   */
+  votes_for?: number | null;
+  votes_against?: number | null;
+  votes_abstained?: number | null;
+  /** When the vote was taken (ISO timestamp with offset). Null if unrecorded. */
+  voted_at?: string | null;
 }

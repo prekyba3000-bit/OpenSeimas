@@ -1,160 +1,353 @@
-import React, { useEffect } from 'react';
-import { useNavigate } from 'react-router';
-import { ArrowRight, ShieldCheck, BarChart3, Users } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate } from 'react-router';
+import { useQuery } from '@tanstack/react-query';
+import { Search } from 'lucide-react';
+import { api, type MpSummary } from '../services/api';
+import { SeimasMap } from './SeimasMap';
+import { ThemeToggle } from './ThemeToggle';
+import { getPartyColor, getPartyShort } from '../utils/partyColors';
+import { formatLtDateLong, formatLtDateShort } from '../utils/ltDate';
+import { ltPlural } from '../utils/ltPlural';
+import { latestQuestions, sampleFaces, searchMembers, voteTime, type CountedVote } from '../utils/frontPage';
+
+// The front door. Built around the questions a visitor arrives with — who
+// represents me, what was decided, who sits where, who governs — rather than
+// around the data types the portal holds. Design note and mockup:
+// docs/reviews/2026-11-14-front-page.md, docs/reviews/mockups/pradzia-2026.html.
+
+const NAV = [
+  // LT-COPY: needs native review
+  { to: '/dashboard/mps', label: 'Kas mane atstovauja' },
+  { to: '/dashboard/votes', label: 'Ką nusprendė' },
+  { to: '/dashboard/factions', label: 'Seimo sudėtis' },
+  { to: '/dashboard/valdzia', label: 'Kas valdo' },
+  { to: '/dashboard/methodology', label: 'Kaip skaičiuojame' },
+];
+
+// Constituency names only: a named person as a suggested search on the front
+// page would be the platform pointing at someone.
+const EXAMPLES = ['Telšių', 'Antakalnio', 'Alytaus', 'Pasaulio lietuvių'];
+
+const FACES = 12;
+const FACES_ON_PHONE = 8;
+
+function whereElected(m: MpSummary): string {
+  // LT-COPY: needs native review
+  if (m.election_type === 'single_mandate' && m.constituency_name) {
+    return `${m.constituency_name} apygarda${m.constituency_number ? ` (Nr. ${m.constituency_number})` : ''}`;
+  }
+  return 'Pagal partijos sąrašą';
+}
 
 export function LandingPage() {
   const navigate = useNavigate();
+  const [query, setQuery] = useState('');
 
   useEffect(() => {
     document.title = 'Atviras Seimas';
   }, []);
 
+  const statsQ = useQuery({ queryKey: ['dashboard', 'stats'], queryFn: () => api.getStats() });
+  const mpsQ = useQuery({ queryKey: ['mps', 'roster'], queryFn: () => api.getMps() });
+  const dayQ = useQuery({ queryKey: ['meta', 'last-sitting-day'], queryFn: () => api.getLastSittingDay() });
+  const day = dayQ.data ?? null;
+  const dayVotesQ = useQuery({
+    queryKey: ['votes', 'day', day?.sitting_date],
+    queryFn: () => api.getVotes(500, 0, { from: day?.sitting_date, to: day?.sitting_date }),
+    enabled: Boolean(day?.sitting_date),
+  });
+
+  const mps = useMemo(() => mpsQ.data ?? [], [mpsQ.data]);
+  const faces = useMemo(() => sampleFaces(mps, FACES), [mps]);
+  const results = useMemo(() => searchMembers(mps, query), [mps, query]);
+  const questions = useMemo(() => latestQuestions(dayVotesQ.data ?? []), [dayVotesQ.data]);
+  const dayLabel = formatLtDateLong(day?.sitting_date);
+  const active = statsQ.data?.mps_active;
+
   return (
-    <div className="min-h-screen flex flex-col bg-background text-foreground font-sans">
-      <nav className="border-b border-border py-4 px-6 md:px-12 flex justify-between items-center sticky top-0 bg-background/80 backdrop-blur-md z-50">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-primary rounded-md flex items-center justify-center text-primary-foreground font-bold">
-            A
-          </div>
-          <span className="font-bold text-lg tracking-tight">Atviras Seimas</span>
+    <div className="min-h-screen bg-background text-foreground font-sans">
+      <header className="sticky top-0 z-40 border-b border-border bg-background/85 backdrop-blur-md">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-5 py-3 md:h-16 md:flex-nowrap md:py-0">
+          <Link to="/" className="font-serif text-xl font-bold tracking-tight">
+            Atviras <span className="text-primary">Seimas</span>
+          </Link>
+          <ThemeToggle className="ml-auto md:order-last md:ml-0" />
+          <nav aria-label="Pagrindinis" className="hide-scrollbar -mx-1 flex w-full gap-1 overflow-x-auto md:ml-auto md:w-auto">
+            {NAV.map((item) => (
+              <Link
+                key={item.to}
+                to={item.to}
+                className="whitespace-nowrap rounded-full px-3.5 py-2 text-[15px] font-semibold text-muted-foreground transition-colors hover:bg-primary/10 hover:text-foreground"
+              >
+                {item.label}
+              </Link>
+            ))}
+          </nav>
         </div>
-        <div className="flex items-center gap-4">
-          <button
-            type="button"
-            onClick={() => navigate('/dashboard/methodology')}
-            className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors hidden sm:inline"
-          >
-            Metodika
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate('/dashboard')}
-            className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-md text-sm font-medium transition-colors"
-          >
-            Atidaryti portalą
-          </button>
-        </div>
-      </nav>
+      </header>
 
-      <p className="text-center text-xs text-muted-foreground px-4 py-2 border-b border-border/60 bg-muted/20">
-        <strong className="text-foreground">Svarbu:</strong> tai ne Lietuvos Respublikos Seimo oficiali svetainė. Tai nepriklausomas skaidrumo ir duomenų projektas — žr.{' '}
-        <button
-          type="button"
-          onClick={() => navigate('/dashboard/sources')}
-          className="text-primary underline underline-offset-2"
-        >
-          duomenų šaltinius
-        </button>
-        .
-      </p>
-
-      <section className="flex-1 flex flex-col md:flex-row items-center justify-center px-6 md:px-12 py-12 md:py-24 max-w-7xl mx-auto w-full gap-12">
-        <div className="flex-1 space-y-8">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium">
-            <span className="w-2 h-2 rounded-full bg-primary" />
-            Vieši duomenys ir metodika
-          </div>
-          <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-foreground leading-[1.1]">
-            Atviras Seimas
+      <main>
+        {/* ── Who represents me ─────────────────────────────────────────── */}
+        <section className="mx-auto max-w-6xl px-5 pb-12 pt-14 text-center md:pt-20">
+          {dayLabel && (
+            <span className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3.5 py-1.5 text-sm font-semibold text-primary">
+              <span className="h-2 w-2 rounded-full bg-primary" aria-hidden="true" />
+              {/* LT-COPY: needs native review */}
+              Duomenys iki {dayLabel}
+            </span>
+          )}
+          <h1 className="mx-auto mt-6 font-serif text-[clamp(2.5rem,7vw,4.75rem)] font-bold leading-[1.02] tracking-tight">
+            Ką Seimas
             <br />
-            <span className="text-primary">visuomenei</span>
+            <span className="text-primary">iš tikrųjų</span> padarė
           </h1>
-          <p className="text-lg text-muted-foreground max-w-lg leading-relaxed">
+          <p className="mx-auto mt-5 max-w-[46ch] text-lg text-muted-foreground md:text-xl">
             {/* LT-COPY: needs native review */}
-            Stebėkite balsavimus ir Seimo narių veiklą. Kiekvienas rodiklis turi šaltinį ir
-            paaiškinimą, kaip jis skaičiuojamas. Bendro balo neskelbiame — jo nėra.
+            Raskite savo Seimo narį ir pažiūrėkite, kaip jis balsavo. Kiekvienas skaičius turi
+            šaltinį. Vertinimų nerašome.
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-4 pt-4">
-            <button
-              type="button"
-              onClick={() => navigate('/dashboard')}
-              className="flex items-center justify-center gap-2 bg-foreground text-background px-8 py-3.5 rounded-lg font-medium hover:bg-foreground/90 transition-all hover:translate-y-[-1px] shadow-lg shadow-black/20"
-            >
-              Pradėti naudojimą
-              <ArrowRight size={18} />
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/dashboard/skaidrumas')}
-              className="flex items-center justify-center gap-2 bg-card border border-border text-foreground px-8 py-3.5 rounded-lg font-medium hover:bg-muted transition-colors"
-            >
-              Sužinoti daugiau
-            </button>
+          <div className="relative mx-auto mt-9 max-w-xl text-left">
+            <Search className="pointer-events-none absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && results[0]) navigate(`/dashboard/mps/${results[0].id}`);
+              }}
+              // LT-COPY: needs native review
+              placeholder={mpsQ.isError ? 'Sąrašo įkelti nepavyko' : 'Pavardė arba apygarda'}
+              aria-label="Ieškoti Seimo nario pagal pavardę arba apygardą"
+              disabled={!mpsQ.data}
+              className="w-full rounded-2xl border-[1.5px] border-border bg-card py-5 pl-14 pr-5 text-lg shadow-lg shadow-black/5 outline-none transition-colors focus:border-primary disabled:opacity-70"
+            />
+            {query.trim().length >= 2 && (
+              <ul className="absolute inset-x-0 top-[calc(100%+8px)] z-30 overflow-hidden rounded-2xl border border-border bg-card shadow-xl">
+                {results.length === 0 ? (
+                  <li className="px-4 py-3 text-sm text-muted-foreground">
+                    {/* LT-COPY: needs native review */}
+                    Nieko neradome. Bandykite pavardę arba apygardos pavadinimą.
+                  </li>
+                ) : (
+                  results.map((m) => (
+                    <li key={m.id} className="border-b border-border last:border-0">
+                      <Link to={`/dashboard/mps/${m.id}`} className="flex items-center gap-3.5 px-4 py-3 hover:bg-muted/50">
+                        <img
+                          src={m.photo_url ?? undefined}
+                          alt=""
+                          loading="lazy"
+                          decoding="async"
+                          className="h-12 w-12 shrink-0 rounded-full bg-muted object-cover object-top"
+                        />
+                        <span className="min-w-0">
+                          <span className="block font-semibold leading-tight">{m.name}</span>
+                          <span className="text-sm text-muted-foreground">
+                            {getPartyShort(m.party)} · {whereElected(m)}
+                          </span>
+                        </span>
+                      </Link>
+                    </li>
+                  ))
+                )}
+              </ul>
+            )}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-6">
-            <button
-              onClick={() => navigate('/dashboard/mps')}
-              className="flex flex-col items-start p-4 rounded-xl border border-border bg-card hover:border-primary/50 transition-all group"
-            >
-              <Users className="w-5 h-5 text-primary mb-2 group-hover:scale-110 transition-transform" />
-              <span className="text-sm font-semibold">Mano Seimo narys</span>
-              <span className="text-xs text-muted-foreground mt-1">Profiliai ir veikla</span>
-            </button>
-            <button
-              onClick={() => navigate('/dashboard/votes')}
-              className="flex flex-col items-start p-4 rounded-xl border border-border bg-card hover:border-primary/50 transition-all group"
-            >
-              <BarChart3 className="w-5 h-5 text-primary mb-2 group-hover:scale-110 transition-transform" />
-              <span className="text-sm font-semibold">Naujausi balsavimai</span>
-              <span className="text-xs text-muted-foreground mt-1">Sprendimų istorija</span>
-            </button>
-            <button
-              onClick={() => navigate('/dashboard/leaderboard')}
-              className="flex flex-col items-start p-4 rounded-xl border border-border bg-card hover:border-primary/50 transition-all group"
-            >
-              <ShieldCheck className="w-5 h-5 text-primary mb-2 group-hover:scale-110 transition-transform" />
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-[15px] text-muted-foreground">
+            {/* LT-COPY: needs native review */}
+            <span>Pabandykite:</span>
+            {EXAMPLES.map((ex) => (
+              <button
+                key={ex}
+                type="button"
+                onClick={() => setQuery(ex)}
+                className="rounded-full border border-border px-3.5 py-1 text-foreground transition-colors hover:border-primary hover:text-primary"
+              >
+                {ex}
+              </button>
+            ))}
+          </div>
+
+          <ul className="mx-auto mt-12 flex max-w-4xl flex-wrap justify-center gap-2.5" aria-label="Keletas Seimo narių">
+            {faces.map((m, i) => (
+              <li key={m.id} className={i >= FACES_ON_PHONE ? 'hidden sm:block' : undefined}>
+                <Link
+                  to={`/dashboard/mps/${m.id}`}
+                  title={`${m.name} · ${getPartyShort(m.party)}`}
+                  className="block h-16 w-16 rounded-full p-[3px] transition-transform hover:scale-110"
+                  style={{ background: getPartyColor(m.party) }}
+                >
+                  <img
+                    src={m.photo_url ?? undefined}
+                    alt={m.name}
+                    loading="lazy"
+                    decoding="async"
+                    className="h-full w-full rounded-full border-2 border-background bg-muted object-cover object-top"
+                  />
+                </Link>
+              </li>
+            ))}
+          </ul>
+          <Link to="/dashboard/mps" className="mt-6 inline-block font-semibold text-primary hover:underline">
+            {/* LT-COPY: needs native review */}
+            {active ? `Visi ${active} Seimo nariai →` : 'Visi Seimo nariai →'}
+          </Link>
+        </section>
+
+        {/* ── What was decided ──────────────────────────────────────────── */}
+        <section className="mx-auto max-w-6xl px-5 py-16">
+          <p className="mb-2 text-sm font-bold uppercase tracking-[0.08em] text-primary">Ką nusprendė</p>
+          <h2 className="font-serif text-[clamp(1.9rem,4.2vw,2.75rem)] font-bold leading-tight tracking-tight">
+            {/* LT-COPY: needs native review */}
+            {day?.sitting_date ? `Paskutinis posėdis: ${formatLtDateShort(day.sitting_date)}` : 'Paskutinis posėdis'}
+          </h2>
+          {day && active != null && (
+            <p className="mt-3 max-w-[60ch] text-muted-foreground">
               {/* LT-COPY: needs native review */}
-              <span className="text-sm font-semibold">Rodikliai ir šaltiniai</span>
-              <span className="text-xs text-muted-foreground mt-1">Penki atskiri rodikliai</span>
-            </button>
-          </div>
-
-          <div className="pt-8 flex flex-wrap items-center gap-6 text-muted-foreground">
-            <div className="flex items-center gap-2">
-              <ShieldCheck size={20} />
-              <span className="text-sm">Šaltiniai nurodyti atskirai</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <BarChart3 size={20} />
-              <span className="text-sm">Paaiškinama metodika</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Users size={20} />
-              <span className="text-sm">Kelias: MP → balsai → palyginimas</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex-1 w-full max-w-xl relative">
-          <div className="absolute -inset-4 bg-gradient-to-tr from-primary/10 to-attention/10 rounded-[2rem] -z-10 blur-xl opacity-60" />
-          <div className="aspect-[4/3] rounded-xl overflow-hidden shadow-raised border border-border bg-gradient-to-br from-card via-muted/30 to-primary/10 relative flex flex-col items-center justify-center p-8 text-center">
-            <div className="rounded-xl border border-border bg-background/80 backdrop-blur-sm px-6 py-8 max-w-sm space-y-3">
-              <p className="text-sm text-primary font-medium">Iliustracija</p>
-              <p className="text-foreground font-semibold text-lg">Portalas suvestinės ir analizės ekrane</p>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                Vietoje stock nuotraukos — neutralus blokas, kad nebūtų painiavos su oficialia valstybės komunikacija.
-              </p>
-            </div>
-            <p className="absolute bottom-4 left-0 right-0 text-xs text-muted-foreground px-4">
-              Tikroji sąsaja atidaroma mygtuku „Pradėti naudojimą“.
+              {day.vote_count} {ltPlural(day.vote_count, 'balsavimas', 'balsavimai', 'balsavimų')}. Bent kartą
+              balsavo {day.mps_present} iš {active} Seimo narių. Žemiau — paskutiniai trys klausimai, dėl
+              kurių tą dieną balsuota.
             </p>
-          </div>
-        </div>
-      </section>
+          )}
 
-      <footer className="py-8 px-4 text-center text-muted-foreground text-sm border-t border-border space-y-2">
-        <p>
-          © {new Date().getFullYear()} OpenSeimas / Atviras Seimas — civic tech projektas. Ne LR Seimo autorių teisės.
-        </p>
-        <p className="text-xs">
-          Oficialūs Seimo dokumentai ir transliacijos:{' '}
-          <a href="https://www.lrs.lt" className="text-primary underline underline-offset-2" target="_blank" rel="noreferrer">
-            lrs.lt
-          </a>
-        </p>
+          <div className="mt-8 grid gap-4 md:grid-cols-3">
+            {questions.map((v) => (
+              <VoteCard key={v.id} vote={v} />
+            ))}
+          </div>
+          {dayVotesQ.isSuccess && questions.length === 0 && (
+            <p className="mt-6 text-muted-foreground">
+              {/* LT-COPY: needs native review */}
+              Šios dienos balsavimų rezultatų neturime.
+            </p>
+          )}
+          <Link to="/dashboard/votes" className="mt-6 inline-block font-semibold text-primary hover:underline">
+            Visi balsavimai →
+          </Link>
+        </section>
+
+        {/* ── Who sits where ────────────────────────────────────────────── */}
+        <section className="mx-auto grid max-w-6xl items-center gap-10 px-5 py-16 md:grid-cols-[0.9fr_1.1fr]">
+          <div>
+            <p className="mb-2 text-sm font-bold uppercase tracking-[0.08em] text-primary">Seimo sudėtis</p>
+            <h2 className="font-serif text-[clamp(1.9rem,4.2vw,2.75rem)] font-bold leading-tight tracking-tight">
+              {/* LT-COPY: needs native review */}
+              {statsQ.data ? `${statsQ.data.seats_total} vieta. Kas kur sėdi.` : 'Kas kur sėdi.'}
+            </h2>
+            <p className="mt-3 max-w-[48ch] text-muted-foreground">
+              {/* LT-COPY: needs native review */}
+              Kiekvienas taškas — vienas Seimo narys. Spalva rodo frakciją. Užveskite pelę arba palieskite
+              tašką — pamatysite, kas ten sėdi.
+            </p>
+            <Link to="/dashboard/factions" className="mt-5 inline-block font-semibold text-primary hover:underline">
+              Frakcijos →
+            </Link>
+          </div>
+          <div className="rounded-3xl border border-border bg-card p-4 shadow-lg shadow-black/5">
+            <SeimasMap mps={mps} compact hideControls />
+          </div>
+        </section>
+
+        {/* ── Who governs ───────────────────────────────────────────────── */}
+        <section className="mx-auto max-w-6xl px-5 py-16">
+          <p className="mb-2 text-sm font-bold uppercase tracking-[0.08em] text-primary">Kas valdo</p>
+          <h2 className="font-serif text-[clamp(1.9rem,4.2vw,2.75rem)] font-bold leading-tight tracking-tight">
+            {/* LT-COPY: needs native review */}
+            Trys institucijos, vienas kelias
+          </h2>
+          <p className="mt-3 max-w-[60ch] text-muted-foreground">
+            {/* LT-COPY: needs native review */}
+            Įstatymą priima Seimas, pasirašo arba grąžina Prezidentas, vykdo Vyriausybė.
+          </p>
+          <div className="mt-8 grid gap-4 md:grid-cols-3">
+            {/* LT-COPY: needs native review */}
+            <Door n={1} to="/dashboard/mps" title="Seimas" text="Seimo nariai, jų balsavimai ir dalyvavimas posėdžiuose." />
+            <Door n={2} to="/dashboard/valdzia" title="Prezidentas" text="Pasirašo įstatymus arba grąžina juos Seimui. Dekretai su nuorodomis." />
+            <Door n={3} to="/dashboard/valdzia" title="Vyriausybė" text="Ministras Pirmininkas ir ministrai, kiekvienas su paskyrimo dekretu." />
+          </div>
+        </section>
+
+        {/* ── How we count ──────────────────────────────────────────────── */}
+        <section className="mx-auto max-w-6xl px-5 py-16">
+          <div className="grid gap-8 rounded-[28px] bg-primary/10 p-8 md:grid-cols-3 md:p-11">
+            {/* LT-COPY: needs native review */}
+            <Trust to="/dashboard/methodology" title="Be balų ir reitingų" text="Rodome, kas padaryta. Kas geriau, sprendžiate jūs." />
+            <Trust to="/dashboard/sources" title="Kiekvienas skaičius su šaltiniu" text="Prie rodiklio parašyta, iš kur jis ir kaip skaičiuojamas." />
+            <Trust to="/dashboard/corrections" title="Klaidas taisome viešai" text="Pataisymų sąrašas atviras, su datomis." />
+          </div>
+        </section>
+      </main>
+
+      <footer className="mt-6 border-t border-border">
+        <div className="mx-auto flex max-w-6xl flex-col gap-2 px-5 py-9 text-sm text-muted-foreground md:flex-row md:justify-between">
+          {/* LT-COPY: needs native review */}
+          <p>Atviras Seimas — nepriklausomas projektas, ne Lietuvos Respublikos Seimo svetainė.</p>
+          <p className="flex gap-4">
+            <Link to="/dashboard/sources" className="hover:text-foreground">Šaltiniai</Link>
+            <Link to="/dashboard/methodology" className="hover:text-foreground">Metodika</Link>
+            <Link to="/dashboard/corrections" className="hover:text-foreground">Pataisymai</Link>
+          </p>
+        </div>
       </footer>
     </div>
+  );
+}
+
+function VoteCard({ vote }: { vote: CountedVote }) {
+  const total = vote.votes_for + vote.votes_against + vote.votes_abstained;
+  const pct = (n: number) => `${((100 * n) / total).toFixed(1)}%`;
+  const time = voteTime(vote.voted_at);
+  return (
+    <article className="flex flex-col rounded-3xl border border-border bg-card p-6 shadow-lg shadow-black/5">
+      {time && <p className="mb-2 text-sm text-muted-foreground">{time}</p>}
+      <h3 className="line-clamp-4 min-h-[5.2em] text-[17px] font-semibold leading-snug">{vote.title ?? 'Be pavadinimo'}</h3>
+      <div className="mt-5 flex h-3.5 overflow-hidden rounded-full bg-muted" aria-hidden="true">
+        <span className="bg-vote-for" style={{ width: pct(vote.votes_for) }} />
+        <span className="bg-vote-against" style={{ width: pct(vote.votes_against) }} />
+        <span className="bg-vote-abstain" style={{ width: pct(vote.votes_abstained) }} />
+      </div>
+      <dl className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[15px]">
+        <Tally dot="bg-vote-for" label="Už" n={vote.votes_for} />
+        <Tally dot="bg-vote-against" label="Prieš" n={vote.votes_against} />
+        <Tally dot="bg-vote-abstain" label="Susilaikė" n={vote.votes_abstained} />
+      </dl>
+      <Link to={`/dashboard/votes/${vote.id}`} className="mt-auto pt-5 font-semibold text-primary hover:underline">
+        {/* LT-COPY: needs native review */}
+        Kas kaip balsavo →
+      </Link>
+    </article>
+  );
+}
+
+function Tally({ dot, label, n }: { dot: string; label: string; n: number }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <span className={`h-2.5 w-2.5 rounded-full ${dot}`} aria-hidden="true" />
+      <dt>{label}</dt>
+      <dd className="font-bold tabular-nums">{n}</dd>
+    </div>
+  );
+}
+
+function Door({ n, to, title, text }: { n: number; to: string; title: string; text: string }) {
+  return (
+    <Link
+      to={to}
+      className="block rounded-3xl border border-border bg-card p-7 transition-all hover:-translate-y-0.5 hover:border-primary"
+    >
+      <span className="font-serif text-5xl font-bold leading-none text-primary">{n}</span>
+      <h3 className="mt-4 font-serif text-2xl font-bold">{title}</h3>
+      <p className="mt-1.5 text-muted-foreground">{text}</p>
+    </Link>
+  );
+}
+
+function Trust({ to, title, text }: { to: string; title: string; text: string }) {
+  return (
+    <Link to={to} className="group block">
+      <h3 className="font-serif text-xl font-bold group-hover:text-primary">{title}</h3>
+      <p className="mt-1.5 text-muted-foreground">{text}</p>
+    </Link>
   );
 }

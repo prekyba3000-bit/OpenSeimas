@@ -1,3 +1,28 @@
+# RESUME — 2026-11-15
+
+Suites: the pre-push hook ran green — backend on a fresh database (493
+collected), `tsc --noEmit`, dashboard **468 passed**, build.
+
+### Done
+- New front page `/` from the mockup the human chose, on live data; vote
+  counts and times added to `/api/votes` (additive). Detail, audit and LT-COPY
+  inventory in `2026-11-14-front-page.md`.
+
+### In flight
+- Not committed. Waiting for the human's yes after the local preview; the
+  push deploys both sides.
+
+### Blocked
+- Unchanged: `apps.lrs.lt` down (data frozen at 5 November); LT native review;
+  rclone client ID.
+
+### Next concrete step
+On the yes: commit (coupling noted), push, then read `/` on production on
+desktop and phone, checking that the three vote cards show counts once Render
+is live.
+
+---
+
 # RESUME — 2026-11-14
 
 Suites, run this session: dashboard `npx vitest run` → **476 passed**;
