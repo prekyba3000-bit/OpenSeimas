@@ -1,3 +1,25 @@
+# RESUME — 2026-11-17
+
+Suites: dashboard `npx vitest run` → **490 passed**; `tsc --noEmit` clean;
+`vite build` built. Backend untouched.
+
+### Done
+- Valdžia: „Kas ir kada ėjo pareigas", the three Governments and the
+  President's decrees on one time axis. Pressing a bar traces that person
+  through every post they held. Detail, rendered audit and LT-COPY inventory
+  are in `2026-11-17-valdzia-timeline.md`.
+
+### In flight
+- Not committed or deployed. Frontend only, no wire change.
+
+### Blocked
+- Unchanged: `apps.lrs.lt` down; LT native review; rclone client ID.
+
+### Next concrete step
+The human reviews the page locally, then commit and deploy (Vercel only).
+
+---
+
 # RESUME — 2026-11-15
 
 Suites: the pre-push hook ran green — backend on a fresh database (493
