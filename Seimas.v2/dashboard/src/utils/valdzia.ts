@@ -34,6 +34,9 @@ export const AREAS: { key: string; title: string; hint: string; president: strin
  *  (Constitution art. 84 p. 1 and art. 140, as quoted on lrp.lt). */
 export const WITH_PRESIDENT = new Set(['uzsienis', 'gynyba']);
 
+/** „Užsienio reikalų ministerija" → „Užsienio reikalų", for tight labels. */
+export const shortName = (ministry: string) => ministry.replace(/ ministerija$/, '');
+
 /** Everyone who held the post in that Government, in order. */
 export function holdersOf(gov: Government, ministryKey: string): CabinetPost[] {
   return gov.posts.filter((p) => p.ministry_key === ministryKey).sort((a, b) => a.seq - b.seq);

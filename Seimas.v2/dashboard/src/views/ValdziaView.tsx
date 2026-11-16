@@ -7,7 +7,8 @@ import type { CabinetPost, Decree, Government, OfficeHolder, PresidentialActs } 
 import { Card } from '../components/Card';
 import { cn } from '../components/ui/utils';
 import { ProblemDetailsNotice } from '../components/ProblemDetailsNotice';
-import { AREAS, WITH_PRESIDENT, holdersOf, keptPost, lastHolder } from '../utils/valdzia';
+import { AREAS, WITH_PRESIDENT, holdersOf, keptPost, lastHolder, shortName } from '../utils/valdzia';
+import { ValdziaTimeline } from '../components/ValdziaTimeline';
 
 /**
  * „Valdžios žemėlapis" — who makes the law, who signs it, who carries it out.
@@ -33,8 +34,6 @@ const Ext = ({ href, children }: { href: string; children: React.ReactNode }) =>
     <ExternalLink className="inline-block w-3 h-3 ml-1 align-baseline" aria-hidden="true" />
   </a>
 );
-
-const shortName = (ministry: string) => ministry.replace(/ ministerija$/, '');
 
 // LT-COPY: needs native review — every string in this file.
 const INSTITUTIONS = [
@@ -329,6 +328,8 @@ export function ValdziaView() {
           <li>Ministerijų grupavimas į keturias sritis yra mūsų, ne oficialus.</li>
         </ul>
       </section>
+
+      <ValdziaTimeline data={data} picked={picked} onPick={pick} />
 
       <PresidentialActsSection acts={data.presidential_acts} />
 
