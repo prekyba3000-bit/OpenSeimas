@@ -9,14 +9,17 @@ Suites: dashboard `npx vitest run` → **490 passed**; `tsc --noEmit` clean;
   through every post they held. Detail, rendered audit and LT-COPY inventory
   are in `2026-11-17-valdzia-timeline.md`.
 
-### In flight
-- Not committed or deployed. Frontend only, no wire change.
+- Deployed as `d0a31d8` and verified on production, on both Vercel hosts
+  at 1360 px and 390 px: 47 bars (3 PMs + 44 minister rows), 83 decree links,
+  today line at 2026-11-17, picking Ruginienė lights 3 bars, no console
+  errors.
 
 ### Blocked
 - Unchanged: `apps.lrs.lt` down; LT native review; rclone client ID.
 
 ### Next concrete step
-The human reviews the page locally, then commit and deploy (Vercel only).
+Unchanged from 2026-11-15: whether the remaining pages get the front page's
+look is the human's call.
 
 ---
 
