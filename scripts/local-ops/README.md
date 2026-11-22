@@ -55,6 +55,7 @@ Run something regardless: `OPS_FORCE=1 ./db_backup.sh` or just omit `--if-due`.
 | `offsite_setup.sh` | one-time: passphrase + rclone OAuth instructions |
 | `install_timers.sh` | install/enable the units, retire the cron lines |
 | `test_catchup.sh` | 8 assertions proving one-run-per-missed-job |
+| `rotate_check.sh` | after a credential rotation: proves the new DB password and admin token work and (optionally) the old ones do not; prints no secret — see `docs/ops/credential-rotation.md` |
 | `lib/due.sh`, `lib/notify.sh` | shared due-tracking and notification |
 
 ## Off-machine backup
