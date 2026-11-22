@@ -160,8 +160,8 @@ function toMpLeaderboardRow(profile: MpProfile): MpLeaderboardRow {
 
 // ── Raw API shapes (internal to this module only) ───────────────────────────
 
-// `penalty` and `loyalty_bonus` are no longer read. The API may still send
-// them during the two-step removal; z.object() strips undeclared keys.
+// No `penalty` per engine and no `loyalty_bonus`: removed from the API with
+// evaluation CORB-07 (2026-11-22), after this client stopped reading them.
 type _RawForensicEntry = {
   status: ForensicStatus;
   explanation: string;
@@ -182,14 +182,8 @@ type _RawForensicBreakdown = {
 
 const forensicStatusSchema = z.enum(["clean", "warning", "flagged", "critical", "unavailable"]);
 
-// `penalty` (per engine) and `loyalty_bonus` are declared optional and read
-// nowhere: the two-step removal of CORB-07. This client ships first; the API
-// then stops sending them, and these two declarations go with that change.
-// They stay declared until then so the wire-contract test still sees every
-// key the backend sends (charter §1.11).
 const rawForensicEntrySchema = z.object({
   status: forensicStatusSchema,
-  penalty: z.number().optional(),
   explanation: z.string(),
 });
 
@@ -204,7 +198,6 @@ const rawForensicBreakdownSchema: z.ZodType<_RawForensicBreakdown> = z.object({
     closest_hop_count: z.number().nullable().optional(),
     debtor_links: z.number().optional(),
   }),
-  loyalty_bonus: z.unknown().optional(),
 });
 
 export const mpProfileSchema = z

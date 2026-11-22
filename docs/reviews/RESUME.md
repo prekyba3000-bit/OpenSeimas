@@ -1,3 +1,36 @@
+# RESUME — 2026-11-22
+
+Client step `fb73613` and ops `460c819` deployed and verified on production
+(both Vercel hosts, 1360 px and 390 px). API step: this commit.
+Suites: backend **501 passed** on a fresh database with 54 migrations;
+dashboard **494 passed**; `tsc` clean; `vite build` built. The pre-push hook's
+system Postgres is stopped since the reboot, so its steps ran against a
+throwaway container.
+
+### Done
+- Whole-repository evaluation finished: `.evaluation/20261118-235807/REPORT.md`
+  (5.2/D, Ready with conditions; 96 findings, 13 High, all verified).
+- Plan approved: fixes first, then the open-data vote source and summaries to
+  production. Stage 0 (P0) done in the working tree — detail, rendered audit,
+  deploy order and LT-COPY inventory in `2026-11-22-eval-p0-fixes.md`:
+  members-list search shows real figures (CORA-01); the loyalty "bonus" is no
+  longer built or rendered, and the API step removes it from the wire
+  (CORB-07); corrections + methodology entries in migration 054; credential
+  rotation runbook and check script (SECF-02).
+
+### Blocked
+- **Credential rotation (SECF-02): the human's step.** Follow
+  `docs/ops/credential-rotation.md`, then run `scripts/local-ops/rotate_check.sh`.
+- Unchanged: `apps.lrs.lt` unreachable (votes frozen at 5 Nov); LT native
+  review; rclone client ID.
+
+### Next concrete step
+Verify the API step on production (`/api/v2/heroes/{id}` has no
+`loyalty_bonus`/`penalty`; the profile renders). Then Stage 1
+(CORA-03, CORF-01, CORF-03, CORF-02/04/05/06, CORA-02/08, guard rewrite).
+
+---
+
 # RESUME — 2026-11-17
 
 Suites: dashboard `npx vitest run` → **490 passed**; `tsc --noEmit` clean;

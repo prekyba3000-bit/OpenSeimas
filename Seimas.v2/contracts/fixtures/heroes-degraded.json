@@ -45,19 +45,16 @@
       "benford": {
         "status": "unavailable",
         "p_value": null,
-        "penalty": 0,
         "explanation": "Benford analysis table is unavailable."
       },
       "chrono": {
         "status": "unavailable",
         "worst_zscore": null,
-        "penalty": 0,
         "explanation": "Chrono-forensics table is unavailable."
       },
       "vote_geometry": {
         "status": "unavailable",
         "max_deviation_sigma": null,
-        "penalty": 0,
         "explanation": "Vote geometry table is unavailable."
       },
       "phantom_network": {
@@ -65,14 +62,7 @@
         "procurement_links": 0,
         "closest_hop_count": null,
         "debtor_links": 0,
-        "penalty": 0,
         "explanation": "Phantom network table is unavailable."
-      },
-      "loyalty_bonus": {
-        "status": "unavailable",
-        "independent_voting_days_pct": null,
-        "bonus": 0,
-        "explanation": "This member sits in no faction, or has too few comparable votes, so agreement with a faction cannot be measured and no loyalty bonus is applied."
       }
     }
   }

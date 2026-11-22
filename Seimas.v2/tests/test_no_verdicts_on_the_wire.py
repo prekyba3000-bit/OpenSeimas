@@ -290,3 +290,49 @@ def test_voter_guide_scoring_recommender_is_prohibited_and_absent():
     )
 
 
+
+
+SCORING_KEYS = {"bonus", "penalty", "loyalty_bonus"}
+VERDICT_STATUSES = {"warning", "flagged", "critical"}
+
+
+def _walk(obj, prefix=""):
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            path = f"{prefix}.{k}" if prefix else k
+            yield path, k, v
+            yield from _walk(v, path)
+    elif isinstance(obj, list):
+        for v in obj:
+            yield from _walk(v, f"{prefix}[]")
+
+
+@pytest.mark.parametrize("loyalty", [None, 75.0, 95.0])
+def test_a_populated_breakdown_carries_no_score_about_the_person(loyalty):
+    """Evaluation CORB-07 (2026-11-22).
+
+    The guard above runs on an empty cursor, so the loyalty sub-object it saw
+    was always "unavailable" with a bonus of 0. With a real faction agreement
+    of 75 %, the payload carried `loyalty_bonus: {status: "warning", bonus: 10}`
+    and every profile drew it as a flag. Checked here on the populated engine
+    output, recursively, for scoring keys and verdict statuses.
+    """
+    from backend.hero_engine import _build_forensic_breakdown_fast
+
+    out = public_breakdown(_build_forensic_breakdown_fast({"mp_id": "x", "display_name": "T"}, loyalty))
+    scoring = [p for p, k, _ in _walk(out) if k in SCORING_KEYS]
+    graded = [p for p, k, v in _walk(out) if k == "status" and v in VERDICT_STATUSES]
+    assert scoring == [], f"a score about a named person on the wire: {scoring}"
+    assert graded == [], f"a verdict status on the wire: {graded}"
+
+
+def test_no_captured_profile_fixture_carries_a_score():
+    """The same rule over every committed /api/v2/heroes fixture."""
+    import json
+
+    fixtures = sorted((BACKEND.parent / "contracts" / "fixtures").glob("heroes-*.json"))
+    assert fixtures
+    for path in fixtures:
+        payload = json.loads(path.read_text())["payload"]
+        scoring = [p for p, k, _ in _walk(payload) if k in SCORING_KEYS]
+        assert scoring == [], f"{path.name}: {scoring}"

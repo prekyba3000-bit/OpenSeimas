@@ -42,19 +42,16 @@
       "benford": {
         "status": "clean",
         "p_value": null,
-        "penalty": 0,
         "explanation": "No Benford anomaly detected in available analysis records."
       },
       "chrono": {
         "status": "unavailable",
         "worst_zscore": null,
-        "penalty": 0,
         "explanation": "Chrono-forensics table is unavailable."
       },
       "vote_geometry": {
         "status": "unavailable",
         "max_deviation_sigma": null,
-        "penalty": 0,
         "explanation": "Vote geometry table is unavailable."
       },
       "phantom_network": {
@@ -62,14 +59,7 @@
         "procurement_links": 0,
         "closest_hop_count": null,
         "debtor_links": 0,
-        "penalty": 0,
         "explanation": "Phantom network table is unavailable."
-      },
-      "loyalty_bonus": {
-        "status": "warning",
-        "independent_voting_days_pct": 24.16,
-        "bonus": 10,
-        "explanation": "Estimated independent voting rate is 24.2%; this is independent but not fully detached, so integrity bonus is applied."
       },
       "total_forensic_adjustment": 10
     }

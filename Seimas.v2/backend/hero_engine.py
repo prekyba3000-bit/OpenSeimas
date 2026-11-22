@@ -854,7 +854,18 @@ _VERDICT_BREAKDOWN_KEYS = frozenset({
     # from nowhere. The per-engine sub-objects stay: each is evidence a reader
     # can open. Their sum is the verdict.
     "total_forensic_adjustment",
+    # A per-person "integrity bonus" of 10 points for disagreeing with one's
+    # faction 10–40 % of the time, derived from 100 − party loyalty and drawn
+    # as a flag on every profile (evaluation CORB-07, 2026-11-22). That is a
+    # verdict on a named person. Agreement with a faction is published as its
+    # own descriptive dimension, with a denominator.
+    "loyalty_bonus",
 })
+
+# Scoring keys inside a per-engine sub-object. The engine's evidence (status,
+# p-value, counts, explanation) stays; what it would have cost the person
+# does not travel.
+_VERDICT_ENGINE_KEYS = frozenset({"penalty", "bonus"})
 
 
 def public_metrics(metrics: Dict[str, Any]) -> Dict[str, Any]:
@@ -883,16 +894,20 @@ def public_breakdown(breakdown: Dict[str, Any]) -> Dict[str, Any]:
     is published on the methodology page, but they do not cross the wire: the
     public API ships evidence and descriptive dimensions; verdicts ship
     nowhere. The per-engine sub-objects (benford, chrono, vote_geometry,
-    phantom_network, loyalty_bonus) are evidence and stay.
+    phantom_network) are evidence and stay, minus their `penalty`.
 
     `raw_forensic_penalty_sum` and `capped_forensic_penalty` are dropped by name
     rather than by prefix: they are the same aggregation as the `_composite_`
     keys and were written without the prefix that would have caught them.
     """
-    return {
-        k: v for k, v in breakdown.items()
-        if not k.startswith("_composite_") and k not in _VERDICT_BREAKDOWN_KEYS
-    }
+    out: Dict[str, Any] = {}
+    for k, v in breakdown.items():
+        if k.startswith("_composite_") or k in _VERDICT_BREAKDOWN_KEYS:
+            continue
+        if isinstance(v, dict):
+            v = {ek: ev for ek, ev in v.items() if ek not in _VERDICT_ENGINE_KEYS}
+        out[k] = v
+    return out
 
 
 # One predicate for "the source recorded this member's choice on this vote",
