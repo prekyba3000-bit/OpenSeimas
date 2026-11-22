@@ -79,6 +79,15 @@ above against the live site: 140 cards and none at „0 %"; „simonyte" → 91 
 „nemuno" → 17; phone „skvern" → 94 %; Bilotaitė's profile renders against the
 API that still sends the bonus, with no bonus wording.
 
+## Production check of the API step (2026-11-22)
+
+`9343a7d` on Render: `/api/v2/heroes/{id}` `forensic_breakdown` keys are
+`benford, chrono, phantom_network, vote_geometry`, none with `penalty` or
+`bonus`; the leaderboard (limit 200) carries neither. Profile rendered on
+both hosts at 1360 px and 390 px with no error screen and no bonus wording;
+„Stebėjimas" and „Skaidrumo centras" render. Migration 054 applies on the
+next daily sync.
+
 ## Deploy order (wire change, §3)
 
 1. Push the client commit. Vercel deploys; verify search and a profile.

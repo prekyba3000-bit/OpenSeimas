@@ -1,7 +1,7 @@
 # RESUME — 2026-11-22
 
-Client step `fb73613` and ops `460c819` deployed and verified on production
-(both Vercel hosts, 1360 px and 390 px). API step: this commit.
+Deployed and verified on production: client `fb73613`, ops `460c819`, API
+`9343a7d` (both Vercel hosts, 1360 px and 390 px; Render payload checked).
 Suites: backend **501 passed** on a fresh database with 54 migrations;
 dashboard **494 passed**; `tsc` clean; `vite build` built. The pre-push hook's
 system Postgres is stopped since the reboot, so its steps ran against a
@@ -25,8 +25,7 @@ throwaway container.
   review; rclone client ID.
 
 ### Next concrete step
-Verify the API step on production (`/api/v2/heroes/{id}` has no
-`loyalty_bonus`/`penalty`; the profile renders). Then Stage 1
+The human rotates the credentials (SECF-02). Agent: Stage 1
 (CORA-03, CORF-01, CORF-03, CORF-02/04/05/06, CORA-02/08, guard rewrite).
 
 ---
