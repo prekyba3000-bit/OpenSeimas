@@ -50,7 +50,6 @@ const mockMpProfile = {
             title: 'Benfordo dėsnio analizė',
             description: 'Benford analysis is within expected range.',
             severity: 'none',
-            penalty: 0,
             pValue: 0.22,
         },
         chrono: {
@@ -59,7 +58,6 @@ const mockMpProfile = {
             title: 'Pataisų laiko analizė',
             description: 'Amendment drafting speed is suspiciously fast in recent profile.',
             severity: 'medium',
-            penalty: -8,
             worstZscore: -2.4,
         },
         voteGeometry: {
@@ -68,7 +66,6 @@ const mockMpProfile = {
             title: 'Balsavimo geometrija',
             description: 'No statistically unusual vote geometry signals.',
             severity: 'none',
-            penalty: 0,
             maxDeviationSigma: 1.2,
         },
         phantomNetwork: {
@@ -77,16 +74,9 @@ const mockMpProfile = {
             title: 'Paslėptų ryšių tinklas',
             description: 'Linked company has tax debtor signal.',
             severity: 'medium',
-            penalty: -5,
             procurementLinks: 0,
             closestHopCount: null,
             debtorLinks: 1,
-        },
-        loyaltyBonus: {
-            status: 'warning',
-            independentVotingDaysPct: 24.6,
-            bonus: 5,
-            explanation: 'Voted against party line on 24.6% of voting days, indicating independent judgment.',
         },
     },
 } as unknown as MpProfile;

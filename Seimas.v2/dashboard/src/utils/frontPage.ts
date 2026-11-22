@@ -36,7 +36,8 @@ export function latestQuestions(votes: VoteSummary[], n = 3): CountedVote[] {
   return out;
 }
 
-const fold = (s: string) =>
+/** Lower-case and strip diacritics, so „Šimonytė" matches "simonyte". */
+export const fold = (s: string) =>
   s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
 /** Members whose name or won constituency contains the query, accents ignored. */

@@ -72,7 +72,14 @@ describe("flags built from a production-shaped breakdown", () => {
       forensicBreakdownToFlags(bd).map((f) => [f.engine, f.severity]),
     );
     expect(byEngine.benford).toBe("none");
-    expect(byEngine.loyalty).toBe("medium");
+  });
+
+  it("carries no loyalty-derived flag, even when the wire still sends one", () => {
+    // Evaluation CORB-07: this test used to assert the loyalty "bonus" flag
+    // rendered as "medium" — pinning a verdict derived from 100 − loyalty.
+    const engines = forensicBreakdownToFlags(bd).map((f) => f.engine);
+    expect(engines).not.toContain("loyalty");
+    expect(forensicBreakdownToFlags(bd).every((f) => !("penalty" in f))).toBe(true);
   });
 
   it("asserts nothing gradeable about a member with three unavailable engines", () => {

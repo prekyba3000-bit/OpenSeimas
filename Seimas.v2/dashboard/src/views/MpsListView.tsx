@@ -1,18 +1,16 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Users, Search, ChevronRight, ArrowUpDown } from 'lucide-react';
 import { motion } from 'motion/react';
-import { api, MpProfile, MpSummary } from '../services/api';
-import { toast } from 'sonner';
+import { api } from '../services/api';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import { MpCard } from '../components/MpCard';
 import { sortMps, SORT_OPTIONS, SortOption } from '../utils/sorting';
 import { SEIMAS_SEATS_TOTAL } from '../utils/mpCounts';
 import { ConstituencyPicker } from '../components/ConstituencyPicker';
-import { ProblemDetailsNotice } from '../components/ProblemDetailsNotice';
 import { ConnectingNotice, ConnectionError, isConnectionProblem } from '../components/ConnectionState';
-import { LT } from '../i18n/lt';
+import { filterRoster } from '../utils/rosterSearch';
 
 const MpsListView = () => {
     const rosterQuery = useQuery({
@@ -36,82 +34,19 @@ const MpsListView = () => {
     // connection screen with a retry.
     const rosterUnavailable = isConnectionProblem(rosterQuery);
 
-    const [searchResults, setSearchResults] = useState<MpSummary[] | null>(null);
     const [search, setSearch] = useState('');
     const [partyFilter, setPartyFilter] = useState<string | null>(null);
     const [sortBy, setSortBy] = useState<SortOption>('name_asc');
-    const [searching, setSearching] = useState(false);
-    const [slowSearch, setSlowSearch] = useState(false);
-    const [searchError, setSearchError] = useState<unknown>(null);
-
-
-    const mapMpProfileToSummary = (mpProfile: MpProfile): MpSummary => ({
-        id: mpProfile.mp.id,
-        name: mpProfile.mp.name,
-        normalized_name: mpProfile.mp.name.toLowerCase(),
-        party: mpProfile.mp.party || '',
-        is_active: mpProfile.mp.active !== false,
-        photo_url: mpProfile.mp.photo || '',
-        vote_count: 0,
-        attendance: 0,
-        vote_mode: null,
-    });
-
-    useEffect(() => {
-        const q = search.trim();
-        if (q.length < 2) {
-            setSearchResults(null);
-            setSearching(false);
-            return;
-        }
-
-        let cancelled = false;
-        setSearching(true);
-        setSlowSearch(false);
-        const slowTimer = window.setTimeout(() => {
-            if (!cancelled) setSlowSearch(true);
-        }, 1200);
-
-        const timer = window.setTimeout(() => {
-            api.searchMps(q, 50)
-                .then((payload) => {
-                    if (cancelled) return;
-                    setSearchResults(payload.results.map(mapMpProfileToSummary));
-                })
-                .catch((err) => {
-                    if (cancelled) return;
-                    console.error('Server-side search failed', err);
-                    setSearchResults([]);
-                    setSearchError(err);
-                    toast.error(LT.errors.searchUnavailable);
-                })
-                .finally(() => {
-                    if (cancelled) return;
-                    setSearching(false);
-                    setSlowSearch(false);
-                    window.clearTimeout(slowTimer);
-                });
-        }, 300);
-
-        return () => {
-            cancelled = true;
-            window.clearTimeout(timer);
-            window.clearTimeout(slowTimer);
-        };
-    }, [search]);
 
     const processedMps = useMemo(() => {
-        const source = searchResults ?? mps;
         // No active-filter here: the roster query asks the API for
         // ?status=active, so membership is decided once, server-side, from the
-        // mandate dates. Search results come from the same source.
-        const filtered = source.filter(mp => {
-            const matchesSearch = (mp.name || '').toLowerCase().includes(search.toLowerCase());
-            const matchesParty = !partyFilter || mp.party === partyFilter;
-            return matchesSearch && matchesParty;
-        });
+        // mandate dates. Search filters that same roster, so a searched member
+        // shows the figures the list shows.
+        const filtered = filterRoster(mps, search)
+            .filter(mp => !partyFilter || mp.party === partyFilter);
         return sortMps(filtered, sortBy);
-    }, [mps, searchResults, search, partyFilter, sortBy]);
+    }, [mps, search, partyFilter, sortBy]);
 
     const handleMpClick = (mpId: string) => {
         window.location.href = `#/dashboard/mps/${mpId}`;
@@ -216,12 +151,12 @@ const MpsListView = () => {
                 {(search || partyFilter) && (
                     <div className="mt-3 flex items-center justify-between">
                         <span className="text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>
-                            {searching ? (slowSearch ? 'Tinklas lėtas, ieškoma…' : 'Ieškoma serveryje...') : 'Filtrai aktyvūs'}
+                            Filtrai aktyvūs
                         </span>
                         <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => { setSearch(''); setPartyFilter(null); setSearchResults(null); }}
+                            onClick={() => { setSearch(''); setPartyFilter(null); }}
                         >
                             Clear
                         </Button>
@@ -236,14 +171,6 @@ const MpsListView = () => {
                 <ConnectionError onRetry={() => refetchRoster()} />
             ) : (
                 <>
-                    {/* Search errors are secondary: the full roster still renders below. */}
-                    {searchError && (
-                        <ProblemDetailsNotice
-                            error={searchError}
-                            className="p-4 border rounded-xl flex items-center gap-3"
-                        />
-                    )}
-
                     {loading ? (
                         <ConnectingNotice />
                     ) : (

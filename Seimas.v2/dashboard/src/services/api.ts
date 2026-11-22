@@ -54,8 +54,6 @@ export type ForensicFlag = {
   title: string;
   description: string;
   severity: "high" | "medium" | "low" | "none" | "unknown";
-  /** Retained from API penalty field for transparency UI until WS2. */
-  penalty: number;
   // TODO(v4): add methodologyAnchor: string once methodology page has anchors
 };
 
@@ -68,12 +66,9 @@ export type ForensicBreakdown = {
     closestHopCount?: number | null;
     debtorLinks?: number;
   };
-  loyaltyBonus: {
-    status: ForensicStatus;
-    independentVotingDaysPct?: number | null;
-    bonus: number;
-    explanation: string;
-  };
+  // No loyalty entry. It was a per-person "integrity bonus" derived from
+  // 100 − party loyalty: a verdict, shipped and rendered (evaluation CORB-07).
+  // Agreement with a faction is its own descriptive dimension.
 };
 
 /** Civic MP profile (mapped from raw API). Presentation fields remain until WS2 profile UI migration. */
@@ -165,9 +160,10 @@ function toMpLeaderboardRow(profile: MpProfile): MpLeaderboardRow {
 
 // ── Raw API shapes (internal to this module only) ───────────────────────────
 
+// `penalty` and `loyalty_bonus` are no longer read. The API may still send
+// them during the two-step removal; z.object() strips undeclared keys.
 type _RawForensicEntry = {
   status: ForensicStatus;
-  penalty: number;
   explanation: string;
 };
 
@@ -180,31 +176,20 @@ type _RawForensicBreakdown = {
     closest_hop_count?: number | null;
     debtor_links?: number;
   };
-  loyalty_bonus: {
-    status: ForensicStatus;
-    /**
-     * null when agreement with a faction cannot be measured at all — the
-     * member sits in none, or has too few comparable votes.
-     *
-     * Optional as well as nullable to match p_value / worst_zscore /
-     * closest_hop_count above: this project compiles with strict:false, and
-     * under that setting a null-bearing zod schema renders its key optional,
-     * so a required field here cannot be satisfied by any schema that admits
-     * null. The backend always sends the key.
-     */
-    independent_voting_days_pct?: number | null;
-    bonus: number;
-    explanation: string;
-  };
 };
 
 // ── Zod (validates wire shape / Layer A) ────────────────────────────────────
 
 const forensicStatusSchema = z.enum(["clean", "warning", "flagged", "critical", "unavailable"]);
 
+// `penalty` (per engine) and `loyalty_bonus` are declared optional and read
+// nowhere: the two-step removal of CORB-07. This client ships first; the API
+// then stops sending them, and these two declarations go with that change.
+// They stay declared until then so the wire-contract test still sees every
+// key the backend sends (charter §1.11).
 const rawForensicEntrySchema = z.object({
   status: forensicStatusSchema,
-  penalty: z.number(),
+  penalty: z.number().optional(),
   explanation: z.string(),
 });
 
@@ -219,16 +204,7 @@ const rawForensicBreakdownSchema: z.ZodType<_RawForensicBreakdown> = z.object({
     closest_hop_count: z.number().nullable().optional(),
     debtor_links: z.number().optional(),
   }),
-  loyalty_bonus: z.object({
-    status: forensicStatusSchema,
-    // Nullable because a member who sits in no faction has nothing to be
-    // independent OF, so the backend reports the engine as unavailable rather
-    // than inverting a missing figure into 100% independence. A bare
-    // z.number() here failed the parse and blanked the whole profile.
-    independent_voting_days_pct: z.number().nullable().optional(),
-    bonus: z.number(),
-    explanation: z.string(),
-  }),
+  loyalty_bonus: z.unknown().optional(),
 });
 
 export const mpProfileSchema = z
@@ -651,7 +627,6 @@ function mapRawForensicEntry(
     title,
     description: raw.explanation,
     severity: forensicSeverityFromStatus(raw.status),
-    penalty: raw.penalty,
   };
 }
 
@@ -689,12 +664,6 @@ function mapRawForensicBreakdown(raw: _RawForensicBreakdown): ForensicBreakdown 
       procurementLinks: raw.phantom_network.procurement_links,
       closestHopCount: raw.phantom_network.closest_hop_count,
       debtorLinks: raw.phantom_network.debtor_links,
-    },
-    loyaltyBonus: {
-      status: raw.loyalty_bonus.status,
-      independentVotingDaysPct: raw.loyalty_bonus.independent_voting_days_pct,
-      bonus: raw.loyalty_bonus.bonus,
-      explanation: raw.loyalty_bonus.explanation,
     },
   };
 }

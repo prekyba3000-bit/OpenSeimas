@@ -8,7 +8,6 @@ function pickFlag(entry: ForensicFlag): ForensicFlag {
     title: entry.title,
     description: entry.description,
     severity: entry.severity,
-    penalty: entry.penalty,
   };
 }
 
@@ -18,22 +17,14 @@ function pickFlag(entry: ForensicFlag): ForensicFlag {
  */
 export function forensicBreakdownToFlags(bd: ForensicBreakdown): ForensicFlag[] {
   // „Bazinė rizika" was not an engine finding — it was the composite's own
-  // input, restated as a flag. It went with the composite.
-
-  const loyalty: ForensicFlag = {
-    engine: "loyalty",
-    status: bd.loyaltyBonus.status,
-    title: "Sutapimas su frakcija",
-    description: bd.loyaltyBonus.explanation,
-    severity: forensicSeverityFromStatus(bd.loyaltyBonus.status),
-    penalty: bd.loyaltyBonus.bonus,
-  };
+  // input, restated as a flag. It went with the composite. The loyalty
+  // "bonus" went the same way (evaluation CORB-07): rewarding a member for
+  // disagreeing with their faction 10–40 % of the time is a verdict.
 
   return [
     pickFlag(bd.benford),
     pickFlag(bd.chrono),
     pickFlag(bd.voteGeometry),
     pickFlag(bd.phantomNetwork),
-    loyalty,
   ];
 }
