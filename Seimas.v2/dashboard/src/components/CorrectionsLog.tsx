@@ -3,11 +3,12 @@ import { formatLtDateLong } from '../utils/ltDate';
 import { useQuery } from '@tanstack/react-query';
 import { trustApi, type CorrectionStatus } from '../services/trust';
 
-const STATUS_LABELS: Record<CorrectionStatus, string> = {
+export const STATUS_LABELS: Record<CorrectionStatus, string> = {
   open: 'Gauta',
   accepted: 'Priimta',
   rejected: 'Atmesta',
   resolved: 'Išspręsta',
+  withheld: 'Neskelbiama',
 };
 
 const STATUS_CLASSES: Record<CorrectionStatus, string> = {
@@ -15,6 +16,7 @@ const STATUS_CLASSES: Record<CorrectionStatus, string> = {
   accepted: 'border-primary/40 text-primary',
   rejected: 'border-destructive/40 text-destructive',
   resolved: 'border-primary/60 text-primary',
+  withheld: 'border-border text-muted-foreground',
 };
 
 function formatDate(iso: string): string {
@@ -45,10 +47,10 @@ export function CorrectionsLog() {
   if (corrections.length === 0) {
     return (
       <p className="text-sm leading-relaxed text-muted-foreground">
-        Čia viešai matysis kiekviena peržiūrėta pastaba ir jos būsena — priimta, atmesta ar
-        išspręsta. Atmestas pastabas skelbiame taip pat: žurnalas, kuriame matyti tik mums palankūs
-        pranešimai, būtų bevertis. Kol kas peržiūrėtų pataisymų nėra. Pastebėjote netikslumą?
-        Užpildykite formą viršuje.
+        Čia viešai matysis peržiūrėtų pastabų būsena ir prižiūrėtojo sprendimas.
+        Atmestų pranešimų teksto neskelbiame, kad portalu nebūtų platinami
+        nepatikrinti teiginiai ar asmens duomenys. Kol kas peržiūrėtų pataisymų
+        nėra. Pastebėjote netikslumą? Užpildykite formą viršuje.
       </p>
     );
   }
@@ -68,7 +70,9 @@ export function CorrectionsLog() {
             </span>
             <span className="text-xs text-muted-foreground">{formatDate(correction.created_at)}</span>
           </div>
-          <p className="text-sm text-foreground">{correction.description}</p>
+          {correction.description && (
+            <p className="text-sm text-foreground">{correction.description}</p>
+          )}
           {correction.resolution_note && (
             <p className="border-l-2 border-primary/40 pl-3 text-sm text-muted-foreground">
               <span className="text-foreground">Sprendimas: </span>

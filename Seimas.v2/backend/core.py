@@ -131,8 +131,8 @@ def client_ip(request) -> str:
     all. The left-most X-Forwarded-For entry is the originating client.
 
     That entry is caller-supplied and therefore spoofable, so this is
-    best-effort throttling, not an access control. Abuse prevention that must
-    hold belongs behind the moderation gate, not here.
+    best-effort throttling, not an access control. The anonymous correction
+    write also has a database-enforced global budget that does not use this key.
     """
     forwarded = request.headers.get("x-forwarded-for") if request.headers else None
     if forwarded:

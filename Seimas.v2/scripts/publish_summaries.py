@@ -78,6 +78,7 @@ def main():
                 WHERE NOT EXISTS (
                     SELECT 1 FROM summary_revisions sr 
                     WHERE sr.entity_type = 'vote' AND sr.entity_id = v.id::text
+                      AND sr.approved_at IS NOT NULL
                 )
             """)
             votes = [str(r["id"]) for r in cur.fetchall()]
@@ -88,6 +89,7 @@ def main():
                 WHERE NOT EXISTS (
                     SELECT 1 FROM summary_revisions sr 
                     WHERE sr.entity_type = 'bill' AND sr.entity_id = l.project_id
+                      AND sr.approved_at IS NOT NULL
                 )
             """)
             bills = [str(r["project_id"]) for r in cur.fetchall()]

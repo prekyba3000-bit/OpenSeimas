@@ -48,7 +48,7 @@ export function CorrectionsView() {
         <div>
           <h2 className="text-lg font-semibold">Viešas pataisymų žurnalas</h2>
           <p className="text-sm text-muted-foreground mt-1">
-            Kiekviena pastaba ir jos sprendimas — vieši.
+            Priimtų ir atmestų pranešimų būsena bei prižiūrėtojo sprendimas — vieši.
           </p>
         </div>
         <CorrectionsLog />

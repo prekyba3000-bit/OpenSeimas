@@ -33,7 +33,7 @@ describe("SummaryHistoryView", () => {
     });
     renderHistory();
 
-    expect(await screen.findByText(/kol kas redaguota nebuvo/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Patvirtintų redakcijų kol kas nėra/i)).toBeInTheDocument();
     expect(screen.getByText(/kaip Vikipedijoje/i)).toBeInTheDocument();
   });
 

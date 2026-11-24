@@ -211,3 +211,48 @@ async def test_a_missing_revision_is_a_404(vote):
 @pytest.mark.asyncio
 async def test_an_unknown_entity_type_is_rejected():
     assert (await _get("/api/summaries/nonsense/1")).status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_public_history_contains_only_approved_revisions(vote):
+    conn, cur, vote_id = vote
+    rendered = _rendered_body(cur, vote_id)
+    _draft(cur, conn, vote_id, rendered, revision=1)
+    assert (await _get(f"/api/trust/summary-history/vote/{vote_id}")).json()["revisions"] == []
+
+    await _post("/api/admin/summaries/approve",
+                {"entity_type": "vote", "entity_id": vote_id,
+                 "revision": 1, "approved_by": "Redaktorius"})
+    _draft(cur, conn, vote_id, rendered + " Nepatvirtintas juodraštis.", revision=2, editor="llm:simplify")
+    response = await _get(f"/api/trust/summary-history/vote/{vote_id}")
+    assert response.status_code == 200
+    assert [row["revision"] for row in response.json()["revisions"]] == [1]
+    assert "Nepatvirtintas juodraštis" not in response.text
+
+
+@pytest.mark.asyncio
+async def test_posting_and_approving_the_same_revision_is_idempotent(vote):
+    conn, cur, vote_id = vote
+    payload = {
+        "entity_type": "vote",
+        "entity_id": vote_id,
+        "body_lt": _rendered_body(cur, vote_id),
+        "editor": "pipeline:template v1",
+        "note": "Bandymo redakcija.",
+    }
+    first = await _post("/api/admin/summaries", payload)
+    second = await _post("/api/admin/summaries", payload)
+    assert first.status_code == second.status_code == 201
+    assert first.json()["id"] == second.json()["id"]
+    assert first.json()["revision"] == second.json()["revision"] == 1
+    cur.execute("SELECT count(*) AS n FROM summary_revisions WHERE entity_type='vote' AND entity_id=%s", (vote_id,))
+    assert cur.fetchone()["n"] == 1
+
+    approval = {"entity_type": "vote", "entity_id": vote_id, "revision": 1, "approved_by": "Redaktorius"}
+    assert (await _post("/api/admin/summaries/approve", approval)).status_code == 200
+    cur.execute("SELECT approved_at, approved_by FROM summary_revisions WHERE entity_type='vote' AND entity_id=%s", (vote_id,))
+    original = cur.fetchone()
+    retry = dict(approval, approved_by="Kitas redaktorius")
+    assert (await _post("/api/admin/summaries/approve", retry)).status_code == 200
+    cur.execute("SELECT approved_at, approved_by FROM summary_revisions WHERE entity_type='vote' AND entity_id=%s", (vote_id,))
+    assert cur.fetchone() == original

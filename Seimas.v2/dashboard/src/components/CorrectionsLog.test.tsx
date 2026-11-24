@@ -33,8 +33,8 @@ describe("CorrectionsLog", () => {
     renderLog();
     expect(await screen.findByText(/Kol kas peržiūrėtų pataisymų nėra/i)).toBeInTheDocument();
     expect(screen.getByText(/Užpildykite formą viršuje/i)).toBeInTheDocument();
-    // The log promises reviewed pastabos only — submissions are not published unread.
-    expect(screen.getByText(/peržiūrėta pastaba/i)).toBeInTheDocument();
+    // Reviewed decisions are public; rejected submission text is not.
+    expect(screen.getByText(/peržiūrėtų pastabų/i)).toBeInTheDocument();
   });
 
   it("renders entries with Lithuanian status badges and the resolution note", async () => {
@@ -80,6 +80,28 @@ describe("CorrectionsLog", () => {
 
     expect(await screen.findByText("Gauta")).toBeInTheDocument();
     expect(document.body.textContent).not.toContain("pilietis@example.lt");
+  });
+
+  it("shows the reviewer's decision without rejected submission text", async () => {
+    vi.mocked(trustApi.listCorrections).mockClear();
+    vi.mocked(trustApi.listCorrections).mockResolvedValue(
+      response([
+        {
+          id: "rejected",
+          entity_type: "mp",
+          entity_id: "member-1",
+          description: null,
+          status: "rejected",
+          resolution_note: "Teiginys nesutvirtintas; pranešimo tekstas neskelbiamas.",
+          created_at: "2026-08-11T09:00:00Z",
+          resolved_at: "2026-08-11T10:00:00Z",
+        },
+      ]),
+    );
+    renderLog();
+
+    expect(await screen.findByText("Atmesta")).toBeInTheDocument();
+    expect(screen.getByText(/Teiginys nesutvirtintas/)).toBeInTheDocument();
   });
 
   it("surfaces a Lithuanian error message when the request fails", async () => {

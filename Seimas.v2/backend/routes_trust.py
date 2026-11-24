@@ -4,7 +4,7 @@ Public:
   GET  /api/trust/corrections                      — public corrections log (no emails)
   POST /api/trust/corrections                      — report an error (rate-limited, honeypot)
   GET  /api/trust/methodology/{metric_key}         — current + all versions
-  GET  /api/trust/summary-history/{etype}/{eid}    — full public edit history
+  GET  /api/trust/summary-history/{etype}/{eid}    — approved public edit history
   GET  /api/trust/replies/{mp_id}                  — verified MP right-of-reply entries
 
 Admin (Authorization: Bearer $SYNC_SECRET):
@@ -47,15 +47,19 @@ router = APIRouter()
 
 _ENTITY_TYPES = ("mp", "vote", "bill", "topic_tag", "summary", "metric", "other")
 _SUMMARY_TYPES = ("vote", "bill", "mp", "topic")
-_CORRECTION_STATUSES = ("open", "accepted", "rejected", "resolved")
+_CORRECTION_STATUSES = ("open", "accepted", "rejected", "resolved", "withheld")
 
-# Submissions are public only after a maintainer has acted on them. `open` means
-# "received, not yet reviewed" and is never served publicly: the submit endpoint
-# is anonymous and unauthenticated, so without this gate anyone could publish
-# arbitrary claims about a named MP on the platform's own corrections log.
-# Rejected reports stay public on purpose — a log of only the reports we agreed
-# with would be worth little to a skeptical reader. Abusive submissions are left
-# at `open`, where they remain invisible.
+# Anonymous writes need a bound that does not depend on caller identity. The
+# per-IP limiter is best-effort; these limits are enforced in Postgres and the
+# advisory lock makes the check + insert atomic across workers and processes.
+CORRECTIONS_BURST_LIMIT = 20
+CORRECTIONS_OPEN_LIMIT = 100
+_CORRECTIONS_WRITE_LOCK = 528491
+
+# Reviewed decisions are public, but a rejected anonymous submission is not:
+# its status and the maintainer's resolution note are enough to keep the log
+# accountable without republishing claims or personal data. `withheld` is a
+# terminal, never-public state for abuse. `open` remains unreviewed and private.
 _PUBLIC_CORRECTION_STATUSES = ("accepted", "rejected", "resolved")
 
 
@@ -92,21 +96,39 @@ def submit_correction(payload: CorrectionIn, request: Request):
     if payload.entity_type not in _ENTITY_TYPES:
         raise HTTPException(status_code=422, detail=f"entity_type must be one of {_ENTITY_TYPES}")
 
+    row = None
     with get_db_conn() as conn:
         if not conn:
             raise HTTPException(status_code=500, detail="Database connection failed")
         with conn.cursor() as cur:
             _require_table(cur, "corrections")
+            cur.execute("SELECT pg_advisory_xact_lock(%s)", (_CORRECTIONS_WRITE_LOCK,))
             cur.execute(
                 """
                 INSERT INTO corrections (entity_type, entity_id, description, reporter_email)
-                VALUES (%s, %s, %s, %s)
+                SELECT %s, %s, %s, %s
+                WHERE (SELECT count(*) FROM corrections
+                       WHERE status = 'open'
+                         AND created_at > NOW() - INTERVAL '10 minutes') < %s
+                  AND (SELECT count(*) FROM corrections WHERE status = 'open') < %s
                 RETURNING id, created_at
                 """,
-                (payload.entity_type, payload.entity_id, payload.description, payload.reporter_email),
+                (
+                    payload.entity_type,
+                    payload.entity_id,
+                    payload.description,
+                    payload.reporter_email,
+                    CORRECTIONS_BURST_LIMIT,
+                    CORRECTIONS_OPEN_LIMIT,
+                ),
             )
             row = cur.fetchone()
-        conn.commit()
+        if row:
+            conn.commit()
+        else:
+            conn.rollback()
+    if not row:
+        raise HTTPException(status_code=429, detail="Rate limit exceeded")
     return {"status": "received", "id": str(row["id"]), "created_at": row["created_at"].isoformat()}
 
 
@@ -140,8 +162,9 @@ def list_corrections(request: Request, status: Optional[str] = None, limit: int 
                 params = (list(_PUBLIC_CORRECTION_STATUSES), limit)
             cur.execute(
                 f"""
-                SELECT id, entity_type, entity_id, description, status,
-                       resolution_note, created_at, resolved_at
+                SELECT id, entity_type, entity_id,
+                       CASE WHEN status = 'rejected' THEN NULL ELSE description END AS description,
+                       status, resolution_note, created_at, resolved_at
                 FROM corrections
                 {where}
                 ORDER BY created_at DESC
@@ -217,7 +240,7 @@ def get_summary_history(entity_type: str, entity_id: str):
                 """
                 SELECT revision, body_lt, editor, note, created_at
                 FROM summary_revisions
-                WHERE entity_type = %s AND entity_id = %s
+                WHERE entity_type = %s AND entity_id = %s AND approved_at IS NOT NULL
                 ORDER BY revision DESC
                 """,
                 (entity_type, entity_id),
@@ -274,7 +297,7 @@ def set_correction_status(
     _require_admin_auth(authorization)
     if payload.status not in _CORRECTION_STATUSES:
         raise HTTPException(status_code=422, detail=f"status must be one of {_CORRECTION_STATUSES}")
-    resolved = payload.status in ("resolved", "rejected")
+    resolved = payload.status in ("resolved", "rejected", "withheld")
     with get_db_conn() as conn:
         if not conn:
             raise HTTPException(status_code=500, detail="Database connection failed")
@@ -351,7 +374,7 @@ class SummaryRevisionIn(BaseModel):
 
 @router.post("/api/admin/summaries", status_code=201)
 def add_summary_revision(payload: SummaryRevisionIn, authorization: Optional[str] = Header(None)):
-    """Append a revision (auto-incremented per entity). Used by maintainers and the pipeline."""
+    """Append a revision, or return the identical one after a retried request."""
     _require_admin_auth(authorization)
     if payload.entity_type not in _SUMMARY_TYPES:
         raise HTTPException(status_code=422, detail=f"entity_type must be one of {_SUMMARY_TYPES}")
@@ -362,21 +385,35 @@ def add_summary_revision(payload: SummaryRevisionIn, authorization: Optional[str
             _require_table(cur, "summary_revisions")
             cur.execute(
                 """
-                SELECT COALESCE(MAX(revision), 0) + 1 AS r FROM summary_revisions
-                WHERE entity_type = %s AND entity_id = %s
+                SELECT id, revision FROM summary_revisions
+                WHERE entity_type = %s AND entity_id = %s AND body_lt = %s
+                  AND editor = %s AND note IS NOT DISTINCT FROM %s
+                ORDER BY revision DESC
+                LIMIT 1
                 """,
-                (payload.entity_type, payload.entity_id),
-            )
-            next_rev = cur.fetchone()["r"]
-            cur.execute(
-                """
-                INSERT INTO summary_revisions (entity_type, entity_id, revision, body_lt, editor, note)
-                VALUES (%s, %s, %s, %s, %s, %s)
-                RETURNING id
-                """,
-                (payload.entity_type, payload.entity_id, next_rev, payload.body_lt, payload.editor, payload.note),
+                (payload.entity_type, payload.entity_id, payload.body_lt, payload.editor, payload.note),
             )
             row = cur.fetchone()
+            if row:
+                next_rev = row["revision"]
+            else:
+                cur.execute(
+                    """
+                    SELECT COALESCE(MAX(revision), 0) + 1 AS r FROM summary_revisions
+                    WHERE entity_type = %s AND entity_id = %s
+                    """,
+                    (payload.entity_type, payload.entity_id),
+                )
+                next_rev = cur.fetchone()["r"]
+                cur.execute(
+                    """
+                    INSERT INTO summary_revisions (entity_type, entity_id, revision, body_lt, editor, note)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                    RETURNING id
+                    """,
+                    (payload.entity_type, payload.entity_id, next_rev, payload.body_lt, payload.editor, payload.note),
+                )
+                row = cur.fetchone()
         conn.commit()
     return {"status": "ok", "id": str(row["id"]), "revision": next_rev}
 
@@ -436,7 +473,7 @@ def approve_summary_revision(payload: SummaryApproveIn, authorization: Optional[
             _require_table(cur, "summary_revisions")
             cur.execute(
                 """
-                SELECT id, body_lt FROM summary_revisions
+                SELECT id, body_lt, approved_at FROM summary_revisions
                 WHERE entity_type = %s AND entity_id = %s AND revision = %s
                 """,
                 (payload.entity_type, payload.entity_id, payload.revision),
@@ -444,6 +481,8 @@ def approve_summary_revision(payload: SummaryApproveIn, authorization: Optional[
             rev = cur.fetchone()
             if not rev:
                 outcome = {"code": 404, "detail": "revision not found"}
+            elif rev["approved_at"] is not None:
+                outcome = {"already_approved": True}
             else:
                 violations = _figure_gate(payload.entity_type, payload.entity_id, rev["body_lt"], cur)
                 if violations:

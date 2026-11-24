@@ -16,9 +16,9 @@ function formatDateTime(iso: string): string {
 }
 
 /**
- * Public revision trail for a plain-language summary. Migration 017 stores the
- * full body per revision and no diffs, so this lists revisions newest-first
- * rather than rendering a diff view.
+ * Public trail of approved revisions for a plain-language summary. Migration
+ * 017 stores the full body per revision and no diffs, so this lists approved
+ * revisions newest-first rather than rendering a diff view. Drafts stay private.
  */
 export function SummaryHistoryView({ entityType, entityId }: { entityType: string; entityId: string }) {
   const { data, isPending, isError } = useQuery({
@@ -60,8 +60,8 @@ export function SummaryHistoryView({ entityType, entityId }: { entityType: strin
 
         {!isPending && !isError && revisions.length === 0 && (
           <p className="text-sm leading-relaxed text-muted-foreground">
-            Čia bus viešai matoma kiekvieno pakeitimo istorija — su data, autoriumi ir priežastimi,
-            kaip Vikipedijoje. Ši santrauka kol kas redaguota nebuvo.
+            Čia bus viešai matoma kiekvieno patvirtinto pakeitimo istorija — su data, autoriumi
+            ir priežastimi, kaip Vikipedijoje. Patvirtintų redakcijų kol kas nėra.
           </p>
         )}
 

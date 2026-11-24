@@ -6,7 +6,7 @@
  */
 import { request } from "./api";
 
-export type CorrectionStatus = "open" | "accepted" | "rejected" | "resolved";
+export type CorrectionStatus = "open" | "accepted" | "rejected" | "resolved" | "withheld";
 
 /** entity_type values accepted by POST /api/trust/corrections. */
 export const ENTITY_TYPES = [
@@ -24,7 +24,7 @@ export interface CorrectionEntry {
   id: string;
   entity_type: string;
   entity_id: string;
-  description: string;
+  description: string | null;
   status: CorrectionStatus;
   resolution_note: string | null;
   created_at: string;

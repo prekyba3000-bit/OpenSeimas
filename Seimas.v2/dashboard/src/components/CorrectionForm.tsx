@@ -128,8 +128,9 @@ export function CorrectionForm() {
       </label>
 
       <p className="text-xs leading-relaxed text-muted-foreground">
-        Pataisymas viešame žurnale bus matomas tik po peržiūros — skelbiame tik peržiūrėtas
-        pastabas, kad portalu nebūtų platinami nepatikrinti teiginiai apie žmones.
+        Viešame žurnale skelbiame peržiūrėtos pastabos būseną ir prižiūrėtojo sprendimą.
+        Atmesto pranešimo teksto neskelbiame, kad portalu nebūtų platinami nepatikrinti
+        teiginiai apie žmones arba palikti asmens duomenys.
       </p>
 
       {/* Honeypot: off-screen rather than type=hidden, which bots detect. Humans never fill it. */}

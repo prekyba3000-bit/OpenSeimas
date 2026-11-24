@@ -60,10 +60,11 @@ describe("CorrectionForm", () => {
     await vi.waitFor(() => expect(screen.getByRole("status")).toHaveTextContent(/Pataisymas gautas/i));
   });
 
-  it("tells the submitter their report is published only after review", () => {
+  it("explains that review decisions are public but rejected report text is withheld", () => {
     vi.mocked(trustApi.submitCorrection).mockClear();
     renderForm();
-    expect(screen.getByText(/tik po peržiūros/i)).toBeInTheDocument();
+    expect(screen.getByText(/peržiūrėtos pastabos būseną/i)).toBeInTheDocument();
+    expect(screen.getByText(/Atmesto pranešimo teksto neskelbiame/i)).toBeInTheDocument();
   });
 
   it("keeps the honeypot reachable in the DOM but out of view", () => {

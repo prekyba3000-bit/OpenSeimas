@@ -3,6 +3,7 @@ import { Mail } from 'lucide-react';
 import { NavLink } from 'react-router';
 import { trustApi } from '../services/trust';
 import { formatLtDateLong } from '../utils/ltDate';
+import { STATUS_LABELS } from './CorrectionsLog';
 
 /**
  * „Pataisymai ir atsakymai" — what the platform has been told it got wrong.
@@ -39,10 +40,15 @@ export function CorrectionsAndRepliesPanel() {
         <ul className="space-y-2">
           {items.map((c) => (
             <li key={c.id} className="rounded-md border border-border p-3">
-              <p className="text-sm text-foreground line-clamp-3">{c.description}</p>
+              {c.description && <p className="text-sm text-foreground line-clamp-3">{c.description}</p>}
+              {c.resolution_note && (
+                <p className="mt-1 text-sm text-muted-foreground line-clamp-3">
+                  <span className="text-foreground">Sprendimas: </span>
+                  {c.resolution_note}
+                </p>
+              )}
               <p className="mt-1 text-xs text-muted-foreground">
-                {formatLtDateLong(c.created_at) ?? c.created_at}
-                {c.status ? ` · ${c.status}` : ''}
+                {formatLtDateLong(c.created_at) ?? c.created_at} · {STATUS_LABELS[c.status]}
               </p>
             </li>
           ))}
