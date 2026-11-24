@@ -428,10 +428,11 @@ class SummaryApproveIn(BaseModel):
 def _figure_gate(entity_type: str, entity_id: str, body_lt: str, cur):
     """Run the figure gate on a stored body against a freshly-rendered template.
 
-    Returns the list of gate violation dicts. Empty means the body's figures
-    all match the live row — the charter's condition for publishing it. A type
-    with no template (mp/topic) returns a single "unsupported" violation, so it
-    cannot be approved into a figure-verified state it was never checked for.
+    Returns the list of gate violation dicts. Empty means the body's labelled
+    figures and required claims match the live row — the charter's condition
+    for publishing it. A type with no template (mp/topic) returns a single
+    "unsupported" violation, so it cannot be approved into a figure-verified
+    state it was never checked for.
     """
     from pipeline.summaries import render_summary
     from pipeline.summaries.verify import verify_rendered

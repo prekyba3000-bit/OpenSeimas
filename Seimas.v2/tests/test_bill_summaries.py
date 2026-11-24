@@ -190,6 +190,25 @@ def test_a_dropped_stage_count_is_rejected():
     assert "dropped_figure" in kinds
 
 
+def test_stage_counts_cannot_move_to_another_stage():
+    row = bill(
+        vote_count=6,
+        tallied_count=0,
+        stage_counts=[("Pateikimas", 1), ("Svarstymas", 2), ("Priėmimas", 3)],
+    )
+    s = render_bill_summary(row)
+    tampered = s.text.replace("pateikimas – 1 balsavimas", "pateikimas – 2 balsavimai")
+    tampered = tampered.replace("svarstymas – 2 balsavimai", "svarstymas – 1 balsavimas")
+    assert "figure_label_mismatch" in {v.kind for v in verify_rendered(tampered, s)}
+
+
+def test_an_invented_bill_outcome_is_rejected():
+    s = render_bill_summary(bill())
+    assert "unsupported_outcome" in {
+        v.kind for v in verify_rendered(s.text + " Projektas tapo įstatymu.", s)
+    }
+
+
 def test_the_registration_number_cannot_be_edited_away():
     """It travels verbatim and carries digits; the gate accounts for them
     where they occur so they cannot be spent on a claim."""

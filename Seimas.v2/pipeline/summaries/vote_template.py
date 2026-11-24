@@ -75,7 +75,7 @@ def is_truncated_title(title: str | None) -> bool:
     return len(title) == _LRS_TITLE_CAP and not title.rstrip().endswith(")")
 
 
-SegmentKind = Literal["literal", "figure", "verbatim"]
+SegmentKind = Literal["literal", "figure", "verbatim", "claim"]
 
 
 @dataclass(frozen=True)
@@ -89,6 +89,8 @@ class Segment:
                  inside it are the source's, not ours, so they are exempt from
                  the figure check but recorded so a later rephrasing cannot
                  quietly introduce new ones.
+    `claim`    - a non-numeric factual statement the template requires, such as
+                 the source publishing no outcome. It must survive unchanged.
     """
 
     kind: SegmentKind
@@ -210,7 +212,7 @@ def render_vote_summary(row: Mapping[str, Any]) -> VoteSummary:
     # LT-COPY: needs native review.
     seg.append(
         Segment(
-            "literal",
+            "claim",
             " Ar klausimas priimtas, šaltinis neskelbia, todėl rezultato nenurodome.",
         )
     )
@@ -223,5 +225,6 @@ def render_vote_summary(row: Mapping[str, Any]) -> VoteSummary:
             "vote_type": row.get("vote_type"),
             "project_id": row.get("project_id"),
             "has_tallies": bool(participated and participated > 0),
+            "outcome_published": False,
         },
     )

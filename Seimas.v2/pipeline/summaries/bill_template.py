@@ -168,7 +168,7 @@ def render_bill_summary(row: Mapping[str, Any]) -> VoteSummary:
     # LT-COPY: needs native review.
     seg.append(
         Segment(
-            "literal",
+            "claim",
             " Ar projektas priimtas, šaltinis neskelbia, todėl rezultato nenurodome."
             " Paskutinis čia nurodytas balsavimas yra paskutinis mums žinomas,"
             " nebūtinai paskutinis įvykęs.",
@@ -184,5 +184,6 @@ def render_bill_summary(row: Mapping[str, Any]) -> VoteSummary:
             "first_date": row["first_date"],
             "last_date": row["last_date"],
             "stages": [s for s, _ in stages],
+            "outcome_published": False,
         },
     )

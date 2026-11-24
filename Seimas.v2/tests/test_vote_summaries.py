@@ -84,6 +84,41 @@ def test_numbers_inside_the_quoted_title_are_allowed():
     assert verify_rendered(s.text, s) == []
 
 
+def test_swapping_for_and_against_counts_is_rejected():
+    s = render_vote_summary(row())
+    tampered = s.text.replace("Už balsavo 98 nariai", "Už balsavo 3 nariai")
+    tampered = tampered.replace("prieš – 3 nariai", "prieš – 98 narių")
+    assert "figure_label_mismatch" in {v.kind for v in verify_rendered(tampered, s)}
+
+
+def test_changing_only_the_month_is_rejected():
+    s = render_vote_summary(row())
+    tampered = s.text.replace("2026 m. rugpjūčio 25 d.", "2026 m. gruodžio 25 d.")
+    assert "figure_label_mismatch" in {v.kind for v in verify_rendered(tampered, s)}
+
+
+def test_an_invented_outcome_is_rejected():
+    s = render_vote_summary(row())
+    assert "unsupported_outcome" in {
+        v.kind for v in verify_rendered(s.text + " Klausimas priimtas.", s)
+    }
+
+
+def test_the_outcome_refusal_cannot_be_replaced_by_a_decision():
+    s = render_vote_summary(row())
+    refusal = "Ar klausimas priimtas, šaltinis neskelbia, todėl rezultato nenurodome."
+    tampered = s.text.replace(refusal, "Klausimas priimtas.")
+    kinds = {v.kind for v in verify_rendered(tampered, s)}
+    assert "required_claim_altered" in kinds
+    assert "unsupported_outcome" in kinds
+
+
+def test_unrelated_wording_can_still_be_rephrased():
+    s = render_vote_summary(row())
+    rephrased = s.text.replace("Balsavimo stadija —", "Stadija:")
+    assert verify_rendered(rephrased, s) == []
+
+
 # --- what the summary must never say ------------------------------------
 
 OUTCOME_WORDS = ("priimta", "nepriimta", "atmesta", "pritarta", "nepritarta", "patvirtinta")

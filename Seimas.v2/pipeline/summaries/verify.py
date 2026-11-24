@@ -16,21 +16,20 @@ on rephrased output identically.
 
 Three rules:
 
-1. Every number in the text must be one the source row supports - the figures
-   the template emitted, once the verbatim spans have been accounted for.
+1. Every number must appear with its own source-bound label. "Už balsavo 98"
+   and "prieš – 98" are different claims even though they contain the same
+   digits. Date figures are bound to their month and position for the same
+   reason.
 
 2. Numbers may not be added, and figures may not be dropped. A rephrasing that
    silently loses "susilaike - 1" tells a different story than the record does,
    so a missing approved figure is a violation too.
 
-3. Spans copied verbatim from the source must survive intact. This closes a
-   hole the first two rules leave open: a title like "Nr. IX-675 5, 17, 41
-   straipsniu" puts 675, 5, 17 and 41 into the allowed multiset, and a
-   rephrasing could spend one of them on a claim of its own - "susilaike 41" -
-   while quietly dropping it from the title. Requiring the verbatim span to
-   appear, and accounting for its digits where it appears, means those digits
-   are spent on the title and cannot be borrowed. What is left to check
-   against is exactly the figures the template stands behind.
+3. Source and required-claim spans must survive intact. Titles and stage names
+   are source text; the statement that no outcome is published is a claim the
+   template stands behind. Additional outcome assertions are rejected when the
+   source has no outcome. Requiring spans where they occur also means their
+   digits cannot be borrowed for an unrelated claim.
 """
 from __future__ import annotations
 
@@ -46,6 +45,11 @@ from .vote_template import VoteSummary
 # accounted for, and being generous about what counts as a number makes the
 # gate stricter, not looser.
 _DIGIT_RUN = re.compile(r"\d+")
+_OUTCOME_CLAIM = re.compile(
+    r"\b(?:(?:ne)?priimt\w*|atme\w*|(?:ne)?pritar\w*|patvirtin\w*|tapo\s+įstatym\w*)",
+    re.IGNORECASE,
+)
+_LABEL_PUNCTUATION = " \t\r\n.,;:!?–—-"
 
 
 @dataclass(frozen=True)
@@ -112,25 +116,45 @@ def approved_figures(summary: VoteSummary) -> list[str]:
     return [s.text for s in summary.segments if s.kind == "figure"]
 
 
-def _consume_verbatim(text: str, summary: VoteSummary) -> tuple[str, list[Violation]]:
-    """Remove each verbatim span from the text, once, where it occurs.
+def _labelled_figure_spans(summary: VoteSummary) -> list[tuple[str, str]]:
+    """Bind every figure to its adjacent label, including a preceding stage name."""
+    claims: list[tuple[str, str]] = []
+    segments = summary.segments
+    for index, segment in enumerate(segments):
+        if segment.kind != "figure":
+            continue
+        before = ""
+        if index and segments[index - 1].kind in ("literal", "verbatim"):
+            before = segments[index - 1].text
+            if (
+                segments[index - 1].kind == "literal"
+                and not before.strip(_LABEL_PUNCTUATION)
+                and index > 1
+                and segments[index - 2].kind == "verbatim"
+            ):
+                before = segments[index - 2].text + before
+        after = ""
+        if index + 1 < len(segments) and segments[index + 1].kind == "literal":
+            after = segments[index + 1].text
+        claims.append((segment.source_field or "", before + segment.text + after))
+    return claims
 
-    A span that is not there is a violation in itself: the title is the one
-    part of a summary that must reach the reader as the source wrote it, and a
-    rephrasing that edits it is describing a different law.
-    """
+
+def _consume_verbatim(text: str, summary: VoteSummary) -> tuple[str, list[Violation]]:
+    """Remove each source or required-claim span once, where it occurs."""
     violations: list[Violation] = []
     remaining = text
     for seg in summary.segments:
-        if seg.kind != "verbatim" or not seg.text:
+        if seg.kind not in ("verbatim", "claim") or not seg.text:
             continue
         index = remaining.find(seg.text)
         if index < 0:
+            kind = "verbatim_altered" if seg.kind == "verbatim" else "required_claim_altered"
             violations.append(
                 Violation(
-                    "verbatim_altered",
-                    f"text no longer contains the source span {seg.source_field or seg.text!r} "
-                    "unchanged; it must travel as the source wrote it",
+                    kind,
+                    f"text no longer contains the required span {seg.source_field or seg.text!r} "
+                    "unchanged; it must travel as the source and template wrote it",
                 )
             )
             continue
@@ -139,14 +163,19 @@ def _consume_verbatim(text: str, summary: VoteSummary) -> tuple[str, list[Violat
 
 
 def verify_rendered(text: str, summary: VoteSummary) -> list[Violation]:
-    """Check a finished string - template output or a rephrasing of it.
-
-    Compares multisets, so a figure repeated twice in text that the row
-    supports once is caught.
-    """
+    """Check source-bound claims and figures in a finished string."""
     remaining, violations = _consume_verbatim(text, summary)
-    allowed = list(approved_figures(summary))
 
+    for field, claim in _labelled_figure_spans(summary):
+        if claim not in text:
+            violations.append(
+                Violation(
+                    "figure_label_mismatch",
+                    f"{field}: required labelled figure {claim!r} is absent or altered",
+                )
+            )
+
+    allowed = list(approved_figures(summary))
     for run in _digit_runs(remaining):
         if run in allowed:
             allowed.remove(run)
@@ -162,6 +191,16 @@ def verify_rendered(text: str, summary: VoteSummary) -> list[Violation]:
         violations.append(
             Violation("dropped_figure", f"approved figure {leftover!r} is missing from the text")
         )
+
+    if not summary.facts.get("outcome_published", False):
+        outcome = _OUTCOME_CLAIM.search(remaining)
+        if outcome:
+            violations.append(
+                Violation(
+                    "unsupported_outcome",
+                    f"text asserts an outcome the source does not publish: {outcome.group(0)!r}",
+                )
+            )
 
     return violations
 

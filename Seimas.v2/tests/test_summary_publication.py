@@ -135,6 +135,28 @@ async def test_approval_refuses_a_body_whose_figures_do_not_match(vote):
 
 
 @pytest.mark.asyncio
+async def test_approval_refuses_relabelled_figures_and_an_invented_outcome(vote):
+    conn, cur, vote_id = vote
+    rendered = _rendered_body(cur, vote_id)
+    tampered = rendered.replace("Už balsavo 90 narių", "Už balsavo 5 nariai")
+    tampered = tampered.replace("prieš – 5 nariai", "prieš – 90 narių")
+    tampered = tampered.replace("2026 m. vasario 3 d.", "2026 m. kovo 3 d.")
+    tampered += " Klausimas priimtas."
+    _draft(cur, conn, vote_id, tampered)
+
+    response = await _post(
+        "/api/admin/summaries/approve",
+        {"entity_type": "vote", "entity_id": vote_id,
+         "revision": 1, "approved_by": "Redaktorius"},
+    )
+    assert response.status_code == 422
+    kinds = {v["kind"] for v in response.json()["violations"]}
+    assert "figure_label_mismatch" in kinds
+    assert "unsupported_outcome" in kinds
+    assert (await _get(f"/api/summaries/vote/{vote_id}")).json()["status"] == "none"
+
+
+@pytest.mark.asyncio
 async def test_a_later_draft_does_not_change_what_is_published(vote):
     """Approve v1; write an unapproved v2. The public keeps seeing v1, because
     "latest" means latest approved, not latest."""
