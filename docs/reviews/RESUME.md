@@ -1,3 +1,30 @@
+# RESUME — 2026-11-25 (CORA-06)
+
+CORA-06 is verified locally in `3e28f05`: summary figures are bound to their
+source labels, the no-outcome statement is required, and invented outcomes are
+rejected. Fresh-Postgres backend suite **529 passed in 6.22s**; all 56 migrations
+applied, and a second run reported **0 applied, 56 already up-to-date**. Detail:
+`2026-11-25-eval-cora06.md`.
+
+### Release state
+- Committed locally on `fix/eval-stage1`; not pushed or deployed.
+- Dashboard suites were not rerun for this backend-only change; the pre-push
+  hook remains the release gate.
+
+### Blocked
+- **Credential rotation (SECF-02): the human's step.** Follow
+  `docs/ops/credential-rotation.md`, then run `scripts/local-ops/rotate_check.sh`.
+- LT native review, including earlier summary, P1 trust and Stage 1 copy; rclone
+  client ID.
+
+### Next concrete step
+SECA-05 — separate summary drafting and approval privileges, derive the approver
+identity from authenticated credentials rather than caller-supplied text, and
+stop the batch publisher approving its own drafts. Then run the full pre-push
+gate before release.
+
+---
+
 # RESUME — 2026-11-24
 
 P1 trust fixes shipped as `8a1c851`. Backend **521 passed** on a fresh database
