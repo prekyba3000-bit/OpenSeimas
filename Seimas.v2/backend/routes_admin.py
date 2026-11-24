@@ -94,7 +94,8 @@ def refresh_status():
 @router.post("/api/admin/refresh")
 def trigger_refresh(background_tasks: BackgroundTasks, authorization: Optional[str] = Header(default=None)):
     """Manually trigger a materialized view refresh."""
-    _require_admin_auth(authorization)
+    identity = _require_admin_auth(authorization)
+    core._audit_admin_action("/api/admin/refresh", identity, "materialized_views")
     background_tasks.add_task(_refresh_materialized_view)
     return {"status": "Refresh triggered"}
 
@@ -102,11 +103,12 @@ def trigger_refresh(background_tasks: BackgroundTasks, authorization: Optional[s
 @router.post("/api/admin/sync/mps")
 def trigger_sync_mps(background_tasks: BackgroundTasks, authorization: Optional[str] = Header(default=None)):
     """Trigger MP data sync from LRS."""
-    _require_admin_auth(authorization)
+    identity = _require_admin_auth(authorization)
 
     if not core.sync_mps:
         raise HTTPException(status_code=500, detail="Ingestion script not loaded")
 
+    core._audit_admin_action("/api/admin/sync/mps", identity, "politicians")
     background_tasks.add_task(core.sync_mps)
     return {"status": "MP sync started in background"}
 
@@ -114,11 +116,12 @@ def trigger_sync_mps(background_tasks: BackgroundTasks, authorization: Optional[
 @router.post("/api/admin/sync/votes")
 def trigger_sync_votes(background_tasks: BackgroundTasks, authorization: Optional[str] = Header(default=None)):
     """Trigger Vote data sync (recent votes)."""
-    _require_admin_auth(authorization)
+    identity = _require_admin_auth(authorization)
 
     if not core.sync_votes:
         raise HTTPException(status_code=500, detail="Ingestion script not loaded")
 
+    core._audit_admin_action("/api/admin/sync/votes", identity, "votes")
     background_tasks.add_task(core.sync_votes)
     return {"status": "Vote sync started in background"}
 

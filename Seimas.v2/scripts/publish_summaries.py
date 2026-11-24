@@ -1,4 +1,4 @@
-"""Publish summaries for all votes and bills to the production API."""
+"""Draft summaries for all votes and bills; approval is a separate human action."""
 import os
 import sys
 import time
@@ -12,11 +12,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from pipeline.summaries import render_summary
 
 API_URL = os.environ.get("API_URL", "https://seimas-api.onrender.com/api")
-SYNC_SECRET = os.environ.get("SYNC_SECRET")
-
-if not SYNC_SECRET:
-    print("Error: SYNC_SECRET environment variable is required.")
-    sys.exit(1)
+SUMMARY_DRAFT_SECRET = os.environ.get("SUMMARY_DRAFT_SECRET")
 
 def get_db_connection():
     dsn = os.environ.get("DB_DSN")
@@ -41,33 +37,25 @@ def post_with_retry(url, json_payload, headers, max_retries=5):
             else:
                 raise
 
-def publish_summary(entity_type: str, entity_id: str, body_lt: str):
-    headers = {"Authorization": f"Bearer {SYNC_SECRET}"}
-    
-    # 1. Post revision
+def draft_summary(entity_type: str, entity_id: str, body_lt: str):
+    headers = {"Authorization": f"Bearer {SUMMARY_DRAFT_SECRET}"}
+
     rev_payload = {
         "entity_type": entity_type,
         "entity_id": str(entity_id),
         "body_lt": body_lt,
         "editor": "System (Initial Batch)",
-        "note": "Initial generation from verified pipeline."
+        "note": "Initial generation from verified pipeline; awaiting independent approval."
     }
-    
-    r = post_with_retry(f"{API_URL}/admin/summaries", rev_payload, headers)
-    revision_id = r.json()["revision"]
-    
-    # 2. Approve revision
-    approve_payload = {
-        "entity_type": entity_type,
-        "entity_id": str(entity_id),
-        "revision": revision_id,
-        "approved_by": "System Auto-Approve"
-    }
-    post_with_retry(f"{API_URL}/admin/summaries/approve", approve_payload, headers)
+
+    post_with_retry(f"{API_URL}/admin/summaries", rev_payload, headers)
 
 
 def main():
-    print(f"Publishing to {API_URL}...")
+    if not SUMMARY_DRAFT_SECRET:
+        print("Error: SUMMARY_DRAFT_SECRET environment variable is required.")
+        sys.exit(1)
+    print(f"Drafting to {API_URL}...")
     conn = get_db_connection()
     
     try:
@@ -103,31 +91,32 @@ def main():
     try:
         with conn.cursor() as cur:
             print("Processing votes...")
-            published_votes = 0
+            drafted_votes = 0
             for i, vote_id in enumerate(votes):
                 summary, row = render_summary("vote", vote_id, cur)
                 if summary:
                     body = getattr(summary, "text", str(summary))
-                    publish_summary("vote", vote_id, body)
-                    published_votes += 1
+                    draft_summary("vote", vote_id, body)
+                    drafted_votes += 1
                 if i > 0 and i % 100 == 0:
                     print(f"  ... {i}/{len(votes)}")
                     
             print("Processing bills...")
-            published_bills = 0
+            drafted_bills = 0
             for i, bill_id in enumerate(bills):
                 summary, row = render_summary("bill", bill_id, cur)
                 if summary:
                     body = getattr(summary, "text", str(summary))
-                    publish_summary("bill", bill_id, body)
-                    published_bills += 1
+                    draft_summary("bill", bill_id, body)
+                    drafted_bills += 1
                 if i > 0 and i % 100 == 0:
                     print(f"  ... {i}/{len(bills)}")
                     
     finally:
         conn.close()
 
-    print(f"Done! Published {published_votes} vote summaries and {published_bills} bill summaries.")
+    print(f"Done! Drafted {drafted_votes} vote summaries and {drafted_bills} bill summaries.")
+    print("A separate approver must review and approve the drafts before they become public.")
 
 if __name__ == "__main__":
     main()

@@ -14,8 +14,12 @@ Skaidrus.Seimas.v.2 is a full-stack transparency dashboard for the Lithuanian Pa
 ### 1. Backend (Render)
 The backend is Dockerized and deploys automatically to Render when changes are pushed to `master`.
 - **Service**: Web Service (Docker)
-- **Env Vars**: `DB_DSN`, `SYNC_SECRET`
-- **Security**: Admin endpoints require `Authorization: Bearer <SYNC_SECRET>`.
+- **Env Vars**: `DB_DSN`, `SYNC_SECRET`, `SUMMARY_DRAFT_SECRET`,
+  `SUMMARY_APPROVE_SECRET`, `SUMMARY_APPROVER_NAME`
+- **Security**: General admin endpoints require `SYNC_SECRET`. Summary drafting
+  also accepts the draft-only `SUMMARY_DRAFT_SECRET`; approval accepts only the
+  distinct `SUMMARY_APPROVE_SECRET` and derives `approved_by` from
+  `SUMMARY_APPROVER_NAME`. The batch script receives only the draft secret.
 
 ### 2. Frontend (Vercel)
 The dashboard is connected to Vercel and rebuilds on git push.
@@ -49,6 +53,9 @@ We use GitHub Actions to keep the data fresh without overloading the API.
 pip install -r requirements.txt
 export DB_DSN="postgresql://user:pass@localhost:5432/seimas"
 export SYNC_SECRET="change-me"
+export SUMMARY_DRAFT_SECRET="different-change-me"
+export SUMMARY_APPROVE_SECRET="third-change-me"
+export SUMMARY_APPROVER_NAME="Local reviewer"
 uvicorn backend.main:app --reload
 ```
 

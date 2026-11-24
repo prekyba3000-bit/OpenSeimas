@@ -40,11 +40,12 @@ feature exists — check.
 - **Backend:** `Seimas.v2/backend/` (FastAPI + psycopg2). **Pipeline:**
   `Seimas.v2/pipeline/` (ingest + summaries). **Dashboard:**
   `Seimas.v2/dashboard/` (React + Vite + TanStack Query). **Migrations:**
-  `Seimas.v2/migrations/` (47 of them; applied by `apply_migrations.py`).
+  `Seimas.v2/migrations/` (57 of them; applied by `apply_migrations.py`).
 - **Secrets — never in the repo (charter §10):** `~/.config/openseimas/`,
-  mode 0600. `prod.env` holds `DB_DSN` (Neon Postgres) and `SYNC_SECRET`
-  (admin-endpoint bearer token). Source it, never echo or commit it:
-  `set -a; . ~/.config/openseimas/prod.env; set +a`.
+  mode 0600. `prod.env` holds `DB_DSN`, `SYNC_SECRET` and the draft-only
+  `SUMMARY_DRAFT_SECRET`. The separate `summary-approver.env` holds the approval
+  credential; never source it for the batch publisher. Source files only when
+  needed, never echo or commit them.
 - **Production:** backend on **Render** (`seimas-api.onrender.com`), frontend
   on **Vercel** (`seimas-v2.vercel.app`, `open-seimas-dashboard.vercel.app`),
   DB on **Neon**. Render and Vercel both auto-deploy from `main`.

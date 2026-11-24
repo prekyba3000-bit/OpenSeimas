@@ -5,6 +5,8 @@ router resolves these names through thin proxies, so patches propagate.
 """
 from fastapi import HTTPException
 from contextlib import contextmanager
+from dataclasses import dataclass
+import hmac
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from psycopg2.pool import ThreadedConnectionPool
@@ -112,6 +114,9 @@ SEIMAS_SEATS_TOTAL = 141
 
 DB_DSN = os.getenv("DB_DSN")
 SYNC_SECRET = os.getenv("SYNC_SECRET")
+SUMMARY_DRAFT_SECRET = os.getenv("SUMMARY_DRAFT_SECRET")
+SUMMARY_APPROVE_SECRET = os.getenv("SUMMARY_APPROVE_SECRET")
+SUMMARY_APPROVER_NAME = os.getenv("SUMMARY_APPROVER_NAME")
 
 if not SYNC_SECRET:
     print("WARNING: SYNC_SECRET not set — admin endpoints will reject all requests")
@@ -164,18 +169,77 @@ def _table_exists(cur, table_name: str) -> bool:
     return cur.fetchone()["reg"] is not None
 
 
-def _require_admin_auth(authorization: Optional[str]) -> None:
-    """
-    Require Authorization: Bearer <SYNC_SECRET> for admin endpoints.
-    When SYNC_SECRET is not configured, all admin requests are rejected.
-    """
-    if not SYNC_SECRET:
-        raise HTTPException(status_code=503, detail="Admin endpoints disabled — SYNC_SECRET not configured")
+def _record_admin_write(cur, route: str, credential_id: str, entity_type: str, entity_id=None) -> None:
+    cur.execute(
+        """
+        INSERT INTO admin_audit_log (route, credential_id, entity_type, entity_id)
+        VALUES (%s, %s, %s, %s)
+        """,
+        (route, credential_id, entity_type, str(entity_id) if entity_id is not None else None),
+    )
+
+
+@dataclass(frozen=True)
+class AdminIdentity:
+    credential_id: str
+    display_name: str
+
+
+def _bearer_token(authorization: Optional[str]) -> str:
     if not authorization:
         raise HTTPException(status_code=401, detail="Unauthorized")
-    scheme, _, token = authorization.partition(" ")
-    if scheme.lower() != "bearer" or token != SYNC_SECRET:
+    scheme, separator, token = authorization.partition(" ")
+    if scheme.lower() != "bearer" or not separator or not token:
         raise HTTPException(status_code=401, detail="Unauthorized")
+    return token
+
+
+def _secret_matches(token: str, secret: Optional[str]) -> bool:
+    return bool(secret) and hmac.compare_digest(token.encode(), secret.encode())
+
+
+def _require_admin_auth(authorization: Optional[str]) -> AdminIdentity:
+    """Require the general admin credential; it cannot approve summaries."""
+    if not SYNC_SECRET:
+        raise HTTPException(status_code=503, detail="Admin endpoints disabled — SYNC_SECRET not configured")
+    if any(_secret_matches(SYNC_SECRET, other) for other in (SUMMARY_DRAFT_SECRET, SUMMARY_APPROVE_SECRET)):
+        raise HTTPException(status_code=503, detail="Admin credentials must be distinct")
+    token = _bearer_token(authorization)
+    if not _secret_matches(token, SYNC_SECRET):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    return AdminIdentity("sync", "SYNC_SECRET")
+
+
+def _require_summary_draft_auth(authorization: Optional[str]) -> AdminIdentity:
+    if not SUMMARY_DRAFT_SECRET and not SYNC_SECRET:
+        raise HTTPException(status_code=503, detail="Summary drafting is not configured")
+    if SUMMARY_DRAFT_SECRET and any(
+        _secret_matches(SUMMARY_DRAFT_SECRET, other) for other in (SYNC_SECRET, SUMMARY_APPROVE_SECRET)
+    ):
+        raise HTTPException(status_code=503, detail="Summary drafting credential must be distinct")
+    token = _bearer_token(authorization)
+    if _secret_matches(token, SUMMARY_DRAFT_SECRET):
+        return AdminIdentity("summary_draft", "SUMMARY_DRAFT_SECRET")
+    if _secret_matches(token, SYNC_SECRET):
+        return AdminIdentity("sync", "SYNC_SECRET")
+    raise HTTPException(status_code=401, detail="Unauthorized")
+
+
+def _require_summary_approval_auth(authorization: Optional[str]) -> AdminIdentity:
+    if not SUMMARY_APPROVE_SECRET or not SUMMARY_APPROVER_NAME:
+        raise HTTPException(
+            status_code=503,
+            detail="Summary approval requires SUMMARY_APPROVE_SECRET and SUMMARY_APPROVER_NAME",
+        )
+    if any(_secret_matches(SUMMARY_APPROVE_SECRET, other) for other in (SYNC_SECRET, SUMMARY_DRAFT_SECRET)):
+        raise HTTPException(status_code=503, detail="Summary approval credential must be distinct")
+    token = _bearer_token(authorization)
+    if not _secret_matches(token, SUMMARY_APPROVE_SECRET):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    name = SUMMARY_APPROVER_NAME.strip()
+    if not name:
+        raise HTTPException(status_code=503, detail="SUMMARY_APPROVER_NAME must not be blank")
+    return AdminIdentity(f"summary_approver:{name}", name)
 
 
 # Connection pool (lazy init)
@@ -233,6 +297,17 @@ def get_db_conn():
         if conn:
             # close=True evicts rather than returns.
             pool.putconn(conn, close=discard)
+
+
+def _audit_admin_action(route: str, identity: AdminIdentity, entity_type: str, entity_id=None) -> None:
+    with get_db_conn() as conn:
+        if not conn:
+            raise HTTPException(status_code=500, detail="Database connection failed")
+        with conn.cursor() as cur:
+            if not _table_exists(cur, "admin_audit_log"):
+                raise HTTPException(status_code=503, detail="Admin audit log is unavailable")
+            _record_admin_write(cur, route, identity.credential_id, entity_type, entity_id)
+        conn.commit()
 
 
 # ─── API Endpoints ───────────────────────────────────────────────────────────

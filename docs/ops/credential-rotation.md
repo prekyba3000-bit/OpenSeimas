@@ -35,6 +35,23 @@ Work in this order, so that nothing runs against a half-rotated set:
    confirm the next sync and backup succeed with `scripts/local-ops/status.sh`.
 10. **Record** the date below. Never the values.
 
+## Summary draft and approval credentials (SECA-05)
+
+Summary publication uses two additional, distinct credentials. They are not
+replacements for the rotation above:
+
+- Render holds `SUMMARY_DRAFT_SECRET`, `SUMMARY_APPROVE_SECRET` and the public
+  reviewer label `SUMMARY_APPROVER_NAME`. All three values must be configured;
+  the two secrets must differ from each other and from `SYNC_SECRET`.
+- Add only `SUMMARY_DRAFT_SECRET` to `prod.env` for
+  `Seimas.v2/scripts/publish_summaries.py`. That script now creates drafts and
+  cannot approve them.
+- Keep `SUMMARY_APPROVE_SECRET` and `SUMMARY_APPROVER_NAME` in a separate
+  `~/.config/openseimas/summary-approver.env` (mode 600), and source it only for
+  an interactive approval request. Do not source it for the batch publisher.
+- The server ignores any request-body `approved_by`; the public value comes from
+  `SUMMARY_APPROVER_NAME`.
+
 ## After rotating
 
 - Agent sessions do not source `prod.env`. If an agent needs to read

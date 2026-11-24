@@ -23,13 +23,17 @@ DSN = os.environ.get("DB_DSN")
 pytestmark = pytest.mark.skipif(not DSN, reason="DB_DSN not set")
 
 TOKEN = "test-admin-token"
+DRAFT_TOKEN = "test-summary-draft-token"
+APPROVE_TOKEN = "test-summary-approve-token"
+APPROVER = "Testinis redaktorius"
 
 
 @pytest.fixture(autouse=True)
 def _admin_token(monkeypatch):
-    # _require_admin_auth compares against SYNC_SECRET; set a known one.
     monkeypatch.setattr(core, "SYNC_SECRET", TOKEN, raising=False)
-    monkeypatch.setenv("SYNC_SECRET", TOKEN)
+    monkeypatch.setattr(core, "SUMMARY_DRAFT_SECRET", DRAFT_TOKEN, raising=False)
+    monkeypatch.setattr(core, "SUMMARY_APPROVE_SECRET", APPROVE_TOKEN, raising=False)
+    monkeypatch.setattr(core, "SUMMARY_APPROVER_NAME", APPROVER, raising=False)
     yield
 
 
@@ -63,9 +67,11 @@ async def _get(path):
         return await c.get(path)
 
 
-async def _post(path, json):
+async def _post(path, json, token=None):
+    if token is None:
+        token = APPROVE_TOKEN if path.endswith("/approve") else DRAFT_TOKEN
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as c:
-        return await c.post(path, json=json, headers={"Authorization": f"Bearer {TOKEN}"})
+        return await c.post(path, json=json, headers={"Authorization": f"Bearer {token}"})
 
 
 def _rendered_body(cur, vote_id):
@@ -109,7 +115,7 @@ async def test_approval_publishes_the_template_body(vote):
     body = resp.json()
     assert body["status"] == "published"
     assert "Testinis balsavimas dėl X" in body["summary"]["body_lt"]
-    assert body["summary"]["approved_by"] == "Redaktorius"
+    assert body["summary"]["approved_by"] == APPROVER
 
 
 @pytest.mark.asyncio
@@ -278,3 +284,123 @@ async def test_posting_and_approving_the_same_revision_is_idempotent(vote):
     assert (await _post("/api/admin/summaries/approve", retry)).status_code == 200
     cur.execute("SELECT approved_at, approved_by FROM summary_revisions WHERE entity_type='vote' AND entity_id=%s", (vote_id,))
     assert cur.fetchone() == original
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("token", [TOKEN, DRAFT_TOKEN])
+async def test_non_approval_credentials_cannot_approve(vote, token):
+    conn, cur, vote_id = vote
+    _draft(cur, conn, vote_id, _rendered_body(cur, vote_id))
+    response = await _post(
+        "/api/admin/summaries/approve",
+        {"entity_type": "vote", "entity_id": vote_id, "revision": 1},
+        token=token,
+    )
+    assert response.status_code == 401
+    assert (await _get(f"/api/summaries/vote/{vote_id}")).json()["status"] == "none"
+
+
+@pytest.mark.asyncio
+async def test_approval_credential_cannot_create_a_draft(vote):
+    conn, cur, vote_id = vote
+    response = await _post(
+        "/api/admin/summaries",
+        {
+            "entity_type": "vote",
+            "entity_id": vote_id,
+            "body_lt": _rendered_body(cur, vote_id),
+            "editor": "self-appointed approver",
+        },
+        token=APPROVE_TOKEN,
+    )
+    assert response.status_code == 401
+    cur.execute(
+        "SELECT count(*) AS n FROM summary_revisions WHERE entity_type='vote' AND entity_id=%s",
+        (vote_id,),
+    )
+    assert cur.fetchone()["n"] == 0
+
+
+@pytest.mark.asyncio
+async def test_draft_credential_cannot_use_general_admin_routes():
+    response = await _post(
+        "/api/admin/methodology",
+        {"metric_key": "attendance", "title_lt": "t", "body_lt": "b"},
+        token=DRAFT_TOKEN,
+    )
+    assert response.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_approval_refuses_a_credential_shared_with_another_role(vote, monkeypatch):
+    conn, cur, vote_id = vote
+    _draft(cur, conn, vote_id, _rendered_body(cur, vote_id))
+    monkeypatch.setattr(core, "SUMMARY_APPROVE_SECRET", TOKEN)
+    response = await _post(
+        "/api/admin/summaries/approve",
+        {"entity_type": "vote", "entity_id": vote_id, "revision": 1},
+    )
+    assert response.status_code == 503
+    assert (await _get(f"/api/summaries/vote/{vote_id}")).json()["status"] == "none"
+
+
+@pytest.mark.asyncio
+async def test_summary_writes_record_credentials_not_caller_asserted_approver(vote):
+    conn, cur, vote_id = vote
+    body = _rendered_body(cur, vote_id)
+    drafted = await _post(
+        "/api/admin/summaries",
+        {
+            "entity_type": "vote",
+            "entity_id": vote_id,
+            "body_lt": body,
+            "editor": "pipeline:template v1",
+        },
+    )
+    assert drafted.status_code == 201
+    approved = await _post(
+        "/api/admin/summaries/approve",
+        {
+            "entity_type": "vote",
+            "entity_id": vote_id,
+            "revision": 1,
+            "approved_by": "Suklastotas vardas",
+        },
+    )
+    assert approved.status_code == 200
+
+    public = (await _get(f"/api/summaries/vote/{vote_id}")).json()["summary"]
+    assert public["approved_by"] == APPROVER
+    cur.execute(
+        """
+        SELECT route, credential_id FROM admin_audit_log
+        WHERE entity_type = 'vote' AND entity_id = %s
+        ORDER BY id DESC LIMIT 2
+        """,
+        (vote_id,),
+    )
+    rows = list(reversed(cur.fetchall()))
+    assert rows == [
+        {"route": "/api/admin/summaries", "credential_id": "summary_draft"},
+        {
+            "route": "/api/admin/summaries/approve",
+            "credential_id": f"summary_approver:{APPROVER}",
+        },
+    ]
+
+
+@pytest.mark.asyncio
+async def test_general_and_draft_routes_reject_shared_credentials(monkeypatch):
+    monkeypatch.setattr(core, "SUMMARY_DRAFT_SECRET", TOKEN)
+    general = await _post(
+        "/api/admin/methodology",
+        {"metric_key": "attendance", "title_lt": "t", "body_lt": "b"},
+        token=TOKEN,
+    )
+    draft = await _post(
+        "/api/admin/summaries",
+        {"entity_type": "vote", "entity_id": "unused", "body_lt": "x", "editor": "x"},
+        token=TOKEN,
+    )
+    assert general.status_code == 503
+    assert draft.status_code == 503

@@ -53,11 +53,15 @@ which is fixed and now covered by `patches/android-gitignore`.
 **Production secrets** live only in `~/.config/openseimas/prod.env` (mode 600):
 
 ```bash
-source ~/.config/openseimas/prod.env    # exports DB_DSN, SYNC_SECRET
+source ~/.config/openseimas/prod.env    # exports DB_DSN, SYNC_SECRET, SUMMARY_DRAFT_SECRET
 ```
 
 - `DB_DSN` — Neon production database.
-- `SYNC_SECRET` — Bearer token for `POST /api/admin/*`.
+- `SYNC_SECRET` — Bearer token for general admin writes; it cannot approve summaries.
+- `SUMMARY_DRAFT_SECRET` — draft-only token used by `scripts/publish_summaries.py`.
+- `SUMMARY_APPROVE_SECRET` — separate approval token, stored in
+  `summary-approver.env`, not inherited by the batch publisher.
+- `SUMMARY_APPROVER_NAME` — server-side public attribution for approvals.
 
 The repo `.env` no longer carries a `SYNC_SECRET`; it previously held a
 `change…` placeholder that silently failed against production and cost a

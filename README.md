@@ -34,6 +34,9 @@ python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 export DB_DSN="postgresql://user:pass@localhost:5432/seimas"
 export SYNC_SECRET="change-me"
+export SUMMARY_DRAFT_SECRET="different-change-me"
+export SUMMARY_APPROVE_SECRET="third-change-me"
+export SUMMARY_APPROVER_NAME="Local reviewer"
 python3 apply_migrations.py            # schema + all migrations, idempotent
 uvicorn backend.main:app --reload      # http://localhost:8000/docs
 

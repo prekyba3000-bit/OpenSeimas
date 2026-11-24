@@ -10,8 +10,13 @@ Public:
 Admin (Authorization: Bearer $SYNC_SECRET):
   POST /api/admin/corrections/{id}/status
   POST /api/admin/methodology
-  POST /api/admin/summaries
   POST /api/admin/replies
+
+Summary drafting also accepts the draft-only $SUMMARY_DRAFT_SECRET:
+  POST /api/admin/summaries
+
+Summary approval requires the separate $SUMMARY_APPROVE_SECRET:
+  POST /api/admin/summaries/approve
 
 Conventions: routes resolve runtime helpers through backend.core proxies so tests can
 monkeypatch backend.core.* (same pattern as routes_public/routes_meta).
@@ -41,6 +46,18 @@ def _table_exists(cur, table_name):
 
 def _require_admin_auth(authorization):
     return core._require_admin_auth(authorization)
+
+
+def _require_summary_draft_auth(authorization):
+    return core._require_summary_draft_auth(authorization)
+
+
+def _require_summary_approval_auth(authorization):
+    return core._require_summary_approval_auth(authorization)
+
+
+def _record_admin_write(cur, route, credential_id, entity_type, entity_id=None):
+    return core._record_admin_write(cur, route, credential_id, entity_type, entity_id)
 
 
 router = APIRouter()
@@ -294,7 +311,7 @@ def set_correction_status(
     payload: CorrectionStatusIn,
     authorization: Optional[str] = Header(None),
 ):
-    _require_admin_auth(authorization)
+    identity = _require_admin_auth(authorization)
     if payload.status not in _CORRECTION_STATUSES:
         raise HTTPException(status_code=422, detail=f"status must be one of {_CORRECTION_STATUSES}")
     resolved = payload.status in ("resolved", "rejected", "withheld")
@@ -315,6 +332,14 @@ def set_correction_status(
                 (payload.status, payload.resolution_note, resolved, correction_id),
             )
             row = cur.fetchone()
+            if row:
+                _record_admin_write(
+                    cur,
+                    "/api/admin/corrections/{id}/status",
+                    identity.credential_id,
+                    "correction",
+                    correction_id,
+                )
         conn.commit()
     if not row:
         raise HTTPException(status_code=404, detail="Correction not found")
@@ -332,7 +357,7 @@ class MethodologyIn(BaseModel):
 @router.post("/api/admin/methodology", status_code=201)
 def publish_methodology(payload: MethodologyIn, authorization: Optional[str] = Header(None)):
     """Publish a NEW version (auto-incremented). Old versions stay queryable — plan §7."""
-    _require_admin_auth(authorization)
+    identity = _require_admin_auth(authorization)
     with get_db_conn() as conn:
         if not conn:
             raise HTTPException(status_code=500, detail="Database connection failed")
@@ -360,6 +385,13 @@ def publish_methodology(payload: MethodologyIn, authorization: Optional[str] = H
                 ),
             )
             row = cur.fetchone()
+            _record_admin_write(
+                cur,
+                "/api/admin/methodology",
+                identity.credential_id,
+                "methodology",
+                row["id"],
+            )
         conn.commit()
     return {"status": "ok", "id": row["id"], "metric_key": payload.metric_key, "version": row["version"]}
 
@@ -375,7 +407,7 @@ class SummaryRevisionIn(BaseModel):
 @router.post("/api/admin/summaries", status_code=201)
 def add_summary_revision(payload: SummaryRevisionIn, authorization: Optional[str] = Header(None)):
     """Append a revision, or return the identical one after a retried request."""
-    _require_admin_auth(authorization)
+    identity = _require_summary_draft_auth(authorization)
     if payload.entity_type not in _SUMMARY_TYPES:
         raise HTTPException(status_code=422, detail=f"entity_type must be one of {_SUMMARY_TYPES}")
     with get_db_conn() as conn:
@@ -414,6 +446,13 @@ def add_summary_revision(payload: SummaryRevisionIn, authorization: Optional[str
                     (payload.entity_type, payload.entity_id, next_rev, payload.body_lt, payload.editor, payload.note),
                 )
                 row = cur.fetchone()
+                _record_admin_write(
+                    cur,
+                    "/api/admin/summaries",
+                    identity.credential_id,
+                    payload.entity_type,
+                    payload.entity_id,
+                )
         conn.commit()
     return {"status": "ok", "id": str(row["id"]), "revision": next_rev}
 
@@ -422,7 +461,6 @@ class SummaryApproveIn(BaseModel):
     entity_type: str = Field(..., min_length=1)
     entity_id: str = Field(..., min_length=1, max_length=200)
     revision: int = Field(..., ge=1)
-    approved_by: str = Field(..., min_length=1, max_length=200)
 
 
 def _figure_gate(entity_type: str, entity_id: str, body_lt: str, cur):
@@ -458,7 +496,7 @@ def approve_summary_revision(payload: SummaryApproveIn, authorization: Optional[
     row supports. So an unreviewed pilot, or a future rephrasing that renumbers,
     cannot be approved even by a maintainer with the token.
     """
-    _require_admin_auth(authorization)
+    identity = _require_summary_approval_auth(authorization)
     if payload.entity_type not in _SUMMARY_TYPES:
         raise HTTPException(status_code=422, detail=f"entity_type must be one of {_SUMMARY_TYPES}")
 
@@ -491,7 +529,14 @@ def approve_summary_revision(payload: SummaryApproveIn, authorization: Optional[
                 else:
                     cur.execute(
                         "UPDATE summary_revisions SET approved_at = NOW(), approved_by = %s WHERE id = %s",
-                        (payload.approved_by, rev["id"]),
+                        (identity.display_name, rev["id"]),
+                    )
+                    _record_admin_write(
+                        cur,
+                        "/api/admin/summaries/approve",
+                        identity.credential_id,
+                        payload.entity_type,
+                        payload.entity_id,
                     )
                     conn.commit()
 
@@ -593,7 +638,7 @@ class MpReplyIn(BaseModel):
 
 @router.post("/api/admin/replies", status_code=201)
 def add_mp_reply(payload: MpReplyIn, authorization: Optional[str] = Header(None)):
-    _require_admin_auth(authorization)
+    identity = _require_admin_auth(authorization)
     if payload.subject_type not in ("profile", "metric", "summary", "recommendation"):
         raise HTTPException(status_code=422, detail="invalid subject_type")
     with get_db_conn() as conn:
@@ -610,5 +655,12 @@ def add_mp_reply(payload: MpReplyIn, authorization: Optional[str] = Header(None)
                 (payload.politician_id, payload.subject_type, payload.subject_ref, payload.body_lt, payload.verified),
             )
             row = cur.fetchone()
+            _record_admin_write(
+                cur,
+                "/api/admin/replies",
+                identity.credential_id,
+                "mp_reply",
+                row["id"],
+            )
         conn.commit()
     return {"status": "ok", "id": str(row["id"])}
