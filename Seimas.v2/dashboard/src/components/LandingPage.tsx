@@ -234,12 +234,14 @@ export function LandingPage() {
             <p className="mb-2 text-sm font-bold uppercase tracking-[0.08em] text-primary">Seimo sudėtis</p>
             <h2 className="font-serif text-[clamp(1.9rem,4.2vw,2.75rem)] font-bold leading-tight tracking-tight">
               {/* LT-COPY: needs native review */}
-              {statsQ.data ? `${statsQ.data.seats_total} vieta. Kas kur sėdi.` : 'Kas kur sėdi.'}
+              {/* „Kas kur sėdi." stood here, but no seating data exists: the dots
+                  are filled in alphabetical order (evaluation CORF-06). */}
+              {statsQ.data ? `${statsQ.data.seats_total} vieta.` : 'Seimo nariai.'}
             </h2>
             <p className="mt-3 max-w-[48ch] text-muted-foreground">
               {/* LT-COPY: needs native review */}
-              Kiekvienas taškas — vienas Seimo narys. Spalva rodo frakciją. Užveskite pelę arba palieskite
-              tašką — pamatysite, kas ten sėdi.
+              Kiekvienas taškas — vienas Seimo narys; vietos salėje nerodomos. Spalva rodo frakciją.
+              Užveskite pelę arba palieskite tašką — pamatysite, kuris tai narys.
             </p>
             <Link to="/dashboard/factions" className="mt-5 inline-block font-semibold text-primary hover:underline">
               Frakcijos →

@@ -268,11 +268,19 @@ class TestAttendanceMethodologyGate:
         cur = self._cursor({"attendance_percentage": None, "eligible_days": 1}, {"v": 1})
         assert hero_engine.resolve_attendance(cur, "mp-1", 0.0) is None
 
-    def test_falls_back_to_v1_when_the_view_has_no_row(self):
+    def test_no_row_in_the_view_is_unknown_not_the_v1_value(self):
+        """Inverted 2026-11-22 (evaluation CORA-03). This test used to assert
+        the fallback to v1 when the view had no row for a member. The view has
+        no row exactly when no sitting day inside the member's mandate has
+        been ingested — and v1 is 0 for that member, so the fallback published
+        „0 %" for every newly sworn-in replacement. No row means no eligible
+        days, and the member is suppressed like any member under three."""
         from backend import hero_engine
 
         cur = self._cursor(None, {"v": 2})
-        assert hero_engine.resolve_attendance(cur, "mp-1", 70.97) == 70.97
+        assert hero_engine.resolve_attendance(cur, "mp-1", 0.0) is None
+        cur = self._cursor(None, {"v": 1})
+        assert hero_engine.resolve_attendance(cur, "mp-1", 70.97) is None
 
     def test_missing_methodology_table_means_v1(self):
         from unittest.mock import MagicMock

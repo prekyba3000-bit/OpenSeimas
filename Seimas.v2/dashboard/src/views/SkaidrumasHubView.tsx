@@ -2,7 +2,6 @@ import React from 'react';
 import { useQueries } from '@tanstack/react-query';
 import { useNavigate, NavLink } from 'react-router';
 import {
-  AlertTriangle,
   Database,
   Radio,
   Search,
@@ -10,7 +9,7 @@ import {
   GitBranch,
   FileText,
   Scale,
-  Trophy,
+  Table2,
   BookOpen,
   Mail,
 } from 'lucide-react';
@@ -20,7 +19,6 @@ import { CorrectionsAndRepliesPanel } from '../components/CorrectionsAndRepliesP
 import {
   api,
   type DashboardStats,
-  type ForensicFlag,
   type LoyaltyResponse,
   type MpSummary,
   type VoteSummary,
@@ -28,7 +26,7 @@ import {
 import { ProblemDetailsNotice } from '../components/ProblemDetailsNotice';
 import { Button } from '../components/Button';
 import { occupancyLabel } from '../utils/mpCounts';
-import { belowAttendance, formatAttendance, hasAttendance } from '../utils/attendance';
+import { formatAttendance, hasAttendance } from '../utils/attendance';
 
 const EMPTY_LOYALTY: LoyaltyResponse = { alignment: [], total_mps: 0 };
 
@@ -47,9 +45,6 @@ const BENFORD_EXPECTED: Record<string, number> = {
 export default function SkaidrumasHubView() {
   const navigate = useNavigate();
 
-  const goToMpForensicFlag = (mpId: string, engine: ForensicFlag['engine']) => {
-    navigate(`/dashboard/mps/${mpId}?flag=${engine}`);
-  };
   const [query, setQuery] = React.useState('');
 
   const hubQueries = useQueries({
@@ -92,26 +87,16 @@ export default function SkaidrumasHubView() {
       .slice(0, 6);
   }, [mps, query]);
 
-  const riskyMps = React.useMemo(
-    // Only members with a publishable figure can be ranked as lowest-attending.
-    // A suppressed member sorted to the top of this list was being named as a
-    // risk on the strength of no data at all.
-    () => belowAttendance(mps, 60),
-    [mps],
-  );
-
   const tickerItems = React.useMemo(() => {
-    const lowAttendanceCount = belowAttendance(mps, 60).length;
     const newestVote = votes[0]?.title ?? 'Nėra naujausių įrašų';
     return [
       // A citation must not be ambiguous about which number it quotes: this is
       // the count holding a mandate today, against the constitutional 141.
       `Seimo nariai (mandatą turi): ${occupancyLabel(stats ?? {})}`,
       `Balsavimai: ${stats?.historical_votes ?? '—'}`,
-      `Dalyvavimas žemiau 60 %: ${lowAttendanceCount}`,
       `Naujausias balsavimas: ${newestVote}`,
     ];
-  }, [stats, mps, votes]);
+  }, [stats, votes]);
 
   if (loading) {
     return <div className="py-16 text-center text-muted-foreground">Kraunama „Skaidrumas Hub“...</div>;
@@ -132,9 +117,12 @@ export default function SkaidrumasHubView() {
     <div className="space-y-6">
       <section className="rounded-xl border border-border bg-card p-8">
         <p className="text-sm] text-primary mb-4">OpenSeimas · skaidrumo centras</p>
-        <h1 className="text-4xl md:text-5xl font-black leading-tight">
-          Neįmanoma būti <span className="text-primary">suktam</span>.
-        </h1>
+        {/* „Neįmanoma būti suktam." („Impossible to be crooked.") stood here,
+            directly above a list of named members ordered lowest attendance
+            first. A headline about crookedness over a worst-first list is a
+            verdict whatever the caption says (evaluation CORF-01). The page's
+            name says what it is. */}
+        <h1 className="text-4xl md:text-5xl font-black leading-tight">Skaidrumo centras</h1>
         <p className="mt-4 max-w-2xl text-muted-foreground">
           {/* LT-COPY: needs native review */}
           Viešoji atskaitomybės platforma: balsavimai, dalyvavimas ir pasisakymai vienoje vietoje.
@@ -219,7 +207,7 @@ export default function SkaidrumasHubView() {
             to="/dashboard/stebejimas"
             className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-2 text-sm hover:bg-muted/50"
           >
-            <Trophy className="w-4 h-4" />
+            <Table2 className="w-4 h-4" />
             Pasisakymai ir balsavimai
           </NavLink>
           <NavLink
@@ -255,34 +243,14 @@ export default function SkaidrumasHubView() {
         </div>
       </section>
 
-      <section className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <div className="rounded-xl border border-border bg-card p-4">
-          <div className="flex items-center gap-2 mb-4">
-            <AlertTriangle className="w-4 h-4 text-primary" />
-            <h2 className="text-base font-semibold text-foreground">Lankomumas žemiau 60 %</h2>
-          </div>
-            {/* LT-COPY: needs native review */}
-            <p className="text-xs text-muted-foreground mb-3">
-              Nariai, kurių dalyvavimas posėdžiuose žemiau 60 %. Tai atrankos kriterijus, o ne
-              vertinimas — kaip skaičiuojama, žr. metodikoje.
-            </p>
-          <div className="space-y-2">
-            {riskyMps.map((mp) => (
-              <button
-                key={mp.id}
-                type="button"
-                onClick={() => navigate(`/dashboard/mps/${mp.id}`)}
-                className="w-full text-left rounded-md border border-border p-3 hover:bg-muted/30 transition-colors"
-              >
-                <div className="text-sm font-semibold">{mp.name}</div>
-                <div className="text-xs text-muted-foreground mt-1">
-                    Dalyvavimas: {formatAttendance(mp.attendance, 1)} · {mp.party || 'Nežinoma frakcija'}
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-
+      <section className="grid grid-cols-1 gap-6">
+        {/* „Lankomumas žemiau 60 %" stood here: every member under 60 %
+            attendance, by name, lowest first, beside an alert triangle, and
+            counted in the ticker above. Order, icon and count made it a
+            worst-first list of named people; the one-line caption calling it
+            „a criterion, not an assessment" could not outweigh them
+            (evaluation CORF-01). Each member's attendance is on their own
+            profile and in the members list, with its denominator. */}
         {/* A „Skaidrumo indeksas" panel stood here ranking named members by
             `100 - attendance` — a composite invented locally, under a label
             that described something else entirely, presented as an index. The
@@ -366,7 +334,7 @@ export default function SkaidrumasHubView() {
               <button
                 key={mp.mp_id}
                 type="button"
-                onClick={() => goToMpForensicFlag(mp.mp_id, 'loyalty')}
+                onClick={() => navigate(`/dashboard/mps/${mp.mp_id}`)}
                 className="w-full text-left rounded-md border border-border p-3 cursor-pointer hover:bg-muted/50 transition-colors"
               >
                 <div className="flex items-center justify-between gap-3">

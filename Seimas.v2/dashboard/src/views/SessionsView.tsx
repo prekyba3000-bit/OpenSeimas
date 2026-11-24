@@ -9,6 +9,7 @@ import { Card } from '../components/Card';
 import { cn } from '../components/ui/utils';
 import { ProblemDetailsNotice } from '../components/ProblemDetailsNotice';
 import { toOutcome } from '../utils/voteOutcome';
+import { formatLtMonth } from '../utils/ltDate';
 
 // LT-COPY: needs native review
 export const UNKNOWN_SESSION_ID = -1;
@@ -70,6 +71,17 @@ const SessionsView = () => {
   });
   const loading = loadingSessions;
   const SESSIONS = useMemo(() => sessionData?.sessions ?? [], [sessionData]);
+  const { timelineStart, timelineEnd } = useMemo(() => {
+    const byStart = [...SESSIONS].sort((a, b) => a.date_from.localeCompare(b.date_from));
+    const first = byStart[0];
+    const last = byStart[byStart.length - 1];
+    const month = (d: string | null | undefined) => formatLtMonth(d ? d.slice(0, 7) : null) ?? '';
+    return {
+      timelineStart: month(first?.date_from),
+      // An open session has no end yet: say where it began, and that it goes on.
+      timelineEnd: last ? (last.date_to ? month(last.date_to) : `${month(last.date_from)} →`) : '',
+    };
+  }, [SESSIONS]);
   const [expandedSession, setExpandedSession] = useState<number | null>(null);
 
   const openSession = useMemo(
@@ -179,9 +191,12 @@ const SessionsView = () => {
             );
           })}
         </div>
+        {/* The ends of the bar, read from the sessions it draws. They were
+            fixed strings, and the bar kept growing past „2026 m. kovas"
+            (evaluation CORF-06). */}
         <div className="flex justify-between text-xs text-muted-foreground mt-2">
-          <span>2024 m. lapkritis</span>
-          <span>2026 m. kovas →</span>
+          <span>{timelineStart}</span>
+          <span>{timelineEnd}</span>
         </div>
       </Card>
 

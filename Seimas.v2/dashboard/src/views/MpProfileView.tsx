@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useSearchParams } from 'react-router';
 import { ArrowLeft } from 'lucide-react';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
@@ -32,7 +31,6 @@ import {
   api,
   type AttendanceTrajectory,
   type MpActivity,
-  type ForensicFlag,
   MpProfile,
   MpVoteRecord,
   type MpVoteTopics,
@@ -46,22 +44,6 @@ import { ltPlural } from '../utils/ltPlural';
 import { factionLabel } from '../utils/faction';
 
 type ProfileTab = 'apzvalga' | 'balsavimai' | 'apygarda';
-
-const FORENSIC_ENGINES: ForensicFlag['engine'][] = [
-  'benford',
-  'chrono',
-  'loyalty',
-  'phantom',
-  'vote_geometry',
-  'base_risk',
-];
-
-function parseHighlightFlag(raw: string | null): ForensicFlag['engine'] | undefined {
-  if (!raw) return undefined;
-  return FORENSIC_ENGINES.includes(raw as ForensicFlag['engine'])
-    ? (raw as ForensicFlag['engine'])
-    : undefined;
-}
 
 /**
  * A member's choice on one vote, or an honest blank.
@@ -101,6 +83,21 @@ function dimensionCoverage(
   return `iš ${eligible} ${ltPlural(eligible, 'posėdžių dienos', 'posėdžių dienų', 'posėdžių dienų')} · ${months} mėn. su duomenimis`;
 }
 
+/**
+ * True when the member's mandate covers no sitting day we hold — a newly
+ * sworn-in member, typically. Every dimension then reads 0 against a chamber
+ * that has had months to act, which is a comparison with no opportunity
+ * behind it (evaluation CORF-03). Null trajectory means "not loaded", not
+ * "no days", and decides nothing.
+ */
+function noSittingDayYet(trajectory: AttendanceTrajectory | null): boolean {
+  return !!trajectory && trajectory.buckets.reduce((sum, b) => sum + b.eligible_days, 0) === 0;
+}
+
+// LT-COPY: needs native review
+const NO_SITTING_DAY_YET_LT =
+  'Nario mandato laikotarpiu dar neturime nė vienos posėdžio dienos duomenų, todėl lyginti nėra su kuo.';
+
 const TAB_LABELS: Record<ProfileTab, string> = {
   apzvalga: 'Apžvalga',
   balsavimai: 'Balsavimai',
@@ -120,7 +117,6 @@ interface MpProfileLayoutProps {
   error?: string | null;
   errorDetails?: unknown;
   slowNetwork?: boolean;
-  highlightEngine?: ForensicFlag['engine'];
 }
 
 export const MpProfileLayout = ({
@@ -136,13 +132,8 @@ export const MpProfileLayout = ({
   error = null,
   errorDetails = null,
   slowNetwork = false,
-  highlightEngine,
 }: MpProfileLayoutProps) => {
   const [tab, setTab] = useState<ProfileTab>('apzvalga');
-
-  useEffect(() => {
-    if (highlightEngine) setTab('apzvalga');
-  }, [highlightEngine]);
 
   if (loading) {
     return (
@@ -277,7 +268,7 @@ export const MpProfileLayout = ({
              then the dimensions that describe it, then how those change over
              time — and no verdict anywhere in the sequence. */
           <div className="flex flex-col gap-6">
-            <MpProfileCard profile={profile} highlightEngine={highlightEngine} />
+            <MpProfileCard profile={profile} />
 
             <section aria-label="Rodikliai">
               <h2 className="text-base font-semibold text-foreground mb-1">Rodikliai</h2>
@@ -297,12 +288,16 @@ export const MpProfileLayout = ({
                     // dial did not. Same predicates the header uses, so a dial
                     // and the paragraph above it cannot contradict each other.
                     value={
-                      servedNoDays(profile.mp) ? null : readMpDimension(profile, dim)
+                      servedNoDays(profile.mp) || noSittingDayYet(trajectory)
+                        ? null
+                        : readMpDimension(profile, dim)
                     }
                     unavailableReason={
                       servedNoDays(profile.mp)
                         ? NEVER_TOOK_SEAT_NO_FIGURE_LT
-                        : dim === 'partyLoyalty'
+                        : noSittingDayYet(trajectory)
+                          ? NO_SITTING_DAY_YET_LT
+                          : dim === 'partyLoyalty'
                           ? factionFigureReason(hasFaction(profile.mp.party))
                           : null
                     }
@@ -425,8 +420,6 @@ function dimensionEvidence(
 }
 
 const MpProfileView = ({ mpId }: { mpId: string }) => {
-  const [searchParams] = useSearchParams();
-  const highlightEngine = parseHighlightFlag(searchParams.get('flag'));
 
   const [slowNetwork, setSlowNetwork] = useState(false);
 
@@ -518,7 +511,6 @@ const MpProfileView = ({ mpId }: { mpId: string }) => {
       error={error}
       errorDetails={errorDetails}
       slowNetwork={slowNetwork}
-      highlightEngine={highlightEngine}
     />
   );
 };

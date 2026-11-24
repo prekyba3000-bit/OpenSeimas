@@ -16,6 +16,7 @@ import { isTruncatedTitle, TITLE_TRUNCATED_LT } from '../utils/voteTitle';
 import { PlainSummary } from '../components/PlainSummary';
 import { factionLabel } from '../utils/faction';
 import { toOutcome } from '../utils/voteOutcome';
+import { fold } from '../utils/frontPage';
 import {
     perMemberChoiceState,
     hasAggregateTallies,
@@ -55,8 +56,12 @@ const VoteDetailView = ({ voteId }: { voteId: string }) => {
 
     const filteredVotes = useMemo(() => {
         if (!vote) return [];
+        // `party` is null for the Speaker and former members; dereferencing it
+        // threw for almost every query (evaluation CORA-02). Accents folded as
+        // in the members list, so „sarunas" finds Šarūnas.
+        const q = fold(search.trim());
         return vote.votes.filter(v => {
-            const matchSearch = v.name.toLowerCase().includes(search.toLowerCase()) || v.party.toLowerCase().includes(search.toLowerCase());
+            const matchSearch = !q || fold(v.name || '').includes(q) || fold(v.party || '').includes(q);
             const matchChoice = !filterChoice || v.choice === filterChoice;
             return matchSearch && matchChoice;
         });

@@ -10,14 +10,16 @@ import { factionLabel } from '../utils/faction';
 import { getPartyMeta, PartyMeta } from '../utils/partyColors';
 import { cn } from '../components/ui/utils';
 import { ProblemDetailsNotice } from '../components/ProblemDetailsNotice';
-import { averageAttendance, byAttendance, formatAttendance, hasAttendance } from '../utils/attendance';
+import { averageAttendance, formatAttendance } from '../utils/attendance';
 import { portraitThumb } from '../utils/portraitThumb';
 
 interface FactionData {
   name: string;
   meta: PartyMeta;
   members: MpSummary[];
-  avgAttendance: number;
+  // null when no member of the faction has a publishable figure. Typed
+  // `number` before, which hid the null with strict off (evaluation CORF-05).
+  avgAttendance: number | null;
   totalVotes: number;
 }
 
@@ -122,7 +124,9 @@ const FactionsView = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {factions.map(faction => {
           const isExpanded = expandedFaction === faction.name;
-          const sortedMembers = [...faction.members].sort(byAttendance('desc'));
+          // By name, never by the metric: ordering a faction's members by
+          // attendance made the roster a rank (evaluation CORF-01).
+          const sortedMembers = [...faction.members].sort((a, b) => a.name.localeCompare(b.name, 'lt'));
 
           return (
             <motion.div
@@ -172,13 +176,18 @@ const FactionsView = () => {
                 {/* Mini attendance bar */}
                 <div className="px-5 pb-4">
                   <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
-                    <div
-                      className="h-full rounded-full transition-all duration-700"
-                      style={{
-                        width: `${faction.avgAttendance}%`,
-                        backgroundColor: faction.meta.hex,
-                      }}
-                    />
+                    {/* No bar without a figure: `width: null%` is dropped, and a
+                        block with no width fills its track — a full bar beside
+                        „—" (evaluation CORF-05). */}
+                    {typeof faction.avgAttendance === 'number' && (
+                      <div
+                        className="h-full rounded-full transition-all duration-700"
+                        style={{
+                          width: `${faction.avgAttendance}%`,
+                          backgroundColor: faction.meta.hex,
+                        }}
+                      />
+                    )}
                   </div>
                 </div>
 
@@ -215,22 +224,10 @@ const FactionsView = () => {
                               <span>{formatAttendance(mp.attendance)}</span>
                             </div>
                           </div>
-                          <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
-                            style={{
-                              // No colour band without a figure to band. A suppressed member
-                              // was being painted as the worst category on no data.
-                              backgroundColor: !hasAttendance(mp) ? 'hsl(var(--muted))'
-                                : mp.attendance! > 80 ? 'hsl(var(--vote-for) / 0.2)'
-                                : mp.attendance! > 50 ? 'hsl(var(--attention) / 0.2)'
-                                : 'hsl(var(--vote-against) / 0.2)',
-                              color: !hasAttendance(mp) ? 'hsl(var(--muted-foreground))'
-                                : mp.attendance! > 80 ? 'hsl(var(--vote-for))'
-                                : mp.attendance! > 50 ? 'hsl(var(--attention))'
-                                : 'hsl(var(--vote-against))',
-                            }}
-                          >
-                            {formatAttendance(mp.attendance)}
-                          </div>
+                          {/* A badge repeating the figure in vote-for / attention /
+                              vote-against colours stood here: a three-band grade on a
+                              named person (evaluation CORF-01). The figure is on the
+                              line above, uncoloured. */}
                         </Link>
                       ))}
                     </div>

@@ -4,7 +4,7 @@
  */
 import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Trophy, ArrowUpDown, HelpCircle } from 'lucide-react';
+import { Table2, ArrowUpDown, HelpCircle } from 'lucide-react';
 import { useNavigate, NavLink, Link } from 'react-router';
 import { api, MONITORING_API_URL, type MpLeaderboardRow } from '../services/api';
 import { API_URL } from '../config';
@@ -22,6 +22,7 @@ import { ProblemDetailsNotice } from '../components/ProblemDetailsNotice';
 import { LT } from '../i18n/lt';
 import { ltPlural } from '../utils/ltPlural';
 import { portraitThumb } from '../utils/portraitThumb';
+import { factionLabel, hasFaction, NO_FACTION_LT } from '../utils/faction';
 
 type SortKey = 'rank' | 'name' | 'faction' | MpCivicDimension;
 type SortDirection = 'asc' | 'desc';
@@ -64,7 +65,10 @@ export default function StebsenaView() {
     error: requestError,
   } = useQuery({
     queryKey: ['monitoring', 'leaderboard'],
-    queryFn: () => api.getMpLeaderboard(),
+    // Every sitting member. The default was 20, so about 120 of 140 members
+    // were absent from a main-navigation page without notice (evaluation
+    // CORA-08); 200 is the API's ceiling, above the 141 seats.
+    queryFn: () => api.getMpLeaderboard(200),
   });
   const rows = useMemo(() => (Array.isArray(rowsRaw) ? rowsRaw : []) as MpRow[], [rowsRaw]);
   const [slowNetwork, setSlowNetwork] = useState(false);
@@ -123,7 +127,7 @@ export default function StebsenaView() {
     const getValue = (row: MpRow & { rank: number }, key: SortKey) => {
       if (key === 'rank') return row.rank;
       if (key === 'name') return row.mp.name || '';
-      if (key === 'faction') return row.faction ?? '';
+      if (key === 'faction') return factionLabel(row.faction);
       return readMpDimension(row, key) as number;
     };
 
@@ -187,7 +191,7 @@ export default function StebsenaView() {
   return (
     <div className="space-y-6 text-foreground">
       <div className="flex items-center gap-3">
-        <Trophy className="w-7 h-7 text-primary" />
+        <Table2 className="w-7 h-7 text-primary" />
         <div>
           <h2 className="text-3xl font-bold text-foreground">Pasisakymai ir balsavimai</h2>
           <p className="text-sm text-foreground/70">
@@ -290,7 +294,7 @@ export default function StebsenaView() {
                       <span className="min-w-0 flex-1">
                         <span className="block font-semibold text-foreground">{row.mp.name}</span>
                         <span className="block text-xs text-foreground/70">
-                          {row.faction?.trim() || '—'}
+                          {factionLabel(row.faction)}
                         </span>
                       </span>
                     </div>
@@ -304,6 +308,31 @@ export default function StebsenaView() {
                         </div>
                       ))}
                     </dl>
+                  </button>
+                </li>
+              ))}
+              {/* Members the sorted dimension cannot rank. The table keeps
+                  them in a labelled group; the phone list dropped them, so on
+                  a phone they vanished from the page (evaluation CORF-02). */}
+              {unranked.length > 0 && (
+                <li className="pt-3 text-sm font-semibold text-foreground" aria-hidden>
+                  {/* LT-COPY: needs native review */}
+                  Nepakanka duomenų
+                  <span className="ml-2 font-normal text-muted-foreground">
+                    — {unranked.length}{' '}
+                    {ltPlural(unranked.length, 'narys', 'nariai', 'narių')} be šio rodiklio; nerikiuojami
+                  </span>
+                </li>
+              )}
+              {unranked.map((row) => (
+                <li key={`unranked-${row.mp.id}`}>
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/dashboard/mps/${row.mp.id}`)}
+                    className="w-full rounded-xl border border-border bg-card p-4 text-left"
+                  >
+                    <span className="block font-semibold text-foreground">{row.mp.name}</span>
+                    <span className="block text-xs text-foreground/70">{factionLabel(row.faction)}</span>
                   </button>
                 </li>
               ))}
@@ -358,12 +387,10 @@ export default function StebsenaView() {
                       </div>
                     </td>
                     <td className="p-4 text-foreground/85">
-                      {row.faction?.trim() ? (
-                        row.faction.trim()
+                      {hasFaction(row.faction) ? (
+                        row.faction!.trim()
                       ) : (
-                        <span className="text-foreground/45" aria-hidden>
-                          —
-                        </span>
+                        <span className="text-foreground/45">{NO_FACTION_LT}</span>
                       )}
                     </td>
                     {visibleDimensions.map((dim) => (
@@ -381,7 +408,7 @@ export default function StebsenaView() {
                   <>
                     <tr>
                       <td
-                        colSpan={3 + visibleDimensions.length}
+                        colSpan={2 + visibleDimensions.length}
                         className="px-4 pt-6 pb-2 text-sm font-semibold text-foreground border-t border-border"
                       >
                         {/* LT-COPY: needs native review */}
@@ -395,9 +422,11 @@ export default function StebsenaView() {
                     </tr>
                     {unranked.map((row) => (
                       <tr key={`unranked-${row.mp.id}`} className="border-t border-border/60">
-                        <td className="p-4 text-muted-foreground">—</td>
+                        {/* A leading „—" cell stood here from a removed rank
+                            column: 3 + N cells under 2 + N headers put every
+                            value under the wrong header (evaluation CORF-02). */}
                         <td className="p-4">{row.mp.name}</td>
-                        <td className="p-4 text-foreground/85">{row.faction?.trim() || '—'}</td>
+                        <td className="p-4 text-foreground/85">{factionLabel(row.faction)}</td>
                         {visibleDimensions.map((dim) => (
                           <td key={dim} className="p-4 text-right">
                             <DimensionValue value={readMpDimension(row, dim)} />

@@ -19,6 +19,7 @@ import {
 import type { LastSittingDay, VoteDetail } from '../services/api';
 import { factionLabel } from '../utils/faction';
 import { portraitThumb } from '../utils/portraitThumb';
+import { formatAttendance } from '../utils/attendance';
 
 export interface Seat {
   id: string;
@@ -373,7 +374,7 @@ export function SeimasMap({
                           <div className="flex items-center gap-3 text-xs text-muted-foreground">
                             <span>{seat.mp.vote_count} {ltPlural(seat.mp.vote_count, 'balsas', 'balsai', 'balsų')}</span>
                             <span>•</span>
-                            <span>{seat.mp.attendance?.toFixed(0) ?? '—'}% dalyvavimas</span>
+                            <span>{formatAttendance(seat.mp.attendance)} dalyvavimas</span>
                           </div>
                         </div>
                       </div>

@@ -19,7 +19,7 @@ export function CitationCopyButton({ className }: Props) {
   const buildCitation = () => {
     const url = getUrl();
     const date = new Date().toISOString().slice(0, 10);
-    return `OpenSeimas / Atviras Seimas — agreguoti Seimo duomenys ir forensinė analizė. Pasiekta: ${date}. URL: ${url}`;
+    return `OpenSeimas / Atviras Seimas — agreguoti Seimo duomenys. Pasiekta: ${date}. URL: ${url}`;
   };
 
   const copyCitation = async () => {

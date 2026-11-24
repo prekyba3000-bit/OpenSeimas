@@ -754,6 +754,13 @@ def resolve_attendance(db_cursor, mp_id: str, v1_value):
         if row is not None:
             v2_value = row["attendance_percentage"] if isinstance(row, dict) else row[0]
             eligible_days = row["eligible_days"] if isinstance(row, dict) else row[1]
+        else:
+            # The view exists and has no row for this member: no sitting day
+            # inside their mandate has been ingested (a newly sworn-in member),
+            # or the view predates them. Either way there is nothing to divide
+            # by. Treating it as "no v2 data" fell through to the v1 view,
+            # which writes 0 for the same member — evaluation CORA-03.
+            eligible_days = 0
     except Exception:  # noqa: BLE001 — view absent before migration 019
         pass
 
@@ -788,8 +795,19 @@ def attendance_overrides(db_cursor) -> Dict[str, Any]:
     profile cannot disagree about a member.
     """
     try:
+        # Every member, not only those the view has a row for: a member with no
+        # sitting day inside their mandate has no row, and has 0 eligible days.
+        # Reading the view alone left them out of this map, so bulk callers
+        # fell back to the v1 value — 0 — for them (evaluation CORA-03). The
+        # COALESCE is on a day count and yields a suppressed (None) figure,
+        # never a displayed zero.
         db_cursor.execute(
-            "SELECT mp_id, attendance_percentage, eligible_days FROM mp_attendance_v2"
+            """
+            SELECT p.id AS mp_id, a.attendance_percentage,
+                   COALESCE(a.eligible_days, 0) AS eligible_days
+            FROM mp_attendance_v2 a
+            RIGHT JOIN politicians p ON p.id = a.mp_id
+            """
         )
         rows = db_cursor.fetchall() or []
     except Exception:  # noqa: BLE001 — view absent before migration 019

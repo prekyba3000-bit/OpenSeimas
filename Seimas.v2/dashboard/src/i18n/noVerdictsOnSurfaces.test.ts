@@ -31,6 +31,8 @@ function sourceFiles(dirs: string[]): string[] {
   return out;
 }
 
+const METRIC_COMPLEMENT = /100(?:\.0)?\s*-\s*[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*/;
+
 const code = (f: string) =>
   readFileSync(f, "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
 
@@ -55,10 +57,17 @@ describe("no verdict reaches a surface", () => {
     // a „Skaidrumo indeksas" panel ranked members by `100 - attendance`, under
     // a label describing something else, and no keyword search would have
     // found it.
-    ["a locally invented composite", /100\s*-\s*(?:mp\.|row\.|item\.)?\w*[Aa]ttendance/],
+    ["any locally invented metric complement", METRIC_COMPLEMENT],
   ])("renders no %s", (_label, pattern) => {
     const offenders = files.filter((f) => pattern.test(code(f)));
     expect(offenders.map((f) => f.replace(SRC, "src"))).toEqual([]);
+  });
+
+  it("recognises a complement of any metric, not only attendance", () => {
+    expect(METRIC_COMPLEMENT.test("100 - attendance")).toBe(true);
+    expect(METRIC_COMPLEMENT.test("100.0 - party_loyalty_pct")).toBe(true);
+    expect(METRIC_COMPLEMENT.test("100 - row.metrics.visibility")).toBe(true);
+    expect(METRIC_COMPLEMENT.test("100 - 2")).toBe(false);
   });
 
   it("no page component imports an aggregation function", () => {

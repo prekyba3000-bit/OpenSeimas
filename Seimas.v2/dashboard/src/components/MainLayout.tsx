@@ -8,7 +8,7 @@ import {
   Calendar,
   Scale,
   Shield,
-  Trophy,
+  Table2,
   Menu,
   Search,
   ScanEye,
@@ -44,7 +44,7 @@ const primaryNavItems = [
 const moreNavItems = [
   { path: '/dashboard/sessions', label: 'Sesijos', icon: Calendar },
   { path: '/dashboard/compare', label: 'Palyginimas', icon: Scale },
-  { path: '/dashboard/stebejimas', label: 'Pasisakymai ir balsavimai', icon: Trophy },
+  { path: '/dashboard/stebejimas', label: 'Pasisakymai ir balsavimai', icon: Table2 },
 ];
 
 const aboutNavItems = [

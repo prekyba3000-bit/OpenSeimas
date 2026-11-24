@@ -1,27 +1,13 @@
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 import { ExternalLink } from 'lucide-react';
 import { Card } from './Card';
-import { FlagList } from './FlagList';
-import type { ForensicFlag, MpProfile } from '../services/api';
-import { forensicBreakdownToFlags } from '../utils/forensicBreakdownToFlags';
+import type { MpProfile } from '../services/api';
 
 export type MpProfileCardProps = {
   profile: MpProfile;
-  highlightEngine?: ForensicFlag['engine'];
 };
 
-export default function MpProfileCard({ profile, highlightEngine }: MpProfileCardProps) {
-  const flagListRef = useRef<HTMLElement>(null);
-  const flags = forensicBreakdownToFlags(profile.forensicBreakdown);
-
-  useEffect(() => {
-    if (highlightEngine && flagListRef.current) {
-      flagListRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  }, [highlightEngine]);
-
-
-
+export default function MpProfileCard({ profile }: MpProfileCardProps) {
   return (
     <Card className="p-6 md:p-8 space-y-6 bg-card border-border text-foreground rounded-xl shadow-card">
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
@@ -40,23 +26,14 @@ export default function MpProfileCard({ profile, highlightEngine }: MpProfileCar
         </div>
       </div>
 
-      <Card className="p-6 bg-muted border-border rounded-xl space-y-4">
-        <div>
-          <div className="text-sm text-muted-foreground">Skaidrumas</div>
-          <div className="text-lg font-semibold mt-1 text-foreground">Ką rodo patikros</div>
-        </div>
-
-        <div className="text-foreground [&_.text-muted-foreground]:text-foreground/70 [&_.text-foreground]:text-foreground [&_a.text-muted-foreground]:text-foreground/70">
-          <FlagList ref={flagListRef} flags={flags} highlightEngine={highlightEngine} />
-        </div>
-
-        {/* A „Bendra forensinė korekcija" total stood here, summing the
-            engines into a single ±N points figure beside a named member — three
-            lines above the profile's own statement that the indicators are not
-            added into one score. It was the composite, rebuilt under another
-            name. The individual findings remain, each with its methodology
-            link; only the total is gone. */}
-      </Card>
+      {/* „Skaidrumas · Ką rodo patikros" stood here: one row per forensic
+          engine — Benford, amendment timing, vote geometry and a „hidden
+          connections network" — each reading „Duomenų nėra". Nothing ever ran
+          those engines, and they were deleted on 2026-11-14; four rows of
+          „no data" on a named member read as checks run or pending on this
+          person (evaluation CORF-04). Before that, a „Bendra forensinė
+          korekcija" total summed them into one ±N figure — the composite under
+          another name. */}
     </Card>
   );
 }

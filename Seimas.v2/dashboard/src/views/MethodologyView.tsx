@@ -75,26 +75,6 @@ export function MethodologyView() {
         </section>
 
         <section>
-          <h2 id="benford" className="text-lg font-semibold mb-2">
-            Benfordo dėsnio analizė
-          </h2>
-          <p className="text-muted-foreground text-sm leading-relaxed">
-            Tikriname, ar balsų ar kitų skaitinių laukų pirmųjų skaitmenų pasiskirstymas atitinka Benfordo dėsnį —
-            tai pagalbinis signalas dėl galimų anomalijų duomenyse, ne savarankiškas kaltinimas.
-          </p>
-        </section>
-
-        <section>
-          <h2 id="chronologine-analize" className="text-lg font-semibold mb-2">
-            Chronologinė analizė
-          </h2>
-          <p className="text-muted-foreground text-sm leading-relaxed">
-            Vertiname pataisų rengimo ir susijusių veiksmų laiko modelius: neįprastai trumpi ar susigrūdę intervalai
-            gali reikšti vertimo dėmesį, ypač kartu su kitais šaltiniais.
-          </p>
-        </section>
-
-        <section>
           <h2 id="partijos-lojalumas" className="text-lg font-semibold mb-2">
             Sutapimas su frakcija (anksčiau „Partijos lojalumas")
           </h2>
@@ -104,23 +84,22 @@ export function MethodologyView() {
           </p>
         </section>
 
+        {/* Four sections stood here describing the Benford, amendment-timing,
+            hidden-network and vote-geometry engines in the present tense
+            („Tikriname", „Vertiname", „Siejame"). Nothing ever ran them, and
+            they were deleted on 2026-11-14 (evaluation CORF-04). The anchors
+            stay so that old links land on the explanation. */}
         <section>
-          <h2 id="fantominis-tinklas" className="text-lg font-semibold mb-2">
-            Fantominis tinklas
-          </h2>
+          <span id="benford" />
+          <span id="chronologine-analize" />
+          <span id="fantominis-tinklas" />
+          <span id="balsavimo-geometrija" />
+          <h2 className="text-lg font-semibold mb-2">Pašalintos patikros</h2>
+          {/* LT-COPY: needs native review */}
           <p className="text-muted-foreground text-sm leading-relaxed">
-            Siejame viešus subjektus (pvz., įmonių ryšius, viešuosius pirkimus) su galimais artimos distancijos ryšiais
-            — signalas gali reikalauti gilesnės žurnalistinės ar tyrėjų patikros.
-          </p>
-        </section>
-
-        <section>
-          <h2 id="balsavimo-geometrija" className="text-lg font-semibold mb-2">
-            Balsavimo geometrija
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            {/* TODO(v4): add methodology description for vote geometry engine */}
-            Statistiniai balsavimo modeliai ir jų nuokrypiai — papildomas metodikos tekstas bus čia.
+            Anksčiau šiame puslapyje buvo aprašytos keturios patikros: Benfordo dėsnio analizė,
+            pataisų laiko analizė, balsavimo geometrija ir ryšių tinklas. Jos nebuvo paleistos ir
+            nė apie vieną Seimo narį nedavė rezultato. 2026 m. lapkričio 14 d. jas pašalinome.
           </p>
         </section>
 

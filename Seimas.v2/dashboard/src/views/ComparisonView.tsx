@@ -235,7 +235,9 @@ const ComparisonView = ({ initialSelected = [null, null] }: ComparisonViewProps)
                 />
 
                 <div className="hidden md:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 bg-primary rounded-full items-center justify-center z-10 shadow-lg shadow-none text-white font-bold text-xs ring-4 ring-background">
-                    VS
+                    {/* „VS" stood here: two named members framed as opponents
+                        (evaluation CORF-01). LT-COPY: needs native review */}
+                    ir
                 </div>
 
                 <MpSelector

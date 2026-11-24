@@ -18,6 +18,7 @@ Three things travelled that should not have:
 The sin is aggregation, not measurement. The dimensions stay; the verdict does
 not.
 """
+import ast
 import pathlib
 
 import pytest
@@ -129,7 +130,7 @@ async def test_heroes_villains_is_gone():
     assert resp.status_code == 404
 
 
-def test_no_route_file_still_computes_the_heroes_composite():
+def test_no_route_file_still_routes_or_computes_a_verdict():
     """A route is a decorator argument, not a substring.
 
     The first version matched the text "heroes-villains" anywhere outside a `#`
@@ -139,10 +140,8 @@ def test_no_route_file_still_computes_the_heroes_composite():
     retired verdict is how a project remembers why it retired it, and a guard
     that forbids writing it down pushes toward silence.
 
-    So the path is read from the route decorators themselves, and the formula
-    check runs against source with comments *and* docstrings stripped.
+    The formula check strips comments and docstrings for the same reason.
     """
-    import ast
     import re
 
     def registered_paths(tree):
@@ -173,7 +172,9 @@ def test_no_route_file_still_computes_the_heroes_composite():
             assert "heroes-villains" not in route, f"{path.name} still routes {route}"
 
         code = re.sub(r"^\s*#.*$", "", strip_docstrings(ast.parse(source)), flags=re.M)
-        assert "100 - risk_score" not in code, f"{path.name} still computes the verdict"
+        assert not re.search(r"100(?:\.0)?\s*-\s*[A-Za-z_]", code), (
+            f"{path.name} still computes a metric complement"
+        )
 
 
 def test_the_leaderboard_is_not_ranked_by_an_aggregate():

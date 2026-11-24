@@ -8,6 +8,17 @@ import {
 } from '../utils/mpLegacyDimensions';
 import { DIMENSION_EXPLAINERS } from '../utils/dimensionExplainers';
 
+const IS_SHARE: Record<MpCivicDimension, boolean> = {
+  attendance: true,
+  partyLoyalty: true,
+  experience: false,
+  legislativeActivity: false,
+  visibility: false,
+};
+
+// LT-COPY: needs native review
+export const POINTS_OF_100_LT = 'iš 100';
+
 export interface DimensionDialProps {
   dimension: MpCivicDimension;
   value: number | null;
@@ -67,7 +78,12 @@ export function DimensionDial({
       {known ? (
         <p className="text-3xl font-semibold text-foreground font-mono tabular-nums leading-none">
           {value.toFixed(1)}
-          <span className="text-lg text-muted-foreground"> %</span>
+          {/* Attendance and faction agreement are shares of something; the
+              other three are points against the chamber's highest value, and
+              „%" called them a share (evaluation CORF-03). */}
+          <span className="text-lg text-muted-foreground">
+            {IS_SHARE[dimension] ? ' %' : ` ${POINTS_OF_100_LT}`}
+          </span>
         </p>
       ) : (
         <p className="text-sm text-muted-foreground leading-relaxed">

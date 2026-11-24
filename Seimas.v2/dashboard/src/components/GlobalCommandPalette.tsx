@@ -6,7 +6,7 @@ import {
   Vote,
   Calendar,
   GitCompare,
-  Trophy,
+  Table2,
   FileText,
   ScanEye,
   BookOpen,
@@ -154,10 +154,10 @@ export function GlobalCommandPalette({ open: controlledOpen, onOpenChange }: Glo
               <span>Palyginimas</span>
             </CommandItem>
             <CommandItem
-              value="stebėsena stebejimas monitoring rizika risk mp sąrašas leaderboard"
+              value="stebėsena stebejimas monitoring mp sąrašas"
               onSelect={() => runCommand(() => navigate('/dashboard/stebejimas'))}
             >
-              <Trophy className="mr-2 h-4 w-4" />
+              <Table2 className="mr-2 h-4 w-4" />
               <span>Pasisakymai ir balsavimai</span>
             </CommandItem>
             <CommandItem value="frakcijos" onSelect={() => runCommand(() => navigate('/dashboard/factions'))}>

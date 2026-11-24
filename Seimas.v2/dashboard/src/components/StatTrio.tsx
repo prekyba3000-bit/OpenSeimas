@@ -20,12 +20,9 @@ export function StatTrio({ stats }: { stats: DashboardStats | null }) {
   const votes = numeric(stats?.historical_votes);
   const days = stats?.sitting_days ?? null;
 
-  // „~38 balsavimų vienam nariui“ — computed, not decorative. Rendered only
-  // when both operands exist, so it can never divide by a missing number.
-  const perMember =
-    votes !== null && active
-      ? `~${Math.round(votes / active)} ${ltPlural(Math.round(votes / active), 'balsavimas', 'balsavimai', 'balsavimų')} vienam nariui`
-      : null;
+  // „~38 balsavimų vienam nariui" stood here: the chamber's roll-call count
+  // divided by members. Every member is eligible for every roll-call vote, so
+  // the ratio is not a per-member quantity of anything (evaluation CORF-06).
   const perDay =
     votes !== null && days
       ? `~${Math.round(votes / days)} ${ltPlural(Math.round(votes / days), 'balsavimas', 'balsavimai', 'balsavimų')} per dieną`
@@ -44,7 +41,7 @@ export function StatTrio({ stats }: { stats: DashboardStats | null }) {
         icon={Vote}
         value={stats?.historical_votes ?? '—'}
         label="Balsavimai"
-        sub={perMember}
+        sub={null}
         sourceTo="/dashboard/methodology"
       />
       <Stat
