@@ -1,5 +1,44 @@
 # RESUME — 2026-11-24
 
+P1 trust fixes shipped as `8a1c851`. Backend **521 passed** on a fresh database
+with 56 migrations; second migration run `0 applied, 56 already up-to-date`.
+Dashboard **521 passed**, `tsc` clean, `vite build` built. The pre-push hook
+reported `all green`. Detail: `2026-11-24-eval-p1-trust.md`.
+
+### Done
+- Public summary history serves approved revisions only. Identical revision
+  posting and repeat approval are idempotent; the publishing script retries
+  entities with drafts but no approved revision.
+- Rejected correction submissions now expose status and reviewer decision but
+  `description: NULL`. New terminal `withheld` status remains never-public.
+- Anonymous writes have global Postgres-enforced limits: 20 open submissions
+  per 10 minutes and 100 open overall, with an advisory transaction lock across
+  workers. Real-Postgres tests prove spoofed-IP, backlog and concurrent bounds.
+- Hub and corrections surfaces show Lithuanian statuses and reviewer decisions
+  without rejected submission text. Local deterministic browser audit passed
+  at 1360/390 px with no page errors; screenshots inspected.
+- Both Vercel hosts serve `index-qI4FLQ-_.js` and passed desktop/phone browser
+  checks with no page errors. Production migration runner: `1 applied, 55
+  already up-to-date`; both new correction IDs are public. Render health is
+  connected, and a no-write admin validation request confirms `withheld` is in
+  the deployed backend's accepted status list.
+
+### Blocked
+- **Credential rotation (SECF-02): the human's step.** Follow
+  `docs/ops/credential-rotation.md`, then run `scripts/local-ops/rotate_check.sh`.
+- LT native review, including P1 trust and Stage 1 copy; rclone client ID.
+
+### Next concrete step
+The human rotates the credentials. Agent: CORA-06 — replace the summary figure
+gate's multiset-of-digits check with source-bound claims so swapped counts,
+changed dates and invented outcomes cannot pass approval. Then SECA-05:
+separate drafting and approval privileges. Production volume caps must not be
+tested by creating anonymous submissions.
+
+---
+
+# RESUME — 2026-11-24 (Stage 1)
+
 Stage 1 shipped as `6db74fb`. The installed pre-push hook reported `all green`:
 backend **514 passed** on a fresh database with 55 migrations (measured run;
 hook has no count in its quiet output), dashboard **519 passed**, `tsc` clean,

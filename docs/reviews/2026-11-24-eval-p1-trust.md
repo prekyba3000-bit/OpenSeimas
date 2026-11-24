@@ -57,5 +57,25 @@ All changed Lithuanian UI copy and both migration 056 correction entries are
 
 ## Release state
 
-Built and verified locally; not yet committed, pushed or checked in production
-at the time of this section's first writing.
+Shipped as `8a1c851` on `main`. The installed pre-push hook ran against a
+throwaway Postgres on its expected localhost port and reported `all green`;
+dashboard **521 passed**, TypeScript and build passed, and the backend suite
+passed on a fresh database.
+
+Both Vercel deployments report success and serve `index-qI4FLQ-_.js`.
+`node .evaluation/20261118-235807/p1-trust-production-browser.mjs` passed on
+both hosts at 1360 px and 390 px: both migration 056 correction entries render,
+the revised privacy copy is present, the old "every note is public" sentence is
+absent, and `pageErrors` is empty. Production screenshots are in
+`.evaluation/20261118-235807/p1-trust-production/` and were inspected.
+
+Render `/health` returned `{"status":"ok","database":"connected"}`. Production
+migration runner output: **1 applied, 55 already up-to-date**. The public API
+returns both new correction IDs and 24 total public corrections. A no-write
+admin validation request returned 422 with `withheld` in the accepted status
+list, confirming the new backend route is deployed. No production anonymous
+submission was created. Production currently has no rejected public row, so
+rejected-text suppression was verified by the real-Postgres API tests and
+deterministic browser fixtures rather than a live rejected example.
+
+Native Lithuanian review remains open.
