@@ -88,6 +88,23 @@ remains open.
 
 ## Release state
 
-Locally verified, not yet shipped when this note was committed. Production
-verification and the migration 055 daily-sync application are recorded in
-`RESUME.md` when checked.
+Shipped as `6db74fb` on `main`. The installed pre-push hook ran against a
+throwaway Postgres on its expected localhost port and reported `all green`;
+dashboard **519 passed**, TypeScript and build passed, backend suite passed on
+a fresh database.
+
+Both Vercel deployments report success for `6db74fb` and serve
+`index-DC52w1XW.js`. `stage1-production-browser.mjs` passed on both hosts at
+1360 px and 390 px: 140 monitoring rows, `limit=200`, no retired checks, no
+old hub or landing claims, no page errors. Screenshots are in
+`.evaluation/20261118-235807/stage1-production/` and were inspected. Render
+`/health` returned `{"status":"ok","database":"connected"}`.
+
+Migration 055 is already visible through the public API: all four correction
+IDs are returned, visibility methodology is current v2 and experience is v1.
+
+Production data has no member with zero eligible sitting days, so that exact
+state was verified in the fresh-database route tests and deterministic
+rendered audit rather than against a real named member.
+
+Native Lithuanian review remains open.

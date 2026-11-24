@@ -1,3 +1,42 @@
+# RESUME — 2026-11-24
+
+Stage 1 shipped as `6db74fb`. The installed pre-push hook reported `all green`:
+backend **514 passed** on a fresh database with 55 migrations (measured run;
+hook has no count in its quiet output), dashboard **519 passed**, `tsc` clean,
+`vite build` built. Migrations applied twice on the fresh database; second run
+`0 applied, 55 already up-to-date`.
+
+### Done
+- Zero eligible sitting days now serve unknown, not 0 %, on list, profile and
+  leaderboard. Newcomer comparison dials explain why no figure is shown.
+- Removed the hub's low-attendance named list and verdict framing, faction
+  attendance ordering/colours, and four never-run profile checks.
+- Monitoring requests all members and keeps unranked rows aligned and visible
+  on phones. Vote search handles null factions and Lithuanian diacritics.
+- Dimension units and drawers match the engine; unsupported seating,
+  per-member-vote and fixed-timeline claims removed; complement guard
+  generalised. Detail in `2026-11-24-eval-stage1-display.md`.
+- Both Vercel hosts verified at 1360 px and 390 px: 140 monitoring rows,
+  `limit=200`, no retired checks or old claims, no page errors. Render health
+  connected. Migration 055 is live: all four corrections, visibility v2 and
+  experience v1 are returned by the public API.
+- The old feed blocker has lifted: production freshness now reports successful
+  `seimas_votes_v2` ingestion on 23 November and votes through 19 November,
+  rather than the previous freeze at 5 November.
+
+### Blocked
+- **Credential rotation (SECF-02): the human's step.** Follow
+  `docs/ops/credential-rotation.md`, then run `scripts/local-ops/rotate_check.sh`.
+- LT native review, including all new Stage 1 copy; rclone client ID.
+
+### Next concrete step
+The human rotates the credentials. Agent: P1 trust fixes — stop unapproved
+summary drafts leaving the public history route (CORA-07), bound anonymous
+correction volume independent of caller-supplied IP (SECA-02), and stop
+publishing anonymous submission text verbatim (SECF-01).
+
+---
+
 # RESUME — 2026-11-22
 
 Deployed and verified on production: client `fb73613`, ops `460c819`, API
