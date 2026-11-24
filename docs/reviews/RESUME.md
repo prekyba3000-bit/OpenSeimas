@@ -1,3 +1,37 @@
+# RESUME — 2026-11-25 (SECA-05)
+
+SECA-05 is verified locally in `aa6a7b3`. Draft, approval and general-admin
+credentials are distinct; `approved_by` comes from server configuration; the
+batch publisher only drafts; migration 057 adds append-only attribution for all
+privileged routes. Fresh-Postgres backend **539 passed in 6.36s**, dashboard
+**521 passed**, typecheck/build passed, and the pre-push hook reported
+`all green`. Second migration run: **0 applied, 57 already up-to-date**. Detail:
+`2026-11-25-eval-seca05.md`.
+
+### Release state
+- CORA-06 (`3e28f05`, `3460c4b`) and SECA-05 (`aa6a7b3`) are committed on
+  `fix/eval-stage1`; none is merged to `main` or deployed.
+- Before release: configure Render's draft/approve secrets and reviewer name;
+  apply migration 057 before the backend. Keep the approval secret out of the
+  batch environment. No production calls were made.
+
+### Blocked
+- **Credential rotation (SECF-02): the human's step.** Follow
+  `docs/ops/credential-rotation.md`, then run `scripts/local-ops/rotate_check.sh`.
+- The human must configure the new summary credentials before drafting or
+  approval can work in production.
+- LT native review, including earlier summary, P1 trust and Stage 1 copy; rclone
+  client ID.
+
+### Next concrete step
+Release the two verified fixes after the human configures credentials, then run
+no-write production auth probes and inspect audit rows from real maintainer
+actions. Next trust-floor item after release: SECA-08 — reporter-email privacy
+notice, retention and erasure. If LLM rephrasing is introduced later, add a
+wording/reviewer-diff gate first.
+
+---
+
 # RESUME — 2026-11-25 (CORA-06)
 
 CORA-06 is verified locally in `3e28f05`: summary figures are bound to their
@@ -7,7 +41,7 @@ applied, and a second run reported **0 applied, 56 already up-to-date**. Detail:
 `2026-11-25-eval-cora06.md`.
 
 ### Release state
-- Committed locally on `fix/eval-stage1`; not pushed or deployed.
+- Committed on `fix/eval-stage1`; not merged to `main` or deployed.
 - Dashboard suites were not rerun for this backend-only change; the pre-push
   hook remains the release gate.
 
