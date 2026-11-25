@@ -749,40 +749,18 @@ def get_mp_diary(mp_id: str, limit: int = 50, offset: int = 0):
             }
 
 
-# A faction position needs a faction. Same floor as the rebuilt
-# faction_alignment view: below ten members voting, „the faction's position" is
-# one or two people, and comparing someone to it says nothing.
-MIN_FACTION_VOTERS = 10
-
+# The published comparable votes (migration 059), not a live recompute: the
+# figure on the dial is counted from this same view, so the list under it holds
+# exactly the votes that figure is made of, from the same publish (ARC-01).
+# A faction position needs a faction: the view keeps only votes where at least
+# ten of the member's faction voted; below that „the faction's position" is one
+# or two people, and comparing someone to it says nothing.
 _FACTION_ALIGNMENT_SQL = """
-WITH countable AS (
-    SELECT mv.politician_id, mv.vote_id, p.current_party,
-           lower(mv.vote_choice) AS choice
-    FROM mp_votes mv
-    JOIN politicians p ON p.id = mv.politician_id
-    WHERE mv.vote_choice IS NOT NULL
-      AND lower(mv.vote_choice) IN ('už','uz','prieš','pries','susilaikė','susilaike')
-      AND p.current_party IS NOT NULL
-),
-mine AS (
-    SELECT vote_id, current_party, choice
-    FROM countable WHERE politician_id = %(mp)s::uuid
-),
-pos AS (
-    SELECT c.vote_id,
-           count(*) AS voters,
-           mode() WITHIN GROUP (ORDER BY c.choice) AS position
-    FROM countable c
-    JOIN mine m ON m.vote_id = c.vote_id AND c.current_party = m.current_party
-    GROUP BY c.vote_id
-)
 SELECT v.seimas_vote_id, v.sitting_date, v.title,
-       m.choice, pos.position, pos.voters,
-       (m.choice = pos.position) AS agreed
-FROM mine m
-JOIN pos ON pos.vote_id = m.vote_id
-JOIN votes v ON v.seimas_vote_id = m.vote_id
-WHERE pos.voters >= %(floor)s
+       fv.choice, fv.position, fv.voters, fv.agreed
+FROM faction_alignment_votes fv
+JOIN votes v ON v.seimas_vote_id = fv.vote_id
+WHERE fv.mp_id = %(mp)s::uuid
 """
 
 
@@ -811,7 +789,7 @@ def get_mp_faction_alignment(mp_id: str, limit: int = 25, offset: int = 0,
         if not conn:
             raise HTTPException(status_code=500, detail="Database connection failed")
         with conn.cursor() as cur:
-            params = {"mp": mp_id, "floor": MIN_FACTION_VOTERS}
+            params = {"mp": mp_id}
 
             cur.execute(
                 f"SELECT count(*) AS n, count(*) FILTER (WHERE agreed) AS agreed "

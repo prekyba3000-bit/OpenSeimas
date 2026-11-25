@@ -31,6 +31,9 @@ PUBLISH_STEPS = (
     ("mp_stats_summary", "REFRESH MATERIALIZED VIEW CONCURRENTLY mp_stats_summary"),
     ("mp_leaderboard_metrics", "REFRESH MATERIALIZED VIEW CONCURRENTLY mp_leaderboard_metrics"),
     ("mp_attendance_v2", "REFRESH MATERIALIZED VIEW CONCURRENTLY mp_attendance_v2"),
+    # faction_alignment is counted from faction_alignment_votes (migration 059),
+    # so the votes go first and the figure is computed from that same snapshot.
+    ("faction_alignment_votes", "REFRESH MATERIALIZED VIEW CONCURRENTLY faction_alignment_votes"),
     ("faction_alignment", "REFRESH MATERIALIZED VIEW CONCURRENTLY faction_alignment"),
 )
 

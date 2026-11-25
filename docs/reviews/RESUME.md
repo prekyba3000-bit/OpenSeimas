@@ -1,3 +1,16 @@
+# RESUME — 2026-11-26 (faction-alignment votes)
+
+Migration 059 publishes the votes behind faction alignment as a view
+(`faction_alignment_votes`) and counts `faction_alignment` from it; the route's
+vote list and card percentage read the published votes. Same computation:
+140/140 production rows identical before and after. Backend **554 passed**.
+Detail: `2026-11-26-eval-arc01.md`.
+
+### Next concrete step
+ARC-01 part 3 (`dq_checks.protects`), or PERF-07 / OPS-01 / TST-*.
+
+---
+
 # RESUME — 2026-11-26 (ARC-01 part 2)
 
 The profile now reads votes, speeches, committee roles and bills from the
