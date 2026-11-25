@@ -85,6 +85,28 @@ def test_submit_correction_honeypot_silently_accepts():
     db.assert_not_called()
 
 
+def test_submit_correction_drops_a_reporter_email_from_an_old_page():
+    # SECA-08: the platform holds no reporter e-mail. A cached old form may still
+    # send one; it must never reach the INSERT, in the SQL or in the parameters.
+    conn = _fake_conn(fetchone={"id": "22222222-2222-2222-2222-222222222222", "created_at": NOW})
+    with patch("backend.core.get_db_conn", side_effect=lambda: _ctx(conn)), \
+         patch("backend.core._table_exists", return_value=True):
+        resp = client.post(
+            "/api/trust/corrections",
+            json={
+                "entity_type": "vote",
+                "entity_id": "1",
+                "description": "valid length description",
+                "reporter_email": "pilietis@example.lt",
+            },
+        )
+    assert resp.status_code == 201
+    for call in conn.cursor.return_value.execute.call_args_list:
+        sql, params = call[0][0], (call[0][1] if len(call[0]) > 1 else ())
+        assert "email" not in sql.lower()
+        assert "pilietis@example.lt" not in [str(p) for p in params]
+
+
 def test_submit_correction_rejects_bad_entity_type():
     resp = client.post(
         "/api/trust/corrections",

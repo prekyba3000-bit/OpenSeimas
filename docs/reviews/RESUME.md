@@ -1,3 +1,23 @@
+# RESUME — 2026-11-26 (SECA-08)
+
+The correction form no longer asks for an e-mail; the API drops one from old
+pages; migration 058 drops `corrections.reporter_email` (erasing the single
+stored address) and publishes corrections entry `reporter-email-retention`.
+The platform now holds no first-party personal data. Backend **542 passed** on a
+fresh database; guard proven red before 058. Detail: `2026-11-26-eval-seca08.md`.
+
+### Release order
+Push (backend + dashboard deploy) → confirm the new backend is live → apply 058
+→ rendered audit of the form and the corrections log.
+
+### Blocked
+- LT native review (now including the SECA-08 corrections entry); rclone client ID.
+
+### Next concrete step
+Remaining P1 items in `.evaluation/20261118-235807/REPORT.md` §7 not yet done.
+
+---
+
 # RESUME — 2026-11-26 (SECF-02 rotated; CORA-06 + SECA-05 released)
 
 **SECF-02 closed.** The human ran `scripts/local-ops/rotate_all.sh` (`b1938f8`):

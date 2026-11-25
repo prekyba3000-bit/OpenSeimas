@@ -28,7 +28,6 @@ export function CorrectionForm() {
   const [entityType, setEntityType] = useState<EntityType>('mp');
   const [entityId, setEntityId] = useState('');
   const [description, setDescription] = useState('');
-  const [email, setEmail] = useState('');
   const [website, setWebsite] = useState(''); // honeypot
   const [touched, setTouched] = useState(false);
 
@@ -38,13 +37,11 @@ export function CorrectionForm() {
         entity_type: entityType,
         entity_id: entityId.trim(),
         description: description.trim(),
-        ...(email.trim() ? { reporter_email: email.trim() } : {}),
         ...(website ? { website } : {}),
       }),
     onSuccess: () => {
       setEntityId('');
       setDescription('');
-      setEmail('');
       setTouched(false);
       queryClient.invalidateQueries({ queryKey: ['trust', 'corrections'] });
     },
@@ -111,20 +108,6 @@ export function CorrectionForm() {
             Aprašymas turi būti bent {MIN_DESCRIPTION} simbolių.
           </span>
         )}
-      </label>
-
-      <label className="block text-sm">
-        <span className="text-foreground">El. paštas (nebūtina)</span>
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="jei norite atsakymo"
-          className="mt-1 min-h-11 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
-        />
-        <span className="mt-1 block text-xs text-muted-foreground">
-          El. paštas viešame žurnale nerodomas — jis matomas tik prižiūrėtojui.
-        </span>
       </label>
 
       <p className="text-xs leading-relaxed text-muted-foreground">

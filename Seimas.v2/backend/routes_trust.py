@@ -97,10 +97,12 @@ def _require_table(cur, table: str):
 
 
 class CorrectionIn(BaseModel):
+    # No reporter e-mail (evaluation SECA-08): the platform no longer holds any.
+    # An old cached page may still send `reporter_email`; pydantic ignores
+    # undeclared keys, so it is dropped here and never reaches the database.
     entity_type: str = Field(..., max_length=20)
     entity_id: str = Field(..., min_length=1, max_length=200)
     description: str = Field(..., min_length=10, max_length=4000)
-    reporter_email: Optional[str] = Field(None, max_length=320)
     website: Optional[str] = Field(None, max_length=50)  # honeypot — must stay empty
 
 
@@ -122,8 +124,8 @@ def submit_correction(payload: CorrectionIn, request: Request):
             cur.execute("SELECT pg_advisory_xact_lock(%s)", (_CORRECTIONS_WRITE_LOCK,))
             cur.execute(
                 """
-                INSERT INTO corrections (entity_type, entity_id, description, reporter_email)
-                SELECT %s, %s, %s, %s
+                INSERT INTO corrections (entity_type, entity_id, description)
+                SELECT %s, %s, %s
                 WHERE (SELECT count(*) FROM corrections
                        WHERE status = 'open'
                          AND created_at > NOW() - INTERVAL '10 minutes') < %s
@@ -134,7 +136,6 @@ def submit_correction(payload: CorrectionIn, request: Request):
                     payload.entity_type,
                     payload.entity_id,
                     payload.description,
-                    payload.reporter_email,
                     CORRECTIONS_BURST_LIMIT,
                     CORRECTIONS_OPEN_LIMIT,
                 ),
@@ -155,7 +156,7 @@ def list_corrections(request: Request, status: Optional[str] = None, limit: int 
 
     Only `_PUBLIC_CORRECTION_STATUSES` are ever returned — unreviewed (`open`)
     submissions are not public, and asking for them explicitly is refused rather
-    than quietly ignored. reporter_email is deliberately never selected.
+    than quietly ignored. No reporter e-mail exists to select (SECA-08).
     """
     if not check_rate_limit(_client_ip(request)):
         raise HTTPException(status_code=429, detail="Rate limit exceeded")

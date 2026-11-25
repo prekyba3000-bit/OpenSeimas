@@ -131,3 +131,38 @@ def test_simultaneous_requests_cannot_cross_the_global_budget(corrections_db):
     assert sorted(response.status_code for response in responses) == [201, 429]
     cur.execute("SELECT count(*) AS n FROM corrections WHERE entity_id LIKE %s", (marker + "%",))
     assert cur.fetchone()["n"] == CORRECTIONS_BURST_LIMIT
+
+
+def test_no_table_holds_an_email_column():
+    """SECA-08 pattern guard: the platform keeps no e-mail address of anyone.
+
+    Asserts the shape (any column named like e-mail, in any table), not just the
+    dropped corrections.reporter_email, so a new form field cannot quietly add one.
+    """
+    with psycopg2.connect(DSN) as conn, conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT table_name || '.' || column_name FROM information_schema.columns
+            WHERE table_schema = 'public'
+              AND (column_name ILIKE '%%email%%' OR column_name ILIKE '%%e_mail%%'
+                   OR column_name ILIKE '%%pastas%%')
+            """
+        )
+        assert [r[0] for r in cur.fetchall()] == []
+
+
+def test_submission_with_a_reporter_email_stores_the_report_only(corrections_db):
+    conn, cur, marker = corrections_db
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/trust/corrections",
+            json={"entity_type": "other", "entity_id": marker + "-old-page",
+                  "description": "Nauja sintetinė pastaba apie klaidą.",
+                  "reporter_email": "pilietis@example.lt"},
+        )
+    assert response.status_code == 201
+    cur.execute("SELECT to_jsonb(c)::text AS row FROM corrections c WHERE entity_id = %s",
+                (marker + "-old-page",))
+    row = cur.fetchone()["row"]
+    assert "Nauja sintetinė pastaba" in row
+    assert "pilietis@example.lt" not in row

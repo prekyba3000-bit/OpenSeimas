@@ -67,6 +67,18 @@ describe("CorrectionForm", () => {
     expect(screen.getByText(/Atmesto pranešimo teksto neskelbiame/i)).toBeInTheDocument();
   });
 
+  it("asks for no e-mail and sends none (SECA-08)", async () => {
+    vi.mocked(trustApi.submitCorrection).mockClear();
+    vi.mocked(trustApi.submitCorrection).mockResolvedValue({ status: "received", id: "1" });
+    renderForm();
+    expect(document.querySelector('input[type="email"]')).toBeNull();
+    expect(screen.queryByText(/el\. pa[sš]tas/i)).toBeNull();
+    fillValid();
+    fireEvent.click(screen.getByRole("button", { name: /Pateikti pataisymą/i }));
+    await vi.waitFor(() => expect(trustApi.submitCorrection).toHaveBeenCalledTimes(1));
+    expect(Object.keys(vi.mocked(trustApi.submitCorrection).mock.calls[0][0])).not.toContain("reporter_email");
+  });
+
   it("keeps the honeypot reachable in the DOM but out of view", () => {
     vi.mocked(trustApi.submitCorrection).mockClear();
     renderForm();

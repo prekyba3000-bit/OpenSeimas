@@ -1,8 +1,8 @@
 /**
  * Trust-floor client (V.4 Phase 1) — backend/routes_trust.py public endpoints.
  *
- * The public corrections log never carries reporter_email: the backend omits it
- * from the SELECT, and CorrectionEntry has no field for it, so it cannot render.
+ * The platform holds no reporter e-mail (evaluation SECA-08), and CorrectionEntry
+ * has no field for one, so even a leaked key could not render.
  */
 import { request } from "./api";
 
@@ -35,7 +35,6 @@ export interface CorrectionSubmission {
   entity_type: EntityType;
   entity_id: string;
   description: string;
-  reporter_email?: string;
   /** Honeypot: rendered off-screen, must stay empty. Filled ⇒ backend discards silently. */
   website?: string;
 }
