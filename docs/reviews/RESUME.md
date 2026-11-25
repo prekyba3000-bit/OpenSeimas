@@ -6,6 +6,8 @@ two mid-ingest refreshes, dormant workflow) and routed `POST /api/admin/refresh`
 through the gate. `GET /api/admin/refresh-status` removed (reported in-memory
 state, no consumer). Backend **548 passed**; real-Postgres tests prove a blocking
 check holds every view. Detail: `2026-11-26-eval-arc01.md`.
+On production (`bb8c1cd`): the admin route published through the gate on Render,
+and `admin_audit_log` recorded it correctly (first real row; SECA-05 check done).
 
 ### Next concrete step
 ARC-01 part 2: profile figures behind published views (methodology entries),
