@@ -163,7 +163,14 @@ def test_exactly_one_production_file_refreshes_views():
 def test_the_publisher_runs_the_gate_before_any_refresh():
     text = PUBLISHER.read_text()
     body = text[text.index("def publish("):]
-    gate_at = body.index("dq_check_runner.main(")
-    hold_at = body.index("if gate == 1:")
+    gate_at = body.index("dq_check_runner.held_units(")
+    hold_at = body.index("if UNIT_OF[view] in held_by:")
     first_refresh_at = body.index("cur.execute(statement)")
     assert gate_at < hold_at < first_refresh_at
+
+
+def test_every_published_view_belongs_to_one_unit():
+    from backend.publish import PUBLISH_STEPS, UNIT_OF
+    assert [v for v, _ in PUBLISH_STEPS] == list(UNIT_OF), (
+        "a view refreshed without a publication unit could never be held"
+    )

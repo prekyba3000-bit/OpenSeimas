@@ -27,6 +27,11 @@ from scripts import dq_check_runner
 # Order matters: mp_leaderboard_metrics reads mp_stats_summary. Literal SQL on
 # purpose, so the static refresh-path guard can read which views are published.
 # CONCURRENTLY keeps reads unblocked; every view has the required unique index.
+#
+# Each view belongs to one publication unit (migration 060). A unit publishes or
+# holds as a whole, because surfaces must agree across its views: the list reads
+# mp_stats_summary and the profile mp_leaderboard_metrics; faction_alignment is
+# counted from faction_alignment_votes.
 PUBLISH_STEPS = (
     ("mp_stats_summary", "REFRESH MATERIALIZED VIEW CONCURRENTLY mp_stats_summary"),
     ("mp_leaderboard_metrics", "REFRESH MATERIALIZED VIEW CONCURRENTLY mp_leaderboard_metrics"),
@@ -36,6 +41,14 @@ PUBLISH_STEPS = (
     ("faction_alignment_votes", "REFRESH MATERIALIZED VIEW CONCURRENTLY faction_alignment_votes"),
     ("faction_alignment", "REFRESH MATERIALIZED VIEW CONCURRENTLY faction_alignment"),
 )
+UNIT_OF = {
+    "mp_stats_summary": "members",
+    "mp_leaderboard_metrics": "members",
+    "mp_attendance_v2": "attendance",
+    "faction_alignment_votes": "faction",
+    "faction_alignment": "faction",
+}
+UNITS = tuple(dict.fromkeys(UNIT_OF.values()))
 
 
 def _record(cur, view: str, job_id: str, started, error: Optional[str] = None) -> None:
@@ -52,12 +65,14 @@ def _record(cur, view: str, job_id: str, started, error: Optional[str] = None) -
 
 
 def publish(dsn: Optional[str] = None, job_id: str = "refresh_stats.sh") -> dict:
-    """Run the gate, then refresh every published view. Never refreshes on HOLD.
+    """Run the gate, then refresh every view whose unit no failing check holds.
 
-    Gate outcomes (dq_check_runner exit codes):
-      0 clear       -> refresh
-      1 blocking    -> HOLD: refresh nothing, last-good views stay served
-      2 unavailable -> refresh anyway: the dq_checks table is not installed in
+    Gate outcomes:
+      clear         -> refresh every unit                     status "published"
+      some held     -> refresh the others; held units keep    status "partial"
+                       serving their last-good views
+      all held      -> refresh nothing                        status "held"
+      unavailable   -> refresh anyway: the dq_checks table is not installed in
                        this database. Treating "not installed" as blocking froze
                        nothing in production only because it was caught first.
     """
@@ -65,9 +80,14 @@ def publish(dsn: Optional[str] = None, job_id: str = "refresh_stats.sh") -> dict
     if not dsn:
         return {"status": "error", "error": "DB_DSN not set"}
 
-    gate = dq_check_runner.main(["--gate"], dsn=dsn)
-    if gate == 1:
-        return {"status": "held", "refreshed": []}
+    verdict = dq_check_runner.held_units(dsn)
+    gate = "unavailable" if verdict is None else ("clear" if not verdict else "blocking")
+    verdict = verdict or {}
+    held_by = ({unit: verdict[dq_check_runner.ALL] for unit in UNITS}
+               if dq_check_runner.ALL in verdict else
+               {unit: checks for unit, checks in verdict.items() if unit in UNITS})
+    if len(held_by) == len(UNITS):
+        return {"status": "held", "refreshed": [], "held": held_by}
 
     refreshed = []
     conn = psycopg2.connect(dsn)
@@ -75,6 +95,8 @@ def publish(dsn: Optional[str] = None, job_id: str = "refresh_stats.sh") -> dict
     try:
         with conn.cursor() as cur:
             for view, sql in PUBLISH_STEPS:
+                if UNIT_OF[view] in held_by:
+                    continue
                 cur.execute("SELECT ispopulated FROM pg_matviews WHERE schemaname = 'public' "
                             "AND matviewname = %s", (view,))
                 row = cur.fetchone()
@@ -93,18 +115,21 @@ def publish(dsn: Optional[str] = None, job_id: str = "refresh_stats.sh") -> dict
                 refreshed.append(view)
     finally:
         conn.close()
-    return {"status": "published", "gate": "clear" if gate == 0 else "unavailable",
-            "refreshed": refreshed}
+    return {"status": "partial" if held_by else "published", "gate": gate,
+            "refreshed": refreshed, "held": held_by}
 
 
 if __name__ == "__main__":
     result = publish()
     stamp = datetime.datetime.now().isoformat(timespec="seconds")
+    held = "; ".join(f"{unit} (by {', '.join(checks)})" for unit, checks in result.get("held", {}).items())
     if result["status"] == "held":
-        print(f"[{stamp}] publish HELD — blocking data-quality failure; last-good views stay served")
-    elif result["status"] == "published":
-        note = "" if result["gate"] == "clear" else " (dq gate unavailable — checks not installed here)"
+        print(f"[{stamp}] publish HELD — every unit; last-good views stay served: {held}")
+    elif result["status"] in ("published", "partial"):
+        note = " (dq gate unavailable — checks not installed here)" if result["gate"] == "unavailable" else ""
         print(f"[{stamp}] published: {', '.join(result['refreshed'])}{note}")
+        if held:
+            print(f"[{stamp}] held, last-good views stay served: {held}")
     else:
         print(f"[{stamp}] publish failed: {result['error']}", file=sys.stderr)
         sys.exit(1)

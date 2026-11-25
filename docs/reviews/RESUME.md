@@ -1,3 +1,17 @@
+# RESUME — 2026-11-26 (ARC-01 part 3)
+
+Scoped holds: migration 060 adds `dq_checks.protects` and `dq_source_units`; a
+failing check holds only the publication units it protects (members /
+attendance / faction), unscoped checks and checks that cannot run still hold
+everything. Applied on production; all checks pass; full publish ran. Backend
+**564 passed**. ARC-01 is complete apart from `bills_initiated_*` (live, no view
+carries them). Detail: `2026-11-26-eval-arc01.md`.
+
+### Next concrete step
+PERF-07 (pooling and caching), OPS-01 (deploy from commits), TST-01/02/04/13.
+
+---
+
 # RESUME — 2026-11-26 (faction-alignment votes)
 
 Migration 059 publishes the votes behind faction alignment as a view

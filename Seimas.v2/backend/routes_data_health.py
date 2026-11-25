@@ -39,9 +39,13 @@ def _checks(cur):
         return {"state": "unknown",
                 "reason": "dq_checks/dq_check_runs not present in this database",
                 "checks": []}
+    # dq_checks.protects arrives with migration 060 (scoped holds).
+    cur.execute("SELECT 1 FROM information_schema.columns WHERE table_name = 'dq_checks' "
+                "AND column_name = 'protects'")
+    protects_col = "c.protects" if cur.fetchone() else "NULL::text[] AS protects"
     cur.execute(
-        """
-        SELECT c.check_key, c.description_lt, c.severity, c.action,
+        f"""
+        SELECT c.check_key, c.description_lt, c.severity, c.action, {protects_col},
                r.status, r.failing_row_count, r.run_at, r.error
         FROM dq_checks c
         LEFT JOIN LATERAL (
@@ -59,6 +63,8 @@ def _checks(cur):
         "description_lt": r["description_lt"],
         "severity": r["severity"],
         "action": r["action"],
+        # Which publication units a failure holds; null = every unit.
+        "protects": list(r["protects"]) if r["protects"] is not None else None,
         # A check that has never run is `unknown`, not `pass`.
         "status": r["status"] or "unknown",
         "failing_row_count": r["failing_row_count"],
@@ -67,8 +73,13 @@ def _checks(cur):
     } for r in rows]
     blocking = [c["check_key"] for c in checks
                 if c["status"] in ("error", "unknown") and c["action"] == "block_publish"]
+    # A failing check that protects no published view holds nothing (migration
+    # 060). Per-source checks are counted as holding: which sources failed is
+    # decided at publish time, and over-reporting a hold is the safe direction.
+    holding = [c for c in checks if c["check_key"] in blocking
+               and not (c["protects"] == [] and c["status"] != "unknown")]
     return {"state": "ok", "checks": checks, "blocking": blocking,
-            "publish_held": bool(blocking)}
+            "publish_held": bool(holding)}
 
 
 def _sources(cur):

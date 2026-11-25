@@ -90,7 +90,7 @@ def test_a_blocking_check_holds_every_published_view(gate_db):
 
     result = publish(DSN, job_id=job)
 
-    assert result == {"status": "held", "refreshed": []}
+    assert result["status"] == "held" and result["refreshed"] == []
     assert _published(cur, mp_id) == (0, 0), "a held publish changed a published view"
     assert _publish_rows(cur, job) == 0, "a held publish was recorded as a refresh"
 
@@ -134,3 +134,61 @@ def test_starting_the_api_publishes_nothing(gate_db):
         client.get("/health")
 
     assert _published(cur, mp_id) == (0, 0)
+
+
+# ─── Scoped holds (ARC-01 part 3, migration 060) ────────────────────────────
+
+def _scope_check(cur, check_key, sql, protects):
+    cur.execute("UPDATE dq_checks SET sql = %s, protects = %s WHERE check_key = %s",
+                (sql, protects, check_key))
+
+
+def _recorded_views(cur, job):
+    cur.execute("SELECT source_name FROM source_fetches WHERE job_id = %s", (job,))
+    return sorted(r["source_name"].removeprefix("matview:") for r in cur.fetchall())
+
+
+ALL_VIEWS = sorted(view for view, _ in PUBLISH_STEPS)
+
+
+@pytest.mark.parametrize("sql, protects, held_units", [
+    ("SELECT 1 AS violation", ["attendance"], {"attendance"}),
+    ("SELECT 'seimas_registrations'::text AS source_name", ["by_source"], {"attendance"}),
+    ("SELECT 'seimas_floor_speeches'::text AS source_name", ["by_source"], {"members"}),
+    ("SELECT 'seimas_diary'::text AS source_name", ["by_source"], set()),
+    ("SELECT 'a_feed_nobody_mapped'::text AS source_name", ["by_source"], {"members", "attendance", "faction"}),
+    ("SELECT 1 AS violation", [], set()),
+    ("SELECT 1 AS violation", None, {"members", "attendance", "faction"}),
+    ("SELECT * FROM a_table_that_does_not_exist", ["attendance"], {"members", "attendance", "faction"}),
+])
+def test_a_failing_check_holds_what_it_protects(gate_db, sql, protects, held_units):
+    cur, check_key, _, _ = gate_db
+    _scope_check(cur, check_key, sql, protects)
+    job = "test-scope-" + uuid.uuid4().hex[:6]
+
+    result = publish(DSN, job_id=job)
+
+    assert set(result["held"]) == held_units
+    from backend.publish import UNIT_OF
+    expected = sorted(v for v in ALL_VIEWS if UNIT_OF[v] not in held_units)
+    assert _recorded_views(cur, job) == expected
+    assert sorted(result["refreshed"]) == expected
+    if not held_units:
+        assert result["status"] == "published"
+    elif len(held_units) == 3:
+        assert result["status"] == "held"
+    else:
+        assert result["status"] == "partial"
+
+
+def test_every_blocking_check_declares_its_scope():
+    """NULL protects is the safe default (holds everything), but a check shipped
+    without a scope is a decision nobody made. Every enabled block_publish check
+    in the migrations says what it protects."""
+    with psycopg2.connect(DSN) as conn, conn.cursor() as cur:
+        cur.execute("SELECT check_key FROM dq_checks WHERE enabled AND action = 'block_publish' "
+                    "AND protects IS NULL AND check_key NOT LIKE 'arc01_%%'")
+        assert [r[0] for r in cur.fetchall()] == []
+        cur.execute("SELECT DISTINCT unnest(units) FROM dq_source_units")
+        from backend.publish import UNITS
+        assert {r[0] for r in cur.fetchall()} <= set(UNITS)

@@ -13,6 +13,10 @@ Exit codes:
     1  at least one block_publish check failed — hold the publish
     2  the runner itself could not run (no DSN, no dq_checks table)
 
+Scoped holds (migration 060): `held_units()` says WHICH publication units a
+failure holds, from dq_checks.protects. ALL ("*") means every unit: an unscoped
+check, an unmapped source, or a check that could not run.
+
 Read-only against the data it inspects: the session is read-only for the check
 SQL, and the only writes are the append-only dq_check_runs rows.
 """
@@ -29,6 +33,7 @@ import psycopg2.extras
 SAMPLE_CAP = 5
 STATEMENT_TIMEOUT_MS = 30_000
 SEVERITY_RANK = {"pass": 0, "warn": 1, "error": 2, "unknown": 3}
+ALL = "*"  # every publication unit
 
 
 def _worst(a: str, b: str) -> str:
@@ -63,6 +68,10 @@ def run_check(conn, check: Dict[str, Any]) -> Dict[str, Any]:
         return result
 
     result["failing_row_count"] = len(rows)
+    # Per-source checks name the source on each row; kept in full (the sample
+    # is capped) so a sixth stale source still decides what is held.
+    if rows and "source_name" in rows[0]:
+        result["sources"] = sorted({str(r["source_name"]) for r in rows if r["source_name"]})
     if not rows:
         result["status"] = "pass"
     else:
@@ -117,7 +126,39 @@ def ping_healthcheck(ok: bool) -> str:
         return f"ping failed: {type(exc).__name__}"
 
 
-def main(argv=None, dsn=None) -> int:
+def units_held(check: Dict[str, Any], result: Dict[str, Any],
+               source_units: Dict[str, List[str]]) -> List[str]:
+    """The publication units one failing block_publish check holds."""
+    protects = check.get("protects")
+    if result["status"] == "unknown" or protects is None:
+        return [ALL]  # did not run, or nobody scoped it: protect everything
+    if list(protects) == ["by_source"]:
+        units: set = set()
+        sources = result.get("sources")
+        if not sources:
+            return [ALL]  # a per-source check whose rows name no source
+        for source in sources:
+            if source not in source_units:
+                return [ALL]  # a source nobody mapped could feed anything
+            units.update(source_units[source])
+        return sorted(units)
+    return sorted(protects)
+
+
+def held_units(dsn: str) -> Dict[str, List[str]] | None:
+    """Run the suite (recording it) and return {unit: [check_key, ...]} held.
+
+    {} means clear. None means the runner could not run (exit 2): the caller
+    decides, as refresh_stats.sh always has. Key ALL means every unit.
+    """
+    out: Dict[str, Any] = {}
+    rc = main(["--gate"], dsn=dsn, out=out)
+    if rc == 2:
+        return None
+    return out.get("held", {})
+
+
+def main(argv=None, dsn=None, out=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dry-run", action="store_true",
                         help="run the checks, print results, record nothing")
@@ -137,20 +178,33 @@ def main(argv=None, dsn=None) -> int:
             if cur.fetchone()["t"] is None:
                 print("ERROR: dq_checks table missing — run migrations first", file=sys.stderr)
                 return 2
+            # protects / dq_source_units arrive with migration 060. Before it,
+            # every check holds every unit, which is what the gate always did.
+            cur.execute("SELECT 1 FROM information_schema.columns WHERE table_name = "
+                        "'dq_checks' AND column_name = 'protects'")
+            protects_col = "protects" if cur.fetchone() else "NULL::text[] AS protects"
             cur.execute(
-                "SELECT check_key, description_lt, sql, severity, action "
+                f"SELECT check_key, description_lt, sql, severity, action, {protects_col} "
                 "FROM dq_checks WHERE enabled ORDER BY check_key"
             )
             checks: List[Dict[str, Any]] = cur.fetchall()
+            source_units: Dict[str, List[str]] = {}
+            cur.execute("SELECT to_regclass('public.dq_source_units') AS t")
+            if cur.fetchone()["t"] is not None:
+                cur.execute("SELECT source_name, units FROM dq_source_units")
+                source_units = {r["source_name"]: list(r["units"]) for r in cur.fetchall()}
 
         blocking: List[str] = []
         unknown: List[str] = []
+        held: Dict[str, List[str]] = {}
         for check in checks:
             result = run_check(conn, check)
             if not args.dry_run:
                 record(conn, result)
             if result["status"] in ("error", "unknown") and check["action"] == "block_publish":
                 blocking.append(check["check_key"])
+                for unit in units_held(check, result, source_units):
+                    held.setdefault(unit, []).append(check["check_key"])
             if result["status"] == "unknown":
                 unknown.append(check["check_key"])
             if not args.gate:
@@ -160,11 +214,15 @@ def main(argv=None, dsn=None) -> int:
                       f"rows={shown} {result['error'] or ''}".rstrip())
 
         ok = not blocking
+        if out is not None:
+            out["held"] = held
         if not args.gate:
             print(f"\n{len(checks)} checks · {len(blocking)} blocking · {len(unknown)} unknown")
             print(f"healthcheck: {ping_healthcheck(ok)}")
             if blocking:
                 print("PUBLISH HELD — last-good data stays served:", ", ".join(blocking))
+                for unit, keys in sorted(held.items()):
+                    print(f"  holds {'every unit' if unit == ALL else unit}: {', '.join(keys)}")
         return 0 if ok else 1
     finally:
         conn.close()
