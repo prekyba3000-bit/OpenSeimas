@@ -31,7 +31,8 @@ Work in this order, so that nothing runs against a half-rotated set:
 7. **GitHub:** if a repository secret `DB_DSN` exists (it feeds the dormant
    workflows), update or delete it: `gh secret list`.
 8. **Verify:** `scripts/local-ops/rotate_check.sh`. All checks must pass.
-9. **Resume the timers:** `systemctl --user start 'openseimas-*.timer'`, then
+9. **Resume the timers:** `systemctl --user start $(systemctl --user list-unit-files 'openseimas-*.timer' --no-legend | awk '{print $1}')`
+   (a `*` pattern only matches loaded units, and stopped timers unload), then
    confirm the next sync and backup succeed with `scripts/local-ops/status.sh`.
 10. **Record** the date below. Never the values.
 
@@ -65,3 +66,4 @@ replacements for the rotation above:
 | Date | What | Verified by |
 |---|---|---|
 | — | Not yet rotated (exposure recorded 2026-08-11) | — |
+| 2026-11-26 | Neon `neondb_owner` password, `SYNC_SECRET`; summary draft/approve secrets and approver name set (SECA-05) — via `scripts/local-ops/rotate_all.sh` | `rotate_check.sh`: all 6 checks passed, old DB password and old token refused |
