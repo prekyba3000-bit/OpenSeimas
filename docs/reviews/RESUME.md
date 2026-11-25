@@ -4,6 +4,7 @@ Migration 059 publishes the votes behind faction alignment as a view
 (`faction_alignment_votes`) and counts `faction_alignment` from it; the route's
 vote list and card percentage read the published votes. Same computation:
 140/140 production rows identical before and after. Backend **554 passed**.
+On production (`0e48c8d`): 30/30 route payloads identical; card and dial agree.
 Detail: `2026-11-26-eval-arc01.md`.
 
 ### Next concrete step
