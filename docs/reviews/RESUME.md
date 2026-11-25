@@ -6,6 +6,8 @@ agrees with the list by construction. A member with no published row gets null
 figures and provenance `unpublished` (wire: dimensions nullable, contract and
 golden fixture updated). Production had 0 such members and identical live vs
 published figures, so no displayed number changes. Backend **551 passed**.
+On production (`9ff69e5`): 30/30 sampled profiles identical before and after;
+rendered audit passed on both hosts.
 Detail: `2026-11-26-eval-arc01.md`.
 
 ### Next concrete step
