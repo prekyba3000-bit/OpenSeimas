@@ -954,48 +954,25 @@ _CHOICE_RECORDED = (
 
 
 def _fetch_mp_metrics(mp_id: str, db_cursor) -> Dict[str, Any] | None:
+    """One member's figures, from the published views only (evaluation ARC-01).
+
+    The vote, speech and committee rollups used to be recomputed here live from
+    mp_votes, speeches and committee_memberships. The data-quality gate holds the
+    views, not the base tables, so during a HOLD the profile showed ungated
+    figures while the list and leaderboard showed the held ones: one member, two
+    epochs. They now come from mp_leaderboard_metrics, whose definition computes
+    the same rollups with the same predicates, so the profile publishes when the
+    list does and agrees with it by construction.
+
+    `is_published` is false for a member added since the last publish. Their
+    figures are unknown, not zero: calculate_hero_profile sends them as null.
+
+    Identity and mandate fields still come from `politicians`: they describe who
+    the member is, not a figure about them. bills_initiated_* are in no view yet
+    and stay live (recorded in docs/reviews/2026-11-26-eval-arc01.md).
+    """
     db_cursor.execute(
-        f"""
-        WITH vote_rollup AS (
-            SELECT
-                mv.politician_id AS mp_id,
-                COUNT(mv.vote_id) FILTER (
-                    WHERE {_CHOICE_RECORDED}
-                ) AS votes_participated,
-                COUNT(mv.vote_id) FILTER (
-                    WHERE LOWER(COALESCE(mv.vote_choice, '')) IN ('už', 'uz')
-                      AND COALESCE(v.result_type, '') = 'Priimta'
-                ) AS votes_for_passed,
-                COUNT(DISTINCT v.sitting_date) FILTER (
-                    WHERE {_CHOICE_RECORDED}
-                ) AS active_vote_days,
-                COUNT(mv.vote_id) FILTER (
-                    WHERE {_CHOICE_RECORDED}
-                      AND COALESCE(v.vote_type, '') ILIKE '%%pateik%%'
-                ) AS amendment_votes,
-                MIN(v.sitting_date) FILTER (
-                    WHERE {_CHOICE_RECORDED}
-                ) AS first_vote_date
-            FROM mp_votes mv
-            LEFT JOIN votes v ON mv.vote_id = v.seimas_vote_id
-            GROUP BY mv.politician_id
-        ),
-        speech_rollup AS (
-            SELECT mp_id,
-                   (COUNT(*) FILTER (WHERE speech_type='floor_speech') * 2
-                  + COUNT(*) FILTER (WHERE speech_type='press_release')) AS speeches_given
-            FROM speeches
-            GROUP BY mp_id
-        ),
-        committee_rollup AS (
-            SELECT
-                mp_id,
-                COUNT(*) FILTER (
-                    WHERE LOWER(COALESCE(role, '')) IN ('chair', 'deputy chair')
-                ) AS committee_leadership_roles
-            FROM committee_memberships
-            GROUP BY mp_id
-        )
+        """
         SELECT
             p.id,
             p.display_name,
@@ -1009,32 +986,25 @@ def _fetch_mp_metrics(mp_id: str, db_cursor) -> Dict[str, Any] | None:
             p.constituency_number,
             p.constituency_name,
             p.election_type,
-            COALESCE(p.bills_authored_count, 0) AS bills_authored_count,
             p.bills_initiated_total,
             p.bills_initiated_individually,
-            COALESCE(s.total_votes_cast, 0) AS total_votes_cast,
-            -- Not COALESCE(..., 0). Charter §1.4 forbids it in a read path by
-            -- name, and this is why: a member with no row in the summary view
-            -- would be published as zero attendance, which states that they
-            -- never showed up rather than that we do not know. NULL travels;
-            -- resolve_attendance keeps it NULL and the surface renders unknown.
-            -- Deliberately no per-cent sign anywhere in this comment: psycopg2
-            -- interpolates the whole query string, comments included, so one
-            -- would be read as a parameter placeholder and raise IndexError
-            -- before Postgres ever sees the query. Cost one 500 in production.
+            lm.mp_id IS NOT NULL AS is_published,
+            lm.bills_authored_count,
+            lm.total_votes_cast,
+            -- Not from the leaderboard view: it coalesces attendance to zero.
+            -- The summary view keeps NULL, and resolve_attendance keeps it NULL.
             s.attendance_percentage AS attendance_percentage,
-            COALESCE(s.amendments_proposed_count, 0) AS amendments_proposed_count,
-            COALESCE(sr.speeches_given, 0) AS speeches_given,
-            COALESCE(cr.committee_leadership_roles, 0) AS committee_leadership_roles,
-            COALESCE(vr.votes_participated, 0) AS votes_participated,
-            COALESCE(vr.votes_for_passed, 0) AS votes_for_passed,
-            COALESCE(vr.active_vote_days, 0) AS active_vote_days,
-            vr.first_vote_date
+            lm.amendments_proposed_count,
+            lm.speeches_given,
+            lm.committee_leadership_roles,
+            lm.votes_participated,
+            lm.votes_for_passed,
+            lm.active_vote_days,
+            lm.amendment_votes,
+            lm.first_vote_date
         FROM politicians p
         LEFT JOIN mp_stats_summary s ON p.id = s.mp_id
-        LEFT JOIN speech_rollup sr ON p.id = sr.mp_id
-        LEFT JOIN committee_rollup cr ON p.id = cr.mp_id
-        LEFT JOIN vote_rollup vr ON p.id = vr.mp_id
+        LEFT JOIN mp_leaderboard_metrics lm ON p.id = lm.mp_id
         WHERE p.id = %s::uuid
         """,
         (mp_id,),
@@ -1227,15 +1197,10 @@ def calculate_hero_profile(mp_id: str, db_cursor) -> Dict[str, Any]:
     committee_leadership = float(mp_row["committee_leadership_roles"] or 0)
     bills_passed = float(mp_row["votes_for_passed"] or 0)
     total_votes_cast = float(mp_row["total_votes_cast"] or 0)
-    # Direct source of CHA: count communication entries in speeches table for this MP.
-    db_cursor.execute(
-        "SELECT (COUNT(*) FILTER (WHERE speech_type='floor_speech') * 2 "
-        "      + COUNT(*) FILTER (WHERE speech_type='press_release')) AS speech_count "
-        "FROM speeches WHERE mp_id::text = %s",
-        (mp_id,),
-    )
-    speech_row = db_cursor.fetchone()
-    speeches_given = float(speech_row["speech_count"] or 0) if speech_row else 0.0
+    # From the published row, like every rollup above (ARC-01). This was a
+    # second live count of `speeches`, outside the gate.
+    speeches_given = float(mp_row["speeches_given"] or 0)
+    published = bool(mp_row.get("is_published"))
     # None when suppressed; the payload keeps the None, the formulas take 0.
     attendance_display = resolve_attendance(db_cursor, mp_id, mp_row["attendance_percentage"])
     attendance_percentage = float(attendance_display or 0)
@@ -1342,6 +1307,23 @@ def calculate_hero_profile(mp_id: str, db_cursor) -> Dict[str, Any]:
         "high_risk_alerts": high_risk_alerts,
     }
 
+    if not published:
+        # Added since the last publish (or the gate is holding). Nothing about
+        # them has passed the data-quality checks, so no figure leaves: null,
+        # never the zeros the arithmetic above fell back to.
+        for key in ("bills_authored_count", "bills_passed", "committee_leadership",
+                    "years_in_parliament", "total_votes_cast", "speeches_given",
+                    "amendments_proposed", "amendments_proposed_proxy", "bills_proposed"):
+            metrics[key] = None
+        metrics_provenance = {key: "unpublished" for key in metrics_provenance}
+        dimensions = {"legislative_activity": None, "experience": None, "visibility": None}
+    else:
+        dimensions = {
+            "legislative_activity": round(_clamp(str_score), 2),
+            "experience": round(_clamp(wis_score), 2),
+            "visibility": round(_clamp(cha_score), 2),
+        }
+
     return {
         "mp": {
             "id": str(mp_row["id"]),
@@ -1375,11 +1357,7 @@ def calculate_hero_profile(mp_id: str, db_cursor) -> Dict[str, Any]:
         #   INT  the composite itself, demoted to the methodology page
         #   STA  score_consistency(attendance, amendments) — a second
         #        aggregation, never displayed, mixing two unrelated things
-        "dimensions": {
-            "legislative_activity": round(_clamp(str_score), 2),
-            "experience": round(_clamp(wis_score), 2),
-            "visibility": round(_clamp(cha_score), 2),
-        },
+        "dimensions": dimensions,
         "metrics": public_metrics(metrics),
         "metrics_provenance": metrics_provenance,
         "forensic_breakdown": public_breakdown(forensic_breakdown),

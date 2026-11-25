@@ -37,9 +37,11 @@ class HeroDimensionsResponse(BaseModel):
     field removed here silently stops being served, which is the intent.
     """
 
-    legislative_activity: float
-    experience: float
-    visibility: float
+    # Optional: null for a member not yet published (evaluation ARC-01). A
+    # dimension computed from no published data would be a zero about a person.
+    legislative_activity: Optional[float]
+    experience: Optional[float]
+    visibility: Optional[float]
 
 
 class HeroProfileResponse(BaseModel):

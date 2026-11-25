@@ -39,7 +39,19 @@
         "metrics.bills_initiated_individually": "Same feed. Zero here would claim the member initiated nothing alone, which is the stronger claim migration 021 warned about.",
         "mp.constituency_number": "Elected from a party list, so the member represents no single-mandate district. 70 of 141 seats. Not missing data — rendering it as a gap would imply a district exists and we failed to find it.",
         "mp.constituency_name": "Same as mp.constituency_number.",
-        "mp.election_type": "A mid-term replacement who took a vacated seat and so was not elected in the 2024 election at all. 6 members."
+        "mp.election_type": "A mid-term replacement who took a vacated seat and so was not elected in the 2024 election at all. 6 members.",
+        "dimensions.experience": "Not yet published (evaluation ARC-01): the member was added since the last publish, or the data-quality gate is holding. No figure about them has passed the checks, so it is unknown, not 0.",
+        "dimensions.legislative_activity": "Not yet published (evaluation ARC-01): the member was added since the last publish, or the data-quality gate is holding. No figure about them has passed the checks, so it is unknown, not 0.",
+        "dimensions.visibility": "Not yet published (evaluation ARC-01): the member was added since the last publish, or the data-quality gate is holding. No figure about them has passed the checks, so it is unknown, not 0.",
+        "metrics.amendments_proposed": "Not yet published (evaluation ARC-01): the member was added since the last publish, or the data-quality gate is holding. No figure about them has passed the checks, so it is unknown, not 0.",
+        "metrics.amendments_proposed_proxy": "Not yet published (evaluation ARC-01): the member was added since the last publish, or the data-quality gate is holding. No figure about them has passed the checks, so it is unknown, not 0.",
+        "metrics.bills_authored_count": "Not yet published (evaluation ARC-01): the member was added since the last publish, or the data-quality gate is holding. No figure about them has passed the checks, so it is unknown, not 0.",
+        "metrics.bills_passed": "Not yet published (evaluation ARC-01): the member was added since the last publish, or the data-quality gate is holding. No figure about them has passed the checks, so it is unknown, not 0.",
+        "metrics.bills_proposed": "Not yet published (evaluation ARC-01): the member was added since the last publish, or the data-quality gate is holding. No figure about them has passed the checks, so it is unknown, not 0.",
+        "metrics.committee_leadership": "Not yet published (evaluation ARC-01): the member was added since the last publish, or the data-quality gate is holding. No figure about them has passed the checks, so it is unknown, not 0.",
+        "metrics.speeches_given": "Not yet published (evaluation ARC-01): the member was added since the last publish, or the data-quality gate is holding. No figure about them has passed the checks, so it is unknown, not 0.",
+        "metrics.total_votes_cast": "Not yet published (evaluation ARC-01): the member was added since the last publish, or the data-quality gate is holding. No figure about them has passed the checks, so it is unknown, not 0.",
+        "metrics.years_in_parliament": "Not yet published (evaluation ARC-01): the member was added since the last publish, or the data-quality gate is holding. No figure about them has passed the checks, so it is unknown, not 0."
       }
     }
   }

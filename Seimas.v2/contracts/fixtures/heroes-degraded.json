@@ -17,29 +17,29 @@
       "election_type": null
     },
     "dimensions": {
-      "legislative_activity": 0.0,
-      "experience": 0.0,
-      "visibility": 0.0
+      "legislative_activity": null,
+      "experience": null,
+      "visibility": null
     },
     "metrics": {
-      "bills_authored_count": 0.0,
+      "bills_authored_count": null,
       "bills_initiated_total": null,
       "bills_initiated_individually": null,
-      "bills_passed": 0.0,
-      "committee_leadership": 0.0,
-      "years_in_parliament": 0.0,
-      "total_votes_cast": 0.0,
-      "speeches_given": 0.0,
+      "bills_passed": null,
+      "committee_leadership": null,
+      "years_in_parliament": null,
+      "total_votes_cast": null,
+      "speeches_given": null,
       "attendance_percentage": null,
-      "amendments_proposed": 0.0,
-      "amendments_proposed_proxy": 0.0,
-      "bills_proposed": 0.0,
+      "amendments_proposed": null,
+      "amendments_proposed_proxy": null,
+      "bills_proposed": null,
       "party_loyalty": null
     },
     "metrics_provenance": {
-      "legislative_activity": "unavailable",
-      "experience": "direct",
-      "visibility": "proxy"
+      "legislative_activity": "unpublished",
+      "experience": "unpublished",
+      "visibility": "unpublished"
     },
     "forensic_breakdown": {
       "benford": {

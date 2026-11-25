@@ -1,3 +1,19 @@
+# RESUME — 2026-11-26 (ARC-01 part 2)
+
+The profile now reads votes, speeches, committee roles and bills from the
+published `mp_leaderboard_metrics` row, so it holds when the gate holds and
+agrees with the list by construction. A member with no published row gets null
+figures and provenance `unpublished` (wire: dimensions nullable, contract and
+golden fixture updated). Production had 0 such members and identical live vs
+published figures, so no displayed number changes. Backend **551 passed**.
+Detail: `2026-11-26-eval-arc01.md`.
+
+### Next concrete step
+Faction-alignment vote list behind a published view; ARC-01 part 3
+(`dq_checks.protects`). Or PERF-07 / OPS-01 / TST-*.
+
+---
+
 # RESUME — 2026-11-26 (ARC-01 part 1)
 
 Published views now change only in `backend/publish.py`, after the data-quality

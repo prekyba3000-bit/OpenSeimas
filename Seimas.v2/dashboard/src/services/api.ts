@@ -224,10 +224,12 @@ export const mpProfileSchema = z
       constituency_name: z.string().nullable().optional(),
       election_type: z.string().nullable().optional(),
     }),
+    // Nullable: a member added since the last publish has no published figures
+    // yet (evaluation ARC-01). readMpDimension already renders null as unknown.
     dimensions: z.object({
-      legislative_activity: z.number(),
-      experience: z.number(),
-      visibility: z.number(),
+      legislative_activity: z.number().nullable(),
+      experience: z.number().nullable(),
+      visibility: z.number().nullable(),
     }),
     forensic_breakdown: rawForensicBreakdownSchema,
     // The real, source-backed numbers. `attributes` above are derived composites

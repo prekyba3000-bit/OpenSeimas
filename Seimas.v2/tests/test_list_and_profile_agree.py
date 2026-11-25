@@ -141,9 +141,22 @@ def test_one_predicate_decides_whether_a_choice_was_recorded():
         "the pre-015 participation predicate is back in the engine"
     )
     # Deferred to, not retyped: six copies drifting from the views is exactly
-    # how this happened.
+    # how this happened. ARC-01 moved the profile's rollups into the published
+    # view, so fewer queries need the predicate at all; the count of uses is not
+    # the point. The shape is: no query here spells a participation test itself.
     assert source.count("_CHOICE_RECORDED = (") == 1
-    assert source.count("{_CHOICE_RECORDED}") >= 6
+    assert source.count("{_CHOICE_RECORDED}") >= 1
+    # A participation test names the against/abstain/absent choices; a "voted
+    # for" filter (`IN ('už', 'uz')`) is a different question and may stand.
+    definition = re.search(r"_CHOICE_RECORDED = \(.*?\n\)", code, re.S).group(0)
+    retyped = [
+        line.strip() for line in code.replace(definition, "").splitlines()
+        if "vote_choice" in line and re.search(r"prie[sš]|susilaik|nedalyvavo", line, re.I)
+    ]
+    assert not retyped, (
+        f"hero_engine retypes the participation predicate instead of deferring to "
+        f"_CHOICE_RECORDED: {retyped}"
+    )
 
 
 def test_the_engine_predicate_matches_the_materialized_view_definition():
