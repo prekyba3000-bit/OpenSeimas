@@ -105,7 +105,7 @@ def test_every_materialized_view_has_a_refresh_path():
 
 def test_attendance_v2_is_refreshed_on_the_schedule():
     """The instance, asserted separately: this one backs a published metric."""
-    schedule = (ROOT / "scripts" / "local-ops" / "refresh_stats.sh").read_text()
+    schedule = (SEIMAS / "backend" / "publish.py").read_text()
     assert "mp_attendance_v2" in schedule
     assert "CONCURRENTLY mp_attendance_v2" in schedule, (
         "a non-concurrent refresh takes an AccessExclusiveLock and blocks reads "
@@ -121,3 +121,49 @@ def test_exemptions_carry_a_reason_and_still_exist():
             f"{name} is exempted from refresh but no longer exists. Stale allowlists "
             f"silently re-admit any future view of the same name — delete the entry."
         )
+
+
+# Evaluation ARC-01. "Every view has a refresher" let six accumulate, and the
+# data-quality gate guarded one. The shape asserted now: exactly one production
+# file refreshes views, and that file runs the gate first.
+PUBLISHER = SEIMAS / "backend" / "publish.py"
+
+
+def _all_production_sources():
+    roots = [
+        (SEIMAS, ("*.py",), False),            # top-level scripts (export_stats.py, ...)
+        (SEIMAS / "backend", ("*.py",), True),
+        (SEIMAS / "pipeline", ("*.py",), True),
+        (SEIMAS / "scripts", ("*.py", "*.sh"), True),
+        (ROOT / "scripts", ("*.py", "*.sh"), True),
+        (ROOT / ".github" / "workflows", ("*.yml", "*.yaml"), True),
+        (SEIMAS / ".github" / "workflows", ("*.yml", "*.yaml"), True),
+    ]
+    for base, globs, recursive in roots:
+        if not base.exists():
+            continue
+        for glob in globs:
+            for p in (base.rglob(glob) if recursive else base.glob(glob)):
+                if "node_modules" in p.parts or ".venv" in p.parts:
+                    continue
+                marker = "--" if p.suffix == ".sql" else "#"
+                yield p, _strip_comments(p.read_text(errors="ignore"), marker)
+
+
+def test_exactly_one_production_file_refreshes_views():
+    refreshers = sorted(
+        str(p.relative_to(ROOT)) for p, text in _all_production_sources() if REFRESH.search(text)
+    )
+    assert refreshers == [str(PUBLISHER.relative_to(ROOT))], (
+        "views must be refreshed only by backend/publish.py, after the data-quality "
+        f"gate; found REFRESH in: {refreshers}. Call backend.publish.publish() instead."
+    )
+
+
+def test_the_publisher_runs_the_gate_before_any_refresh():
+    text = PUBLISHER.read_text()
+    body = text[text.index("def publish("):]
+    gate_at = body.index("dq_check_runner.main(")
+    hold_at = body.index("if gate == 1:")
+    first_refresh_at = body.index("cur.execute(statement)")
+    assert gate_at < hold_at < first_refresh_at

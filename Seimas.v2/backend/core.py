@@ -14,7 +14,6 @@ import os
 import sys
 import time
 import threading
-import datetime
 import logging
 from typing import Optional
 from collections import defaultdict
@@ -44,51 +43,11 @@ except ImportError as e:
     sync_mps = None
     sync_votes = None
 
-REFRESH_INTERVAL_SEC = int(os.getenv("REFRESH_INTERVAL", "1800"))  # 30 min default
-
-_refresh_state = {
-    "last_refresh": None,
-    "last_error": None,
-    "refresh_count": 0,
-}
-_refresh_stop = threading.Event()
 _leaderboard_cache = {
     "entries": {},
 }
 _leaderboard_cache_lock = threading.Lock()
 CACHE_DURATION_SEC = 3600
-
-
-def _refresh_materialized_view():
-    """Refresh mp_stats_summary then mp_leaderboard_metrics (which depends on it).
-    Runs in a background thread."""
-    try:
-        if not DB_DSN:
-            _refresh_state["last_error"] = "DB_DSN not set"
-            return
-        conn = psycopg2.connect(DB_DSN)
-        conn.autocommit = True
-        with conn.cursor() as cur:
-            cur.execute("REFRESH MATERIALIZED VIEW CONCURRENTLY mp_stats_summary;")
-            cur.execute("SELECT to_regclass('public.mp_leaderboard_metrics') AS t")
-            if cur.fetchone()[0]:
-                cur.execute("REFRESH MATERIALIZED VIEW CONCURRENTLY mp_leaderboard_metrics;")
-        conn.close()
-        _refresh_state["last_refresh"] = datetime.datetime.utcnow().isoformat() + "Z"
-        _refresh_state["last_error"] = None
-        _refresh_state["refresh_count"] += 1
-        print(f"[scheduler] Materialized view refreshed at {_refresh_state['last_refresh']}")
-    except Exception as e:
-        _refresh_state["last_error"] = str(e)
-        print(f"[scheduler] Refresh failed: {e}")
-
-
-def _scheduler_loop():
-    """Periodically refresh the materialized view until stop event is set."""
-    while not _refresh_stop.is_set():
-        _refresh_materialized_view()
-        _refresh_stop.wait(timeout=REFRESH_INTERVAL_SEC)
-
 
 
 ALLOWED_ORIGINS = [

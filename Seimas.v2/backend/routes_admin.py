@@ -2,7 +2,7 @@
 from fastapi import APIRouter, HTTPException, BackgroundTasks, Header, Response
 from typing import Optional
 
-from backend.core import _refresh_state, _refresh_materialized_view
+from backend.publish import publish
 
 from backend import core
 from backend.core import (
@@ -82,22 +82,16 @@ def health_ready(response: Response):
     return {"ready": ready, "database": db_status}
 
 
-@router.get("/api/admin/refresh-status")
-def refresh_status():
-    """Check the status of the background materialized view refresh."""
-    return {
-        "interval_seconds": core.REFRESH_INTERVAL_SEC,
-        **_refresh_state,
-    }
-
-
 @router.post("/api/admin/refresh")
 def trigger_refresh(background_tasks: BackgroundTasks, authorization: Optional[str] = Header(default=None)):
-    """Manually trigger a materialized view refresh."""
+    """Request a publish. The data-quality gate decides; a HOLD refreshes nothing.
+
+    Same step as the 30-minute timer (backend.publish). The outcome is recorded
+    in source_fetches and read back through /api/meta/freshness."""
     identity = _require_admin_auth(authorization)
     core._audit_admin_action("/api/admin/refresh", identity, "materialized_views")
-    background_tasks.add_task(_refresh_materialized_view)
-    return {"status": "Refresh triggered"}
+    background_tasks.add_task(publish, None, "POST /api/admin/refresh")
+    return {"status": "Publish requested; the data-quality gate decides"}
 
 
 @router.post("/api/admin/sync/mps")

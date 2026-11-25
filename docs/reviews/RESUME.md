@@ -1,3 +1,18 @@
+# RESUME — 2026-11-26 (ARC-01 part 1)
+
+Published views now change only in `backend/publish.py`, after the data-quality
+gate. Removed five ungated refreshers (API boot/30-min thread in every worker,
+two mid-ingest refreshes, dormant workflow) and routed `POST /api/admin/refresh`
+through the gate. `GET /api/admin/refresh-status` removed (reported in-memory
+state, no consumer). Backend **548 passed**; real-Postgres tests prove a blocking
+check holds every view. Detail: `2026-11-26-eval-arc01.md`.
+
+### Next concrete step
+ARC-01 part 2: profile figures behind published views (methodology entries),
+then part 3: `dq_checks.protects` scoped holds. Or PERF-07 / OPS-01 / TST-*.
+
+---
+
 # RESUME — 2026-11-26 (SECA-08)
 
 The correction form no longer asks for an e-mail; the API drops one from old

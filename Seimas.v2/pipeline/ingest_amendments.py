@@ -73,8 +73,7 @@ def sync_amendments() -> None:
         payload,
     )
 
-    print("Refreshing mp_stats_summary after amendment count updates...")
-    cur.execute("REFRESH MATERIALIZED VIEW mp_stats_summary")
+    # No view refresh here (evaluation ARC-01): backend.publish owns publication.
 
     conn.commit()
     cur.close()

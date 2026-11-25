@@ -305,8 +305,9 @@ def sync_db():
                     stripped_payload
                 )
 
-    print("Refreshing mp_stats_summary after party updates...")
-    cur.execute("REFRESH MATERIALIZED VIEW mp_stats_summary")
+    # No view refresh here (evaluation ARC-01): this ran before the data-quality
+    # gate and published mp_stats_summary ungated on every sync. backend.publish
+    # owns publication.
 
     conn.commit()
     cur.close()

@@ -23,7 +23,7 @@ def _controls(monkeypatch):
     monkeypatch.setattr(core, "SYNC_SECRET", TOKEN)
     monkeypatch.setattr(core, "sync_mps", lambda: None)
     monkeypatch.setattr(core, "sync_votes", lambda: None)
-    monkeypatch.setattr(routes_admin, "_refresh_materialized_view", lambda: None)
+    monkeypatch.setattr(routes_admin, "publish", lambda *a, **k: None)
 
 
 @pytest.fixture()

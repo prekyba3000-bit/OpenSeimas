@@ -117,7 +117,7 @@ def ping_healthcheck(ok: bool) -> str:
         return f"ping failed: {type(exc).__name__}"
 
 
-def main(argv=None) -> int:
+def main(argv=None, dsn=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dry-run", action="store_true",
                         help="run the checks, print results, record nothing")
@@ -125,7 +125,7 @@ def main(argv=None) -> int:
                         help="exit 1 if any block_publish check failed; print nothing else")
     args = parser.parse_args(argv)
 
-    dsn = os.environ.get("DB_DSN")
+    dsn = dsn or os.environ.get("DB_DSN")
     if not dsn:
         print("ERROR: DB_DSN not set", file=sys.stderr)
         return 2

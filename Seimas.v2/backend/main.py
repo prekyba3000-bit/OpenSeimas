@@ -1,4 +1,4 @@
-"""FastAPI app assembly: middleware, exception handlers, lifespan, routers.
+"""FastAPI app assembly: middleware, exception handlers, routers.
 
 Import surface kept stable: `backend.main:app` is the gunicorn/uvicorn target.
 Runtime helpers live in backend.core; monkeypatch backend.core.* in tests.
@@ -7,9 +7,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import Response, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
-from contextlib import asynccontextmanager
 import os
-import threading
 from typing import Dict, Optional, Any
 
 from backend import core
@@ -17,13 +15,8 @@ from backend.core import (  # noqa: F401 — re-exported for backward compatibil
     ALLOWED_ORIGINS,
     DB_DSN,
     SYNC_SECRET,
-    REFRESH_INTERVAL_SEC,
-    _refresh_state,
-    _refresh_stop,
     _leaderboard_cache,
     _leaderboard_cache_lock,
-    _scheduler_loop,
-    _refresh_materialized_view,
     get_pool,
     get_db_conn,
     check_rate_limit,
@@ -45,18 +38,10 @@ from backend.routes_trust import router as trust_router
 from backend.routes_data_health import router as data_health_router
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    t = threading.Thread(target=core._scheduler_loop, daemon=True, name="mv-refresh")
-    t.start()
-    print(f"[scheduler] Started background refresh every {core.REFRESH_INTERVAL_SEC}s")
-    yield
-    core._refresh_stop.set()
-    t.join(timeout=5)
-    print("[scheduler] Stopped background refresh")
-
-
-app = FastAPI(title="Skaidrus Seimas API", lifespan=lifespan)
+# No lifespan refresh thread (evaluation ARC-01): the API used to refresh the
+# published views every 30 minutes in each worker, ungated. Views change only in
+# backend.publish, after the data-quality gate.
+app = FastAPI(title="Skaidrus Seimas API")
 
 # Exact origins, and no credentials.
 #
