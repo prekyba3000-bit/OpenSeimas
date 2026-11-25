@@ -6,9 +6,10 @@ stored address) and publishes corrections entry `reporter-email-retention`.
 The platform now holds no first-party personal data. Backend **542 passed** on a
 fresh database; guard proven red before 058. Detail: `2026-11-26-eval-seca08.md`.
 
-### Release order
-Push (backend + dashboard deploy) → confirm the new backend is live → apply 058
-→ rendered audit of the form and the corrections log.
+### Release state
+On production: `b5e4e08`; backend confirmed live before 058 was applied (`1
+applied`); 0 e-mail-like columns remain; rendered audit passed on both hosts at
+1360/390 px with no page errors.
 
 ### Blocked
 - LT native review (now including the SECA-08 corrections entry); rclone client ID.
