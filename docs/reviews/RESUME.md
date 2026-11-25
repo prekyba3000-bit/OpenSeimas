@@ -1,3 +1,38 @@
+# RESUME — 2026-11-26 (SECF-02 rotated; CORA-06 + SECA-05 released)
+
+**SECF-02 closed.** The human ran `scripts/local-ops/rotate_all.sh` (`b1938f8`):
+new Neon `neondb_owner` password, new `SYNC_SECRET`, and the SECA-05 summary
+credentials set on Render and in `prod.env` / `summary-approver.env` (0600).
+`rotate_check.sh`: all six checks passed; old DB password and old token refused.
+Real-run fixes: personal Neon keys need `org_id` to list projects; a
+`systemctl start` glob matches only loaded units, so the timers had stayed off
+(00:27–00:45) until restarted by name — script and runbook step 9 fixed.
+
+**CORA-06 + SECA-05 on production.** Migration 057 applied first (`1 applied, 56
+already up-to-date`), then `main` fast-forwarded to `b1938f8`; pre-push hook
+`all green` (dashboard 521). Backend-only change; no Vercel side. No-write probes
+(valid body, invalid `entity_type`, so 422 means "auth passed, nothing written"):
+
+| Request | Got |
+|---|---|
+| approve, no token / `SYNC_SECRET` / draft secret | 401 / 401 / 401 |
+| approve, approval secret | 422 |
+| draft, approval secret | 401 |
+| draft, draft secret / `SYNC_SECRET` | 422 / 422 |
+
+`/health` ok, `/health/ready` 200; `admin_audit_log` 0 rows and no probe revisions.
+
+### Blocked
+- LT native review (earlier summary, P1 trust and Stage 1 copy); rclone client ID.
+- Audit rows from real maintainer actions are still uninspected: none has happened yet.
+- The human should delete the two temporary Neon/Render API keys.
+
+### Next concrete step
+SECA-08 — reporter-email privacy notice, retention and erasure. Inspect
+`admin_audit_log` after the first real maintainer write.
+
+---
+
 # RESUME — 2026-11-25 (SECA-05)
 
 SECA-05 is verified locally in `aa6a7b3`. Draft, approval and general-admin
